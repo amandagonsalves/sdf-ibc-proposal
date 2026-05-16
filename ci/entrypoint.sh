@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
-WASM_FILE="${REPO_ROOT}/target/wasm32-unknown-unknown/release/stellar_ibc_light_client.wasm"
+WASM_FILE="${REPO_ROOT}/target/wasm32v1-none/release/stellar_ibc_light_client.wasm"
 HERMES_CONFIG="${HOME}/.hermes/config.toml"
 TESTS_DIR="${SCRIPT_DIR}/tests"
 MNEMONIC_FILE="${SCRIPT_DIR}/relayer-mnemonic.txt"
@@ -35,7 +35,7 @@ fi
 echo "==> Building stellar-ibc-light-client (wasm32)..."
 cd "${REPO_ROOT}"
 cargo build \
-  --target wasm32-unknown-unknown \
+  --target wasm32v1-none \
   --no-default-features \
   -p stellar-ibc-light-client \
   --release
@@ -59,7 +59,7 @@ echo "==> Adding relayer key to Hermes..."
 if [[ -f "${MNEMONIC_FILE}" ]]; then
   hermes --config "${HERMES_CONFIG}" \
     keys add \
-    --chain cardano-entrypoint \
+    --chain cardanoentrypoint \
     --mnemonic-file "${MNEMONIC_FILE}" \
     --overwrite
   echo "    Key added from ${MNEMONIC_FILE}"
@@ -68,7 +68,7 @@ elif [[ -n "${RELAYER_MNEMONIC:-}" ]]; then
   echo "${RELAYER_MNEMONIC}" > "${TMP_MNEMONIC}"
   hermes --config "${HERMES_CONFIG}" \
     keys add \
-    --chain cardano-entrypoint \
+    --chain cardanoentrypoint \
     --mnemonic-file "${TMP_MNEMONIC}" \
     --overwrite
   rm "${TMP_MNEMONIC}"

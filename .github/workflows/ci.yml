@@ -72,7 +72,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.91.1
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32v1-none
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -86,10 +86,10 @@ jobs:
             ${{ runner.os }}-cargo-stellar-wasm-
 
       - name: Build light client WASM
-        run: cargo build --target wasm32-unknown-unknown --no-default-features -p stellar-ibc-light-client --release
+        run: cargo build --target wasm32v1-none --no-default-features -p stellar-ibc-light-client --release
 
       - name: Report WASM size
         run: |
-          WASM=target/wasm32-unknown-unknown/release/stellar_ibc_light_client.wasm
+          WASM=target/wasm32v1-none/release/stellar_ibc_light_client.wasm
           echo "WASM size: $(wc -c < $WASM) bytes"
           ls -lh $WASM

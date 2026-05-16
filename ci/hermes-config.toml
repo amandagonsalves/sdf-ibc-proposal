@@ -17,7 +17,7 @@ enabled = false
 
 # Cosmos cardano-entrypoint chain (ibc-go v10, 08-wasm enabled)
 [[chains]]
-id = 'cardano-entrypoint'
+id = 'cardanoentrypoint'
 type = 'CosmosSdk'
 rpc_addr = 'http://127.0.0.1:26657'
 grpc_addr = 'http://127.0.0.1:9090'
