@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/../.." && pwd)
-WASM_FILE="${REPO_ROOT}/target/wasm32v1-none/release/stellar_ibc_light_client.wasm"
+WASM_FILE="${REPO_ROOT}/target/wasm32-unknown-unknown/release/stellar_ibc_light_client.wasm"
 CONTAINER="cardano-entrypoint-node-prod"
 CHAIN_BIN="/go/bin/cardano-entrypointd"
 CHAIN_HOME="/root/.cardano-entrypoint-data/node"

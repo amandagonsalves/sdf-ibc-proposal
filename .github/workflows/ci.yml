@@ -72,7 +72,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.91.1
         with:
-          targets: wasm32v1-none
+          targets: wasm32-unknown-unknown
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -85,11 +85,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-stellar-wasm-
 
+      - name: Install binaryen
+        run: sudo apt-get install -y binaryen
+
       - name: Build light client WASM
-        run: cargo build --target wasm32v1-none --no-default-features -p stellar-ibc-light-client --release
+        run: cargo build --target wasm32-unknown-unknown --no-default-features -p stellar-ibc-light-client --release
+
+      - name: Lower bulk-memory to MVP
+        run: |
+          WASM=target/wasm32-unknown-unknown/release/stellar_ibc_light_client.wasm
+          wasm-opt --enable-bulk-memory --llvm-memory-copy-fill-lowering -O1 --strip-debug "$WASM" -o "$WASM"
 
       - name: Report WASM size
         run: |
-          WASM=target/wasm32v1-none/release/stellar_ibc_light_client.wasm
+          WASM=target/wasm32-unknown-unknown/release/stellar_ibc_light_client.wasm
           echo "WASM size: $(wc -c < $WASM) bytes"
           ls -lh $WASM

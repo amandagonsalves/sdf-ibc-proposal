@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
-WASM_FILE="${REPO_ROOT}/target/wasm32v1-none/release/stellar_ibc_light_client.wasm"
+WASM_FILE="${REPO_ROOT}/target/wasm32-unknown-unknown/release/stellar_ibc_light_client.wasm"
 HERMES_CONFIG="${HOME}/.hermes/config.toml"
 TESTS_DIR="${SCRIPT_DIR}/tests"
 MNEMONIC_FILE="${SCRIPT_DIR}/relayer-mnemonic.txt"
@@ -35,10 +35,26 @@ fi
 echo "==> Building stellar-ibc-light-client (wasm32)..."
 cd "${REPO_ROOT}"
 cargo build \
-  --target wasm32v1-none \
+  --target wasm32-unknown-unknown \
   --no-default-features \
   -p stellar-ibc-light-client \
   --release
+
+# Lower memory.copy/memory.fill to WebAssembly MVP equivalents.
+# The wasmvm in cardano-entrypoint-node-prod was compiled with bulk-memory
+# disabled in its validator; wasm-opt's --llvm-memory-copy-fill-lowering
+# translates those instructions to plain loops before upload.
+if command -v wasm-opt &>/dev/null; then
+  wasm-opt \
+    --enable-bulk-memory \
+    --llvm-memory-copy-fill-lowering \
+    -O1 --strip-debug \
+    "${WASM_FILE}" -o "${WASM_FILE}"
+  echo "    (bulk-memory lowered via wasm-opt)"
+else
+  echo "WARNING: wasm-opt not found. Install binaryen: brew install binaryen"
+  echo "  The WASM may be rejected by the chain if it uses bulk-memory instructions."
+fi
 
 echo "    ${WASM_FILE}"
 echo "    $(wc -c < "${WASM_FILE}") bytes"
