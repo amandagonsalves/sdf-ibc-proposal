@@ -1,0 +1,39 @@
+[global]
+log_level = 'debug'
+
+[mode.clients]
+enabled = true
+refresh = true
+misbehaviour = true
+
+[mode.connections]
+enabled = false
+
+[mode.channels]
+enabled = false
+
+[mode.packets]
+enabled = false
+
+# Cosmos cardano-entrypoint chain (ibc-go v10, 08-wasm enabled)
+[[chains]]
+id = 'cardano-entrypoint'
+type = 'CosmosSdk'
+rpc_addr = 'http://127.0.0.1:26657'
+grpc_addr = 'http://127.0.0.1:9090'
+event_source = { mode = 'push', url = 'ws://127.0.0.1:26657/websocket', batch_delay = '500ms' }
+rpc_timeout = '10s'
+trusted_node = false
+account_prefix = 'cosmos'
+key_name = 'testkey'
+store_prefix = 'ibc'
+default_gas = 100000
+max_gas = 4000000
+gas_price = { price = 0.001, denom = 'stake' }
+gas_multiplier = 1.5
+max_msg_num = 30
+max_tx_size = 2097152
+clock_drift = '5s'
+trusting_period = '3m'
+trust_threshold = '2/3'
+address_type = { derivation = 'cosmos' }
