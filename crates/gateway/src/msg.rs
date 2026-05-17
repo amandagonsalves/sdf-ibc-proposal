@@ -1,14 +1,11 @@
-use crate::{
-    proto::{
-        stellar_gateway_msg_server::{StellarGatewayMsg, StellarGatewayMsgServer},
-        MsgAckPacketRequest, MsgAckPacketResponse, MsgCreateClientRequest, MsgCreateClientResponse,
-        MsgRecvPacketRequest, MsgRecvPacketResponse, MsgRegisterCounterpartyRequest,
-        MsgRegisterCounterpartyResponse, MsgTimeoutPacketRequest, MsgTimeoutPacketResponse,
-        MsgUpdateClientRequest, MsgUpdateClientResponse, SubmitSignedTxRequest,
-        SubmitSignedTxResponse,
-    },
-    rpc::RpcClient,
+use crate::proto::{
+    stellar_gateway_msg_server::{StellarGatewayMsg, StellarGatewayMsgServer},
+    MsgAckPacketRequest, MsgAckPacketResponse, MsgCreateClientRequest, MsgCreateClientResponse,
+    MsgRecvPacketRequest, MsgRecvPacketResponse, MsgRegisterCounterpartyRequest,
+    MsgRegisterCounterpartyResponse, MsgTimeoutPacketRequest, MsgTimeoutPacketResponse,
+    MsgUpdateClientRequest, MsgUpdateClientResponse, SubmitSignedTxRequest, SubmitSignedTxResponse,
 };
+use stellar_hermes_core::rpc::RpcClient;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]

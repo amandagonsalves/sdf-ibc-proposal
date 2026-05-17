@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 stellar-ibc = { workspace = true }
+stellar-hermes-core = { workspace = true }
 
 tonic = { workspace = true }
 tonic-health = { workspace = true }
@@ -25,6 +26,7 @@ axum = { workspace = true }
 
 soroban-client = { workspace = true }
 stellar-strkey = { workspace = true }
+reqwest = { workspace = true }
 
 anyhow = { workspace = true }
 thiserror = { workspace = true }

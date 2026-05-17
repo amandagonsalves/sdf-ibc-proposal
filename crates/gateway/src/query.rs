@@ -1,16 +1,14 @@
 use tonic::{Request, Response, Status};
 
-use crate::{
-    proto::{
-        stellar_gateway_query_server::{StellarGatewayQuery, StellarGatewayQueryServer},
-        LatestHeightRequest, LatestHeightResponse, QueryClientStateRequest,
-        QueryClientStateResponse, QueryConsensusStateRequest, QueryConsensusStateResponse,
-        QueryIbcHeaderRequest, QueryIbcHeaderResponse, QueryNextSeqRecvRequest,
-        QueryNextSeqRecvResponse, QueryPacketCommitmentRequest, QueryPacketCommitmentResponse,
-        QueryPacketReceiptRequest, QueryPacketReceiptResponse,
-    },
-    rpc::RpcClient,
+use crate::proto::{
+    stellar_gateway_query_server::{StellarGatewayQuery, StellarGatewayQueryServer},
+    LatestHeightRequest, LatestHeightResponse, QueryClientStateRequest, QueryClientStateResponse,
+    QueryConsensusStateRequest, QueryConsensusStateResponse, QueryIbcHeaderRequest,
+    QueryIbcHeaderResponse, QueryNextSeqRecvRequest, QueryNextSeqRecvResponse,
+    QueryPacketCommitmentRequest, QueryPacketCommitmentResponse, QueryPacketReceiptRequest,
+    QueryPacketReceiptResponse,
 };
+use stellar_hermes_core::rpc::RpcClient;
 
 #[derive(Clone)]
 pub struct QueryHandler {

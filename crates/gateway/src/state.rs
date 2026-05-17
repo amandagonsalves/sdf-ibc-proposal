@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::rpc::RpcClient;
+use stellar_hermes_core::rpc::RpcClient;
 
 #[derive(Clone)]
 pub struct AppState {
