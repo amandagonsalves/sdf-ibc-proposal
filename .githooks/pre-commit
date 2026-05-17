@@ -3,8 +3,6 @@ set -euo pipefail
 
 cargo fmt --all
 
-git diff --name-only --diff-filter=M | grep '\.rs$' | xargs -r git add
-
 cargo clippy --workspace --all-targets -- \
   -D warnings \
   -A clippy::manual_is_multiple_of \
