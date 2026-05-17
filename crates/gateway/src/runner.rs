@@ -30,8 +30,12 @@ pub async fn run(cfg: GatewayConfig) {
         .set_service_status("", tonic_health::ServingStatus::Serving)
         .await;
 
+    const GATEWAY_FILE_DESCRIPTOR_SET: &[u8] =
+        include_bytes!(concat!(env!("OUT_DIR"), "/stellar_gateway_descriptor.bin"));
+
     let reflection_service = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(tonic_health::pb::FILE_DESCRIPTOR_SET)
+        .register_encoded_file_descriptor_set(GATEWAY_FILE_DESCRIPTOR_SET)
         .build_v1()
         .expect("gRPC reflection service failed to build");
 

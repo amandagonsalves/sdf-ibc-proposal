@@ -37,3 +37,4 @@ ibc = { workspace = true }
 
 [build-dependencies]
 tonic-build = { workspace = true }
+prost-build = "0.14"
