@@ -7,8 +7,8 @@ use crate::{
         MsgUpdateClientRequest, MsgUpdateClientResponse, SubmitSignedTxRequest,
         SubmitSignedTxResponse,
     },
-    rpc::RpcClient,
 };
+use stellar_hermes_core::rpc::RpcClient;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]

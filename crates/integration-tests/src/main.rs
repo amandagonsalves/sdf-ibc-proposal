@@ -7,7 +7,7 @@ use soroban_client::{
     xdr::{LedgerKey, LedgerKeyAccount, Limits, ReadXdr, WriteXdr},
     Options, Server,
 };
-use stellar_hermes_gateway::rpc::RpcClient;
+use stellar_hermes_core::rpc::RpcClient;
 
 const TESTNET_URL: &str = "https://soroban-testnet.stellar.org";
 

@@ -7,9 +7,9 @@ use crate::{
     config::GatewayConfig,
     msg::MsgHandler,
     query::QueryHandler,
-    rpc::RpcClient,
     state::AppState,
 };
+use stellar_hermes_core::rpc::RpcClient;
 
 pub async fn run(cfg: GatewayConfig) {
     let http_addr = cfg.http_addr();

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/ibc",
+    "crates/core",
     "crates/gateway",
     "crates/integration-tests",
 ]
@@ -68,6 +69,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 stellar-ibc = { path = "crates/ibc" }
+stellar-hermes-core = { path = "crates/core" }
 stellar-hermes-gateway = { path = "crates/gateway" }
 
 [workspace.lints.rust]

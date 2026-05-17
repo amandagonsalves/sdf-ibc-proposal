@@ -1,17 +1,15 @@
 [package]
-name = "stellar-integration-tests"
+name = "stellar-hermes-core"
 version = "0.1.0"
 edition = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
 rust-version = { workspace = true }
-description = "Manual integration tests against Stellar testnet"
-
-[[bin]]
-name = "integration-tests"
-path = "src/main.rs"
+description = "Shared RPC primitives for the Stellar Hermes gateway"
 
 [dependencies]
-stellar-hermes-core = { workspace = true }
 soroban-client = { workspace = true }
+reqwest = { workspace = true }
+anyhow = { workspace = true }
+serde_json = { workspace = true }
 tokio = { workspace = true }

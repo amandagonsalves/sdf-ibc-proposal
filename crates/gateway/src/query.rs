@@ -9,8 +9,8 @@ use crate::{
         QueryNextSeqRecvResponse, QueryPacketCommitmentRequest, QueryPacketCommitmentResponse,
         QueryPacketReceiptRequest, QueryPacketReceiptResponse,
     },
-    rpc::RpcClient,
 };
+use stellar_hermes_core::rpc::RpcClient;
 
 #[derive(Clone)]
 pub struct QueryHandler {
