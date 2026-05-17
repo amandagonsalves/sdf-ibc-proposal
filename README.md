@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/thumbnail.png" alt="Stellar IBC Bridge" width="100%" />
+</p>
+
 # Stellar IBC Bridge
 
 Rust implementation of IBC v2 (Eureka) for the Stellar network, enabling trustless
