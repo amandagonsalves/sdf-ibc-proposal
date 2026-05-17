@@ -1,13 +1,11 @@
 use ibc::core::{
     client::context::{
-        ClientExecutionContext, ClientValidationContext,
         client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
         consensus_state::ConsensusState,
+        ClientExecutionContext, ClientValidationContext,
     },
     client::types::{error::ClientError, Height, Status},
-    commitment_types::commitment::{
-        CommitmentPrefix, CommitmentProofBytes, CommitmentRoot,
-    },
+    commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
     host::types::{
         error::HostError,
         identifiers::{ClientId, ClientType},
@@ -16,7 +14,7 @@ use ibc::core::{
     primitives::{proto::Any, Timestamp},
 };
 
-use crate::context::{StellarIbcContext, storage::SorobanStorage};
+use crate::context::{storage::SorobanStorage, StellarIbcContext};
 
 #[derive(Clone, Debug)]
 pub struct MockClientState;
@@ -115,11 +113,7 @@ impl<V: ClientValidationContext> ClientStateValidation<V> for MockClientState {
         unimplemented!()
     }
 
-    fn check_substitute(
-        &self,
-        _ctx: &V,
-        _substitute_client_state: Any,
-    ) -> Result<(), ClientError> {
+    fn check_substitute(&self, _ctx: &V, _substitute_client_state: Any) -> Result<(), ClientError> {
         unimplemented!()
     }
 }
@@ -223,7 +217,9 @@ impl<S: SorobanStorage> ClientValidationContext for StellarIbcContext<S> {
         _client_id: &ClientId,
         _height: &Height,
     ) -> Result<(Timestamp, Height), HostError> {
-        Err(HostError::missing_state("client update meta: not implemented"))
+        Err(HostError::missing_state(
+            "client update meta: not implemented",
+        ))
     }
 }
 
@@ -235,7 +231,9 @@ impl<S: SorobanStorage> ClientExecutionContext for StellarIbcContext<S> {
         _client_state_path: ClientStatePath,
         _client_state: Self::ClientStateRef,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_client_state: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_client_state: not implemented",
+        ))
     }
 
     fn store_consensus_state(
@@ -243,14 +241,18 @@ impl<S: SorobanStorage> ClientExecutionContext for StellarIbcContext<S> {
         _consensus_state_path: ClientConsensusStatePath,
         _consensus_state: Self::ConsensusStateRef,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_consensus_state: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_consensus_state: not implemented",
+        ))
     }
 
     fn delete_consensus_state(
         &mut self,
         _consensus_state_path: ClientConsensusStatePath,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("delete_consensus_state: not implemented"))
+        Err(HostError::failed_to_store(
+            "delete_consensus_state: not implemented",
+        ))
     }
 
     fn store_update_meta(
@@ -260,7 +262,9 @@ impl<S: SorobanStorage> ClientExecutionContext for StellarIbcContext<S> {
         _host_timestamp: Timestamp,
         _host_height: Height,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_update_meta: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_update_meta: not implemented",
+        ))
     }
 
     fn delete_update_meta(
@@ -268,6 +272,8 @@ impl<S: SorobanStorage> ClientExecutionContext for StellarIbcContext<S> {
         _client_id: ClientId,
         _height: Height,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("delete_update_meta: not implemented"))
+        Err(HostError::failed_to_store(
+            "delete_update_meta: not implemented",
+        ))
     }
 }

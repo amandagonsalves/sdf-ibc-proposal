@@ -6,7 +6,7 @@ pub mod storage;
 pub mod token_transfer;
 pub mod validation;
 
-use crate::{event::IbcEvent, context::storage::SorobanStorage};
+use crate::{context::storage::SorobanStorage, event::IbcEvent};
 
 pub struct StellarIbcContext<S> {
     pub store: S,

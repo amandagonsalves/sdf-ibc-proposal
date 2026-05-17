@@ -1,10 +1,7 @@
-use ibc::core::{
-    client::types::Height,
-    host::types::identifiers::ClientId,
-};
+use ibc::core::{client::types::Height, host::types::identifiers::ClientId};
 
 use crate::{
-    context::{StellarIbcContext, storage::SorobanStorage},
+    context::{storage::SorobanStorage, StellarIbcContext},
     error::Error,
 };
 
@@ -16,11 +13,7 @@ pub trait IbcCommonContext {
         client_state: Vec<u8>,
     ) -> Result<(), Error>;
 
-    fn consensus_state(
-        &self,
-        client_id: &ClientId,
-        height: &Height,
-    ) -> Result<Vec<u8>, Error>;
+    fn consensus_state(&self, client_id: &ClientId, height: &Height) -> Result<Vec<u8>, Error>;
     fn store_consensus_state(
         &mut self,
         client_id: &ClientId,
@@ -45,11 +38,7 @@ impl<S: SorobanStorage> IbcCommonContext for StellarIbcContext<S> {
         Err(Error::Storage("not implemented".into()))
     }
 
-    fn consensus_state(
-        &self,
-        _client_id: &ClientId,
-        _height: &Height,
-    ) -> Result<Vec<u8>, Error> {
+    fn consensus_state(&self, _client_id: &ClientId, _height: &Height) -> Result<Vec<u8>, Error> {
         Err(Error::Storage("not implemented".into()))
     }
 

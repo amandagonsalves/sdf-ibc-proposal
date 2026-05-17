@@ -20,19 +20,23 @@ use ibc::core::{
 };
 
 use crate::{
-    context::{StellarIbcContext, storage::SorobanStorage},
+    context::{storage::SorobanStorage, StellarIbcContext},
     event::IbcEvent,
 };
 
 impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
     type E = Self;
 
-    fn get_client_execution_context(&mut self) -> &mut <StellarIbcContext<S> as ExecutionContext>::E {
+    fn get_client_execution_context(
+        &mut self,
+    ) -> &mut <StellarIbcContext<S> as ExecutionContext>::E {
         self
     }
 
     fn increase_client_counter(&mut self) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("increase_client_counter: not implemented"))
+        Err(HostError::failed_to_store(
+            "increase_client_counter: not implemented",
+        ))
     }
 
     fn store_connection(
@@ -40,7 +44,9 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _connection_path: &ConnectionPath,
         _connection_end: ConnectionEnd,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_connection: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_connection: not implemented",
+        ))
     }
 
     fn store_connection_to_client(
@@ -48,11 +54,15 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _client_connection_path: &ClientConnectionPath,
         _conn_id: ConnectionId,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_connection_to_client: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_connection_to_client: not implemented",
+        ))
     }
 
     fn increase_connection_counter(&mut self) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("increase_connection_counter: not implemented"))
+        Err(HostError::failed_to_store(
+            "increase_connection_counter: not implemented",
+        ))
     }
 
     fn store_packet_commitment(
@@ -60,14 +70,18 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _commitment_path: &CommitmentPath,
         _commitment: PacketCommitment,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_packet_commitment: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_packet_commitment: not implemented",
+        ))
     }
 
     fn delete_packet_commitment(
         &mut self,
         _commitment_path: &CommitmentPath,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("delete_packet_commitment: not implemented"))
+        Err(HostError::failed_to_store(
+            "delete_packet_commitment: not implemented",
+        ))
     }
 
     fn store_packet_receipt(
@@ -75,7 +89,9 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _receipt_path: &ReceiptPath,
         _receipt: Receipt,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_packet_receipt: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_packet_receipt: not implemented",
+        ))
     }
 
     fn store_packet_acknowledgement(
@@ -83,11 +99,15 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _ack_path: &AckPath,
         _ack_commitment: AcknowledgementCommitment,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_packet_acknowledgement: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_packet_acknowledgement: not implemented",
+        ))
     }
 
     fn delete_packet_acknowledgement(&mut self, _ack_path: &AckPath) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("delete_packet_acknowledgement: not implemented"))
+        Err(HostError::failed_to_store(
+            "delete_packet_acknowledgement: not implemented",
+        ))
     }
 
     fn store_channel(
@@ -103,7 +123,9 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _seq_send_path: &SeqSendPath,
         _seq: Sequence,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_next_sequence_send: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_next_sequence_send: not implemented",
+        ))
     }
 
     fn store_next_sequence_recv(
@@ -111,7 +133,9 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _seq_recv_path: &SeqRecvPath,
         _seq: Sequence,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_next_sequence_recv: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_next_sequence_recv: not implemented",
+        ))
     }
 
     fn store_next_sequence_ack(
@@ -119,11 +143,15 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         _seq_ack_path: &SeqAckPath,
         _seq: Sequence,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("store_next_sequence_ack: not implemented"))
+        Err(HostError::failed_to_store(
+            "store_next_sequence_ack: not implemented",
+        ))
     }
 
     fn increase_channel_counter(&mut self) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("increase_channel_counter: not implemented"))
+        Err(HostError::failed_to_store(
+            "increase_channel_counter: not implemented",
+        ))
     }
 
     fn emit_ibc_event(&mut self, event: RawIbcEvent) -> Result<(), HostError> {
@@ -136,4 +164,3 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
         Ok(())
     }
 }
-

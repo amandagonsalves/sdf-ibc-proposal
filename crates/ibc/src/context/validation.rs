@@ -14,8 +14,8 @@ use ibc::core::{
             error::HostError,
             identifiers::{ConnectionId, Sequence},
             path::{
-                AckPath, ChannelEndPath, CommitmentPath,
-                ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath,
+                AckPath, ChannelEndPath, CommitmentPath, ReceiptPath, SeqAckPath, SeqRecvPath,
+                SeqSendPath,
             },
         },
         ValidationContext,
@@ -25,8 +25,8 @@ use ibc::core::{
 
 use crate::context::{
     client::{MockClientState, MockConsensusState},
-    StellarIbcContext,
     storage::SorobanStorage,
+    StellarIbcContext,
 };
 
 impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
@@ -46,8 +46,13 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
         Err(HostError::missing_state("host_timestamp: not implemented"))
     }
 
-    fn host_consensus_state(&self, _height: &Height) -> Result<<StellarIbcContext<S> as ValidationContext>::HostConsensusState, HostError> {
-        Err(HostError::missing_state("host_consensus_state: not implemented"))
+    fn host_consensus_state(
+        &self,
+        _height: &Height,
+    ) -> Result<<StellarIbcContext<S> as ValidationContext>::HostConsensusState, HostError> {
+        Err(HostError::missing_state(
+            "host_consensus_state: not implemented",
+        ))
     }
 
     fn client_counter(&self) -> Result<u64, HostError> {
@@ -62,15 +67,19 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
         &self,
         _client_state_of_host_on_counterparty: <StellarIbcContext<S> as ValidationContext>::HostClientState,
     ) -> Result<(), HostError> {
-        Err(HostError::invalid_state("validate_self_client: not implemented"))
+        Err(HostError::invalid_state(
+            "validate_self_client: not implemented",
+        ))
     }
 
     fn commitment_prefix(&self) -> CommitmentPrefix {
-        CommitmentPrefix::try_from(b"ibc".to_vec()).expect("'ibc' is valid prefix")
+        CommitmentPrefix::from(b"ibc".to_vec())
     }
 
     fn connection_counter(&self) -> Result<u64, HostError> {
-        Err(HostError::missing_state("connection_counter: not implemented"))
+        Err(HostError::missing_state(
+            "connection_counter: not implemented",
+        ))
     }
 
     fn channel_end(&self, _channel_end_path: &ChannelEndPath) -> Result<ChannelEnd, HostError> {
@@ -78,33 +87,45 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
     }
 
     fn get_next_sequence_send(&self, _seq_send_path: &SeqSendPath) -> Result<Sequence, HostError> {
-        Err(HostError::missing_state("get_next_sequence_send: not implemented"))
+        Err(HostError::missing_state(
+            "get_next_sequence_send: not implemented",
+        ))
     }
 
     fn get_next_sequence_recv(&self, _seq_recv_path: &SeqRecvPath) -> Result<Sequence, HostError> {
-        Err(HostError::missing_state("get_next_sequence_recv: not implemented"))
+        Err(HostError::missing_state(
+            "get_next_sequence_recv: not implemented",
+        ))
     }
 
     fn get_next_sequence_ack(&self, _seq_ack_path: &SeqAckPath) -> Result<Sequence, HostError> {
-        Err(HostError::missing_state("get_next_sequence_ack: not implemented"))
+        Err(HostError::missing_state(
+            "get_next_sequence_ack: not implemented",
+        ))
     }
 
     fn get_packet_commitment(
         &self,
         _commitment_path: &CommitmentPath,
     ) -> Result<PacketCommitment, HostError> {
-        Err(HostError::missing_state("get_packet_commitment: not implemented"))
+        Err(HostError::missing_state(
+            "get_packet_commitment: not implemented",
+        ))
     }
 
     fn get_packet_receipt(&self, _receipt_path: &ReceiptPath) -> Result<Receipt, HostError> {
-        Err(HostError::missing_state("get_packet_receipt: not implemented"))
+        Err(HostError::missing_state(
+            "get_packet_receipt: not implemented",
+        ))
     }
 
     fn get_packet_acknowledgement(
         &self,
         _ack_path: &AckPath,
     ) -> Result<AcknowledgementCommitment, HostError> {
-        Err(HostError::missing_state("get_packet_acknowledgement: not implemented"))
+        Err(HostError::missing_state(
+            "get_packet_acknowledgement: not implemented",
+        ))
     }
 
     fn channel_counter(&self) -> Result<u64, HostError> {
@@ -119,4 +140,3 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
         Ok(())
     }
 }
-
