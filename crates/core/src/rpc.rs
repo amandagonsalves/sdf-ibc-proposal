@@ -74,7 +74,11 @@ impl RpcClient {
             })
             .transpose()?;
 
-        Ok(LedgerData { sequence, header_xdr, metadata_xdr })
+        Ok(LedgerData {
+            sequence,
+            header_xdr,
+            metadata_xdr,
+        })
     }
 
     pub async fn get_ledger_entry(&self, key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
