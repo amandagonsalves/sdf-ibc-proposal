@@ -1,0 +1,38 @@
+[package]
+name = "stellar-hermes-gateway"
+version = "0.1.0"
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+description = ""
+
+[[bin]]
+name = "stellar-gateway"
+path = "src/main.rs"
+
+[dependencies]
+stellar-ibc = { path = "../ibc" }
+
+tonic = { workspace = true }
+tonic-health = { workspace = true }
+tonic-prost = { workspace = true }
+tonic-reflection = { workspace = true }
+prost = { workspace = true }
+
+tokio = { workspace = true }
+axum = { workspace = true }
+
+soroban-client = { workspace = true }
+stellar-strkey = { workspace = true }
+
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+dotenvy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[build-dependencies]
+tonic-build = { workspace = true }
