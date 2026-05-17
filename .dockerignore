@@ -1,0 +1,9 @@
+target/
+.git/
+.github/
+ci/
+docs/
+*.md
+.env
+.env.*
+!.env.example

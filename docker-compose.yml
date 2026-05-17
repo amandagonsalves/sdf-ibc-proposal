@@ -1,0 +1,50 @@
+services:
+  stellar-node:
+    profiles: [local]
+    image: stellar/quickstart:latest
+    platform: linux/amd64
+    command: --local --enable-soroban-rpc
+    ports:
+      - "8000:8000"
+      - "11625:11625"
+      - "11626:11626"
+    environment:
+      ENABLE_LOGS: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  stellar-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: stellar-ibc-gateway:latest
+    restart: unless-stopped
+    depends_on:
+      stellar-node:
+        condition: service_healthy
+        required: false
+    ports:
+      - "${STELLAR_GATEWAY_GRPC_PORT:-50052}:50052"
+      - "${STELLAR_GATEWAY_HTTP_PORT:-8001}:8001"
+    environment:
+      STELLAR_GATEWAY_HOST: "0.0.0.0"
+      STELLAR_GATEWAY_GRPC_PORT: "50052"
+      STELLAR_GATEWAY_HTTP_PORT: "8001"
+      STELLAR_RPC_URL: "${STELLAR_RPC_URL:-https://soroban-testnet.stellar.org}"
+      NETWORK_PASSPHRASE: "${NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}"
+      STELLAR_SIGNING_KEY: "${STELLAR_SIGNING_KEY}"
+      IBC_CONTRACT_ID: "${IBC_CONTRACT_ID:-}"
+      TRANSFER_CONTRACT_ID: "${TRANSFER_CONTRACT_ID:-}"
+    env_file:
+      - path: .env
+        required: false
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 50052 && nc -z localhost 8001"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
