@@ -84,6 +84,7 @@ jobs:
       - name: Check install build warnings
         run: >
           cargo rustc --locked --release
+          -p stellar-hermes-gateway
           --bin stellar-gateway --
           -D warnings
 
