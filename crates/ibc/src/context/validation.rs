@@ -6,20 +6,21 @@ use ibc::core::{
         commitment::{AcknowledgementCommitment, PacketCommitment},
         packet::Receipt,
     },
-    client::context::client_state::ClientStateValidation,
     client::types::Height,
     commitment_types::commitment::CommitmentPrefix,
     connection::types::ConnectionEnd,
-    host::types::{
-        error::HostError,
-        identifiers::{ConnectionId, Sequence},
-        path::{
-            AckPath, ChannelEndPath, ClientConnectionPath, CommitmentPath, ConnectionPath,
-            ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath,
+    host::{
+        types::{
+            error::HostError,
+            identifiers::{ConnectionId, Sequence},
+            path::{
+                AckPath, ChannelEndPath, CommitmentPath,
+                ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath,
+            },
         },
+        ValidationContext,
     },
     primitives::{Signer, Timestamp},
-    router::ValidationContext,
 };
 
 use crate::context::{
@@ -33,7 +34,7 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
     type HostClientState = MockClientState;
     type HostConsensusState = MockConsensusState;
 
-    fn get_client_validation_context(&self) -> &Self::V {
+    fn get_client_validation_context(&self) -> &<StellarIbcContext<S> as ValidationContext>::V {
         self
     }
 
@@ -45,7 +46,7 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
         Err(HostError::missing_state("host_timestamp: not implemented"))
     }
 
-    fn host_consensus_state(&self, _height: &Height) -> Result<Self::HostConsensusState, HostError> {
+    fn host_consensus_state(&self, _height: &Height) -> Result<<StellarIbcContext<S> as ValidationContext>::HostConsensusState, HostError> {
         Err(HostError::missing_state("host_consensus_state: not implemented"))
     }
 
@@ -59,7 +60,7 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
 
     fn validate_self_client(
         &self,
-        _client_state_of_host_on_counterparty: Self::HostClientState,
+        _client_state_of_host_on_counterparty: <StellarIbcContext<S> as ValidationContext>::HostClientState,
     ) -> Result<(), HostError> {
         Err(HostError::invalid_state("validate_self_client: not implemented"))
     }
@@ -119,8 +120,3 @@ impl<S: SorobanStorage> ValidationContext for StellarIbcContext<S> {
     }
 }
 
-const _: () = {
-    fn _assert_client_state_validation<V: ibc::core::client::context::ClientValidationContext, T: ClientStateValidation<V>>() {}
-    fn _check() {
-    }
-};

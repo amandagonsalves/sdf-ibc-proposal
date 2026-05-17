@@ -1,6 +1,6 @@
 use ibc::core::{
     host::types::identifiers::PortId,
-    router::{module::Module, router::ModuleId, types::Router},
+    router::{module::Module, router::Router, types::module::ModuleId},
 };
 
 pub struct IbcRouter;

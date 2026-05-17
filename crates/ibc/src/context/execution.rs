@@ -4,19 +4,19 @@ use ibc::core::{
         commitment::{AcknowledgementCommitment, PacketCommitment},
         packet::Receipt,
     },
-    client::context::ClientExecutionContext,
-    client::types::Height,
     connection::types::ConnectionEnd,
     handler::types::events::IbcEvent as RawIbcEvent,
-    host::types::{
-        error::HostError,
-        identifiers::{ConnectionId, Sequence},
-        path::{
-            AckPath, ChannelEndPath, ClientConnectionPath, CommitmentPath, ConnectionPath,
-            ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath,
+    host::{
+        types::{
+            error::HostError,
+            identifiers::{ConnectionId, Sequence},
+            path::{
+                AckPath, ChannelEndPath, ClientConnectionPath, CommitmentPath, ConnectionPath,
+                ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath,
+            },
         },
+        ExecutionContext,
     },
-    router::ExecutionContext,
 };
 
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
 impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
     type E = Self;
 
-    fn get_client_execution_context(&mut self) -> &mut Self::E {
+    fn get_client_execution_context(&mut self) -> &mut <StellarIbcContext<S> as ExecutionContext>::E {
         self
     }
 
@@ -137,9 +137,3 @@ impl<S: SorobanStorage> ExecutionContext for StellarIbcContext<S> {
     }
 }
 
-const _: fn() = || {
-    fn _assert<S: SorobanStorage>() {
-        fn _check<T: ClientExecutionContext>() {}
-        _check::<StellarIbcContext<S>>();
-    }
-};
