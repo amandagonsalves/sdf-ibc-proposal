@@ -2,6 +2,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 
 pub mod config;
 pub mod proto;
+pub mod rpc;
 
 fn main() {
     tracing_subscriber::registry()
