@@ -77,3 +77,42 @@ jobs:
 
       - name: Test
         run: cargo test --manifest-path Cargo.toml --locked
+
+  gateway-health:
+    name: Gateway health
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: rust
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@1.91.1
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-gateway-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-gateway-
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install grpcurl
+        run: |
+          GRPCURL_VERSION=1.9.1
+          curl -sSL \
+            "https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz" \
+            | tar -xz -C /usr/local/bin grpcurl
+
+      - name: Run gateway health checks
+        run: bash ci/gateway-health.sh
