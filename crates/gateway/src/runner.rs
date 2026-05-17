@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use axum::{routing::get, Router};
 
-use crate::{config::GatewayConfig, query::QueryHandler, rpc::RpcClient, state::AppState};
+use crate::{
+    config::GatewayConfig, msg::MsgHandler, query::QueryHandler, rpc::RpcClient, state::AppState,
+};
 
 pub async fn run(cfg: GatewayConfig) {
     let http_addr = cfg.http_addr();
@@ -45,6 +47,7 @@ pub async fn run(cfg: GatewayConfig) {
         .add_service(reflection_service)
         .add_service(health_service)
         .add_service(QueryHandler::new(rpc.clone()).into_server())
+        .add_service(MsgHandler::new(rpc.clone()).into_server())
         // .add_service(ClientServiceServer::new(client_handler))
         // .add_service(PacketServiceServer::new(packet_handler))
         // .add_service(CounterpartyServiceServer::new(counterparty_handler))
