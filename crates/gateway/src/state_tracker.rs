@@ -85,7 +85,7 @@ impl StateTracker {
         };
         match &self.ibc_contract_id {
             None => true,
-            Some(id) => &hash.0 == id,
+            Some(id) => hash.0 == soroban_client::xdr::Hash(*id),
         }
     }
 }
@@ -114,8 +114,10 @@ fn ledger_changes(meta: &LedgerCloseMeta) -> Vec<LedgerEntryChange> {
 
 fn collect_tx_changes(meta: &TransactionMeta, out: &mut Vec<LedgerEntryChange>) {
     match meta {
-        TransactionMeta::V0(changes) => {
-            out.extend(changes.iter().cloned());
+        TransactionMeta::V0(operations) => {
+            for op in operations.iter() {
+                out.extend(op.changes.iter().cloned());
+            }
         }
         TransactionMeta::V1(v) => {
             out.extend(v.tx_changes.iter().cloned());

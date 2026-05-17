@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use tonic::{Request, Response, Status};
 use tokio::sync::Mutex;
+use tonic::{Request, Response, Status};
 
 use crate::proto::{
     stellar_gateway_query_server::{StellarGatewayQuery, StellarGatewayQueryServer},

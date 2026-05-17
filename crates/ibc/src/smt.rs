@@ -32,8 +32,7 @@ impl Smt {
     }
 
     pub fn root(&self) -> [u8; 32] {
-        let leaves: Vec<([u8; 32], [u8; 32])> =
-            self.leaves.iter().map(|(&k, &v)| (k, v)).collect();
+        let leaves: Vec<([u8; 32], [u8; 32])> = self.leaves.iter().map(|(&k, &v)| (k, v)).collect();
         subtree_root(&leaves, 0)
     }
 }

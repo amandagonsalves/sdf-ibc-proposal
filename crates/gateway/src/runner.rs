@@ -26,10 +26,7 @@ pub async fn run(cfg: GatewayConfig) {
             .map(|c| c.0)
     };
 
-    let tracker = Arc::new(Mutex::new(StateTracker::new(
-        rpc.clone(),
-        ibc_contract_id,
-    )));
+    let tracker = Arc::new(Mutex::new(StateTracker::new(rpc.clone(), ibc_contract_id)));
 
     let app_state = Arc::new(AppState::new(rpc.clone(), cfg.signing_key.clone()));
 
