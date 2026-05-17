@@ -1,8 +1,6 @@
 use core::marker::PhantomData;
 
-use ibc::apps::transfer::context::{
-    TokenTransferExecutionContext, TokenTransferValidationContext,
-};
+use ibc::apps::transfer::context::{TokenTransferExecutionContext, TokenTransferValidationContext};
 use ibc::apps::transfer::types::{Memo, PrefixedCoin, PrefixedDenom};
 use ibc::core::host::types::{
     error::HostError,
@@ -22,7 +20,9 @@ impl<S: SorobanStorage> TokenTransferValidationContext for TokenTransferContext<
     }
 
     fn receiver_account(&self, _receiver: &Signer) -> Result<Self::AccountId, HostError> {
-        Err(HostError::missing_state("receiver_account: not implemented"))
+        Err(HostError::missing_state(
+            "receiver_account: not implemented",
+        ))
     }
 
     fn get_port(&self) -> Result<PortId, HostError> {
@@ -34,7 +34,9 @@ impl<S: SorobanStorage> TokenTransferValidationContext for TokenTransferContext<
     }
 
     fn can_receive_coins(&self) -> Result<(), HostError> {
-        Err(HostError::invalid_state("can_receive_coins: not implemented"))
+        Err(HostError::invalid_state(
+            "can_receive_coins: not implemented",
+        ))
     }
 
     fn escrow_coins_validate(
@@ -45,7 +47,9 @@ impl<S: SorobanStorage> TokenTransferValidationContext for TokenTransferContext<
         _coin: &PrefixedCoin,
         _memo: &Memo,
     ) -> Result<(), HostError> {
-        Err(HostError::invalid_state("escrow_coins_validate: not implemented"))
+        Err(HostError::invalid_state(
+            "escrow_coins_validate: not implemented",
+        ))
     }
 
     fn unescrow_coins_validate(
@@ -55,7 +59,9 @@ impl<S: SorobanStorage> TokenTransferValidationContext for TokenTransferContext<
         _channel_id: &ChannelId,
         _coin: &PrefixedCoin,
     ) -> Result<(), HostError> {
-        Err(HostError::invalid_state("unescrow_coins_validate: not implemented"))
+        Err(HostError::invalid_state(
+            "unescrow_coins_validate: not implemented",
+        ))
     }
 
     fn mint_coins_validate(
@@ -63,7 +69,9 @@ impl<S: SorobanStorage> TokenTransferValidationContext for TokenTransferContext<
         _account: &Self::AccountId,
         _coin: &PrefixedCoin,
     ) -> Result<(), HostError> {
-        Err(HostError::invalid_state("mint_coins_validate: not implemented"))
+        Err(HostError::invalid_state(
+            "mint_coins_validate: not implemented",
+        ))
     }
 
     fn burn_coins_validate(
@@ -72,7 +80,9 @@ impl<S: SorobanStorage> TokenTransferValidationContext for TokenTransferContext<
         _coin: &PrefixedCoin,
         _memo: &Memo,
     ) -> Result<(), HostError> {
-        Err(HostError::invalid_state("burn_coins_validate: not implemented"))
+        Err(HostError::invalid_state(
+            "burn_coins_validate: not implemented",
+        ))
     }
 
     fn denom_hash_string(&self, _denom: &PrefixedDenom) -> Option<String> {
@@ -89,7 +99,9 @@ impl<S: SorobanStorage> TokenTransferExecutionContext for TokenTransferContext<S
         _coin: &PrefixedCoin,
         _memo: &Memo,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("escrow_coins_execute: not implemented"))
+        Err(HostError::failed_to_store(
+            "escrow_coins_execute: not implemented",
+        ))
     }
 
     fn unescrow_coins_execute(
@@ -99,7 +111,9 @@ impl<S: SorobanStorage> TokenTransferExecutionContext for TokenTransferContext<S
         _channel_id: &ChannelId,
         _coin: &PrefixedCoin,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("unescrow_coins_execute: not implemented"))
+        Err(HostError::failed_to_store(
+            "unescrow_coins_execute: not implemented",
+        ))
     }
 
     fn mint_coins_execute(
@@ -107,7 +121,9 @@ impl<S: SorobanStorage> TokenTransferExecutionContext for TokenTransferContext<S
         _account: &Self::AccountId,
         _coin: &PrefixedCoin,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("mint_coins_execute: not implemented"))
+        Err(HostError::failed_to_store(
+            "mint_coins_execute: not implemented",
+        ))
     }
 
     fn burn_coins_execute(
@@ -116,6 +132,8 @@ impl<S: SorobanStorage> TokenTransferExecutionContext for TokenTransferContext<S
         _coin: &PrefixedCoin,
         _memo: &Memo,
     ) -> Result<(), HostError> {
-        Err(HostError::failed_to_store("burn_coins_execute: not implemented"))
+        Err(HostError::failed_to_store(
+            "burn_coins_execute: not implemented",
+        ))
     }
 }
