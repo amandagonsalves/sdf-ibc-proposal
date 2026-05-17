@@ -1,4 +1,4 @@
-.PHONY: test upload-wasm health-check
+.PHONY: test upload-wasm health-check hermes-health docker-health docker-health-local
 
 SCRIPT_DIR  := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 REPO_ROOT   := $(abspath $(SCRIPT_DIR)..)
@@ -17,3 +17,12 @@ upload-wasm:
 
 health-check:
 	@bash $(TESTS_DIR)/health-check.sh
+
+hermes-health:
+	@bash $(SCRIPT_DIR)hermes-health.sh
+
+docker-health:
+	@bash $(SCRIPT_DIR)docker-health.sh
+
+docker-health-local:
+	@PROFILE=local bash $(SCRIPT_DIR)docker-health.sh

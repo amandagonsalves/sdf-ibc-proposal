@@ -1,8 +1,53 @@
 # ci/ — Local integration tests for stellar-ibc
 
-Tests the Stellar IBC light client WASM against a live Cosmos entrypoint chain.
-
 ## What gets tested
+
+### Gateway + Hermes integration (T-1 through T-5)
+
+Run against a live Stellar gateway and Hermes fork. Start the gateway first:
+
+```bash
+caribic chain start --chain stellar
+bash ci/hermes-health.sh
+# or: make -C ci hermes-health
+```
+
+| Test | What it checks |
+|---|---|
+| T-1 | Gateway reachable: gRPC :50052, HTTP :8001, soroban-testnet.stellar.org:443 |
+| T-2 | `hermes health-check` — stellar-testnet, cardano-devnet, cardano-entrypoint all healthy |
+| T-3 | `LatestHeight` gRPC returns `revisionHeight > 0` |
+| T-4 | `~/.hermes/config.toml` contains stellar-testnet block with `type = 'Stellar'` |
+| T-5 | `hermes create client` — currently BLOCKED on `QueryIbcHeader` (shown, not a failure) |
+
+### Docker integration (D-1 through D-9)
+
+Builds the gateway image, starts it via Docker Compose, verifies all checks, then tears down.
+No gateway needs to be running beforehand — the script manages the full lifecycle.
+
+```bash
+# Testnet profile (default — gateway points at soroban-testnet.stellar.org)
+bash ci/docker-health.sh
+# or: make -C ci docker-health
+
+# Local node profile (starts stellar/quickstart alongside the gateway)
+PROFILE=local bash ci/docker-health.sh
+# or: make -C ci docker-health-local
+```
+
+| Test | Profile | What it checks |
+|---|---|---|
+| D-1 | both | `stellar-gateway` container appears in `docker compose ps` |
+| D-2 | both | `GET /health` → `"Server is up."` on HTTP `:8001` |
+| D-3 | both | gRPC port `:50052` accepting connections |
+| D-4 | both | `LatestHeight` gRPC returns `revisionHeight > 0` |
+| D-5 | both | Docker healthcheck reports container as `healthy` |
+| D-6 | both | gRPC reflection lists `stellar.gateway.v1.StellarGatewayQuery` |
+| D-7 | local | Stellar node `GET /health` on `:8000` returns OK |
+| D-8 | local | Gateway HTTP health after connecting to local node |
+| D-9 | local | `LatestHeight` gRPC > 0 against local node |
+
+### WASM light client (against Cosmos entrypoint)
 
 | Test | Requires chain | What it checks |
 |---|---|---|
@@ -74,10 +119,12 @@ RELAYER_MNEMONIC="your twelve word mnemonic here ..." bash ci/entrypoint.sh
 ```
 ci/
   entrypoint.sh          Main script: build → configure → key → tests
+  hermes-health.sh       T-1…T-5 gateway + hermes integration tests
+  docker-health.sh       D-1…D-9 Docker Compose lifecycle tests
   hermes-config.toml     Hermes config pointing at localhost:26657
   relayer-mnemonic.txt   Devnet relayer mnemonic (from incubator config.yml)
-  Makefile               Individual test targets (upload-wasm, health-check)
+  Makefile               Individual test targets
   tests/
-    health-check.sh      hermes health-check
+    health-check.sh      hermes health-check (entrypoint sub-test)
     upload-wasm.sh       hermes client store wasm-code + checksum verification
 ```
