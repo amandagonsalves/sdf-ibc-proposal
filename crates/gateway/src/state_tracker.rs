@@ -1,11 +1,30 @@
 use std::collections::HashMap;
 
+use sha2::{Digest, Sha256};
 use soroban_client::xdr::{
     LedgerCloseMeta, LedgerEntryChange, LedgerEntryData, LedgerKey, Limits, ReadXdr, ScAddress,
     TransactionMeta, WriteXdr,
 };
 use stellar_hermes_core::rpc::RpcClient;
+use stellar_ibc::proof::{
+    serialize_membership_proof_with_index, serialize_non_membership_proof_with_index,
+};
 use stellar_ibc::smt::Smt;
+
+pub enum PathLookup {
+    Found {
+        value_hash: [u8; 32],
+        proof_bytes: Vec<u8>,
+    },
+    Absent {
+        proof_bytes: Vec<u8>,
+    },
+}
+
+fn key_index(key: &[u8]) -> u64 {
+    let h: [u8; 32] = Sha256::digest(key).into();
+    u64::from_be_bytes(h[..8].try_into().expect("sha256 has 32 bytes"))
+}
 
 pub struct StateTracker {
     rpc: RpcClient,
@@ -29,6 +48,34 @@ impl StateTracker {
             return Ok(root);
         }
         self.process(seq).await
+    }
+
+    pub async fn proof_for_path(&mut self, seq: u32, key: &[u8]) -> anyhow::Result<PathLookup> {
+        self.root_at(seq).await?;
+        let index = key_index(key);
+        match self.smt.generate_membership_proof(key) {
+            Some(proof) => {
+                let value_hash = proof.value_hash;
+                let bytes = serialize_membership_proof_with_index(
+                    &proof,
+                    key,
+                    value_hash.as_slice(),
+                    index,
+                );
+                Ok(PathLookup::Found {
+                    value_hash,
+                    proof_bytes: bytes,
+                })
+            }
+            None => {
+                let proof = self
+                    .smt
+                    .generate_non_membership_proof(key)
+                    .ok_or_else(|| anyhow::anyhow!("non-membership proof unavailable for key"))?;
+                let bytes = serialize_non_membership_proof_with_index(&proof, key, index);
+                Ok(PathLookup::Absent { proof_bytes: bytes })
+            }
+        }
     }
 
     async fn process(&mut self, seq: u32) -> anyhow::Result<[u8; 32]> {
