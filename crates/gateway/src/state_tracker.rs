@@ -50,19 +50,11 @@ impl StateTracker {
 
     fn apply(&mut self, change: LedgerEntryChange) {
         match change {
-            LedgerEntryChange::Created(e) | LedgerEntryChange::Updated(e) => {
-                if let LedgerEntryData::ContractData(d) = e.data {
-                    if !self.matches(&d.contract) {
-                        return;
-                    }
-                    let Ok(k) = d.key.to_xdr(Limits::none()) else {
-                        return;
-                    };
-                    let Ok(v) = d.val.to_xdr(Limits::none()) else {
-                        return;
-                    };
-                    self.smt.insert(&k, &v);
-                }
+            LedgerEntryChange::Created(e) => {
+                self.apply_contract_data_write(e.data, /* is_update */ false);
+            }
+            LedgerEntryChange::Updated(e) => {
+                self.apply_contract_data_write(e.data, /* is_update */ true);
             }
             LedgerEntryChange::Removed(LedgerKey::ContractData(key)) => {
                 if !self.matches(&key.contract) {
@@ -74,6 +66,26 @@ impl StateTracker {
                 self.smt.remove(&k);
             }
             _ => {}
+        }
+    }
+
+    fn apply_contract_data_write(&mut self, data: LedgerEntryData, is_update: bool) {
+        let LedgerEntryData::ContractData(d) = data else {
+            return;
+        };
+        if !self.matches(&d.contract) {
+            return;
+        }
+        let Ok(k) = d.key.to_xdr(Limits::none()) else {
+            return;
+        };
+        let Ok(v) = d.val.to_xdr(Limits::none()) else {
+            return;
+        };
+        if is_update {
+            self.smt.update(&k, &v);
+        } else {
+            self.smt.insert(&k, &v);
         }
     }
 

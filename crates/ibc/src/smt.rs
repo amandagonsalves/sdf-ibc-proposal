@@ -26,6 +26,10 @@ impl Smt {
         self.leaves.insert(k, v);
     }
 
+    pub fn update(&mut self, key: &[u8], value: &[u8]) {
+        self.insert(key, value);
+    }
+
     pub fn remove(&mut self, key: &[u8]) {
         let k: [u8; 32] = Sha256::digest(key).into();
         self.leaves.remove(&k);
@@ -109,5 +113,19 @@ mod tests {
         smt.insert(b"k2", b"v2");
         let r2 = smt.root();
         assert_ne!(r1, r2);
+    }
+
+    #[test]
+    fn update_changes_root_and_overwrites_value() {
+        let mut smt = Smt::new();
+        smt.insert(b"k", b"v1");
+        let root_v1 = smt.root();
+
+        smt.update(b"k", b"v2");
+        let root_v2 = smt.root();
+        assert_ne!(root_v1, root_v2);
+
+        smt.update(b"k", b"v1");
+        assert_eq!(smt.root(), root_v1);
     }
 }
