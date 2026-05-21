@@ -3876,6 +3876,7 @@ dependencies = [
  "anyhow",
  "ibc",
  "ibc-derive",
+ "ics23",
  "prost 0.13.5",
  "serde",
  "sha2 0.10.9",
