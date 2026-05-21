@@ -4,6 +4,8 @@ members = [
     "crates/core",
     "crates/gateway",
     "crates/integration-tests",
+    "contracts/soroban-mock-lc",
+    "contracts/soroban-ibc",
 ]
 resolver = "2"
 
