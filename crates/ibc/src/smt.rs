@@ -151,9 +151,9 @@ impl Smt {
         let levels = self.materialize_levels();
         let mut out = Vec::with_capacity(TREE_DEPTH);
         let mut i = idx;
-        for h in 0..TREE_DEPTH {
+        for level in levels.iter().take(TREE_DEPTH) {
             let sibling_idx = i ^ 1;
-            out.push(*levels[h].get(&sibling_idx).unwrap_or(&EMPTY));
+            out.push(*level.get(&sibling_idx).unwrap_or(&EMPTY));
             i >>= 1;
         }
         out
