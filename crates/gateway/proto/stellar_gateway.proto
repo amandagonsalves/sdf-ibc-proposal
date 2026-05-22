@@ -120,6 +120,8 @@ message MsgCreateClientRequest {
   bytes  client_state    = 1;
   bytes  consensus_state = 2;
   string signer          = 3;
+  string client_type     = 4;
+  uint64 height          = 5;
 }
 
 message MsgCreateClientResponse {

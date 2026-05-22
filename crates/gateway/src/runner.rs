@@ -66,7 +66,15 @@ pub async fn run(cfg: GatewayConfig) {
         .add_service(reflection_service)
         .add_service(health_service)
         .add_service(QueryHandler::new(rpc.clone(), tracker).into_server())
-        .add_service(MsgHandler::new(rpc.clone()).into_server())
+        .add_service(
+            MsgHandler::new(
+                rpc.clone(),
+                cfg.ibc_contract_id.clone(),
+                cfg.signing_key.clone(),
+                cfg.network_passphrase.clone(),
+            )
+            .into_server(),
+        )
         .serve(grpc_addr)
         .await
         .expect("gRPC server failed");
