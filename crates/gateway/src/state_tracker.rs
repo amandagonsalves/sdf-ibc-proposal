@@ -5,11 +5,11 @@ use soroban_client::xdr::{
     LedgerCloseMeta, LedgerEntryChange, LedgerEntryData, LedgerKey, Limits, ReadXdr, ScAddress,
     TransactionMeta, WriteXdr,
 };
-use stellar_hermes_core::rpc::RpcClient;
-use stellar_ibc::proof::{
+use stellar_ibc_core::proof::{
     serialize_membership_proof_with_index, serialize_non_membership_proof_with_index,
 };
-use stellar_ibc::smt::Smt;
+use stellar_ibc_core::rpc::RpcClient;
+use stellar_ibc_core::smt::Smt;
 
 pub enum PathLookup {
     Found {

@@ -1,11 +1,10 @@
 [workspace]
 members = [
-    "crates/ibc",
     "crates/core",
     "crates/gateway",
     "crates/integration-tests",
-    "contracts/soroban-mock-lc",
-    "contracts/soroban-ibc",
+    "contracts/mock-light-client",
+    "contracts/stellar-ibc",
 ]
 resolver = "2"
 
@@ -71,9 +70,9 @@ dotenvy = "0.15"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-stellar-ibc = { path = "crates/ibc" }
-stellar-hermes-core = { path = "crates/core" }
+stellar-ibc-core = { path = "crates/core" }
 stellar-hermes-gateway = { path = "crates/gateway" }
+mock-light-client = { path = "contracts/mock-light-client" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

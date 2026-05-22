@@ -1,5 +1,5 @@
 [package]
-name = "soroban-ibc"
+name = "stellar-ibc"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -13,4 +13,4 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
-soroban-mock-lc = { path = "../soroban-mock-lc", features = [] }
+mock-light-client = { workspace = true }

@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::*;
-use soroban_mock_lc::{MockLightClient, MockLightClientClient};
+use mock_light_client::{MockLightClient, MockLightClientClient};
 use soroban_sdk::testutils::Address as _;
 use soroban_sdk::{vec, Bytes, Env, String};
 
@@ -103,6 +103,9 @@ fn update_client_bumps_height_via_lc() {
 
     let new_h = router.update_client(&id, &Bytes::from_slice(&env, b"msg"));
     assert_eq!(new_h, 6);
-    assert_eq!(MockLightClientClient::new(&env, &lc_id).latest_height(&id), 6);
+    assert_eq!(
+        MockLightClientClient::new(&env, &lc_id).latest_height(&id),
+        6
+    );
     assert!(!router.frozen(&id));
 }

@@ -1,5 +1,5 @@
 [package]
-name = "stellar-hermes-core"
+name = "stellar-ibc-core"
 version = "0.1.0"
 edition = { workspace = true }
 license = { workspace = true }
@@ -13,3 +13,13 @@ reqwest = { workspace = true }
 anyhow = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
+ibc = { workspace = true }
+ibc-derive = { workspace = true }
+prost = "0.13"
+ics23 = "0.12"
+thiserror = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+sha2 = { workspace = true }
+stellar-strkey = { workspace = true }
+soroban-sdk = { workspace = true }

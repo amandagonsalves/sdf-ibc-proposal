@@ -10,7 +10,7 @@ use soroban_client::{
     xdr::{LedgerHeader, LedgerKey, LedgerKeyAccount, Limits, ReadXdr, StellarValueExt, WriteXdr},
     Options, Server,
 };
-use stellar_hermes_core::rpc::RpcClient;
+use stellar_ibc_core::rpc::RpcClient;
 
 const TESTNET_URL: &str = "https://soroban-testnet.stellar.org";
 

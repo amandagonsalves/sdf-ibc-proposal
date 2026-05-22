@@ -5,7 +5,7 @@ use crate::proto::{
     MsgRegisterCounterpartyResponse, MsgTimeoutPacketRequest, MsgTimeoutPacketResponse,
     MsgUpdateClientRequest, MsgUpdateClientResponse, SubmitSignedTxRequest, SubmitSignedTxResponse,
 };
-use stellar_hermes_core::rpc::RpcClient;
+use stellar_ibc_core::rpc::RpcClient;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]

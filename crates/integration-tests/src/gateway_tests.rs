@@ -141,7 +141,10 @@ async fn test_query_packet_receipt(channel: Channel, height: u64) {
         Ok(r) => {
             let body = r.into_inner();
             if body.received {
-                fail(label, "received=true for a sequence the SMT does not contain");
+                fail(
+                    label,
+                    "received=true for a sequence the SMT does not contain",
+                );
                 return;
             }
             if body.proof.is_empty() {

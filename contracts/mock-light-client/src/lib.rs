@@ -72,10 +72,7 @@ impl MockLightClient {
             .unwrap_or(0)
             + 1;
         storage.set(&DataKey::LatestHeight(client_id.clone()), &next);
-        storage.set(
-            &DataKey::ConsensusState(client_id, next),
-            &Bytes::new(&env),
-        );
+        storage.set(&DataKey::ConsensusState(client_id, next), &Bytes::new(&env));
         next
     }
 

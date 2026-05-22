@@ -12,7 +12,7 @@ name = "integration-tests"
 path = "src/main.rs"
 
 [dependencies]
-stellar-hermes-core = { workspace = true }
+stellar-ibc-core = { workspace = true }
 soroban-client = { workspace = true }
 tokio = { workspace = true }
 tonic = { workspace = true }

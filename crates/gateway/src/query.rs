@@ -13,7 +13,7 @@ use crate::proto::{
     QueryPacketReceiptResponse,
 };
 use crate::state_tracker::{PathLookup, StateTracker};
-use stellar_hermes_core::rpc::RpcClient;
+use stellar_ibc_core::rpc::RpcClient;
 
 const PACKET_COMMITMENT_DISCRIMINATOR: u8 = 0x01;
 const PACKET_RECEIPT_DISCRIMINATOR: u8 = 0x02;

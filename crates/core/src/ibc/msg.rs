@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::Error;
 use ibc::{core::handler::types::msgs::MsgEnvelope, primitives::proto::Any};
 use prost::Message;
 

@@ -28,8 +28,8 @@ check: fmt-check lint test
 start-gateway:
 	cargo run -p stellar-hermes-gateway
 
-test-ibc:
-	cargo test -p stellar-ibc
+test-ibc-core:
+	cargo test -p stellar-ibc-core
 
 run-integration-tests:
 	cargo run -p stellar-integration-tests

@@ -11,7 +11,7 @@ use crate::{
     state::AppState,
     state_tracker::StateTracker,
 };
-use stellar_hermes_core::rpc::RpcClient;
+use stellar_ibc_core::rpc::RpcClient;
 
 pub async fn run(cfg: GatewayConfig) {
     let http_addr = cfg.http_addr();
