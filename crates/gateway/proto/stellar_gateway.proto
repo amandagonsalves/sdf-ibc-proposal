@@ -135,9 +135,9 @@ message MsgUpdateClientRequest {
 message MsgUpdateClientResponse {}
 
 message MsgRegisterCounterpartyRequest {
-  string client_id              = 1;
-  string counterparty_client_id = 2;
-  bytes  merkle_prefix          = 3;
+  string client_id                              = 1;
+  string counterparty_client_id                 = 2;
+  repeated bytes counterparty_commitment_prefix = 3;
 }
 
 message MsgRegisterCounterpartyResponse {}

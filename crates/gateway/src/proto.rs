@@ -186,8 +186,8 @@ pub struct MsgRegisterCounterpartyRequest {
     pub client_id: String,
     #[prost(string, tag = "2")]
     pub counterparty_client_id: String,
-    #[prost(bytes = "vec", tag = "3")]
-    pub merkle_prefix: Vec<u8>,
+    #[prost(bytes = "vec", repeated, tag = "3")]
+    pub counterparty_commitment_prefix: Vec<Vec<u8>>,
 }
 
 #[derive(Clone, Message)]
