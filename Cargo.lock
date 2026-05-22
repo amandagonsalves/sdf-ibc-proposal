@@ -4028,6 +4028,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "stellar-transfer-app"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+ "stellar-ibc-router",
+ "stellar-mock-light-client",
+]
+
+[[package]]
 name = "stellar-xdr"
 version = "26.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

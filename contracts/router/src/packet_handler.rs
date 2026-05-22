@@ -1,6 +1,7 @@
 use soroban_sdk::{panic_with_error, vec, Bytes, Env, IntoVal, String, Symbol, Vec};
 
 use crate::errors::Error;
+use crate::events::{AckPacket, RecvPacket, SendPacket, TimeoutPacket, WriteAck};
 use crate::ibc_store;
 use crate::ics02_client;
 use crate::ics24_host::{commit_v2_acknowledgement, commit_v2_packet, error_ack_hash};
@@ -53,10 +54,12 @@ pub(crate) fn send_packet(
     let hash = commit_v2_packet(env, &packet);
     ibc_store::set_packet_commitment(env, &source_client_id, next, &hash);
 
-    env.events().publish(
-        (Symbol::new(env, "send_packet"), source_client_id, next),
+    SendPacket {
+        client_id: source_client_id,
+        sequence: next,
         packet,
-    );
+    }
+    .publish(env);
 
     next
 }
@@ -99,22 +102,19 @@ pub(crate) fn recv_packet(env: &Env, packet: Packet, proof: Bytes, proof_height:
     let ack_hash = commit_v2_acknowledgement(env, &acks);
     ibc_store::set_ack_commitment(env, &packet.dest_client, packet.sequence, &ack_hash);
 
-    env.events().publish(
-        (
-            Symbol::new(env, "recv_packet"),
-            packet.dest_client.clone(),
-            packet.sequence,
-        ),
-        packet.clone(),
-    );
-    env.events().publish(
-        (
-            Symbol::new(env, "write_ack"),
-            packet.dest_client,
-            packet.sequence,
-        ),
-        acks,
-    );
+    RecvPacket {
+        client_id: packet.dest_client.clone(),
+        sequence: packet.sequence,
+        packet: packet.clone(),
+    }
+    .publish(env);
+
+    WriteAck {
+        client_id: packet.dest_client,
+        sequence: packet.sequence,
+        acknowledgements: acks,
+    }
+    .publish(env);
 }
 
 pub(crate) fn write_acknowledgement(
@@ -133,10 +133,12 @@ pub(crate) fn write_acknowledgement(
     let ack_hash = commit_v2_acknowledgement(env, &acknowledgements);
     ibc_store::set_ack_commitment(env, &dest_client_id, sequence, &ack_hash);
 
-    env.events().publish(
-        (Symbol::new(env, "write_ack"), dest_client_id, sequence),
+    WriteAck {
+        client_id: dest_client_id,
+        sequence,
         acknowledgements,
-    );
+    }
+    .publish(env);
 }
 
 pub(crate) fn acknowledge_packet(
@@ -179,14 +181,13 @@ pub(crate) fn acknowledge_packet(
 
     ibc_store::delete_packet_commitment(env, &packet.source_client, packet.sequence);
 
-    env.events().publish(
-        (
-            Symbol::new(env, "ack_packet"),
-            packet.source_client.clone(),
-            packet.sequence,
-        ),
-        (packet, acknowledgements),
-    );
+    AckPacket {
+        client_id: packet.source_client.clone(),
+        sequence: packet.sequence,
+        packet,
+        acknowledgements,
+    }
+    .publish(env);
 }
 
 pub(crate) fn timeout_packet(env: &Env, packet: Packet, proof: Bytes, proof_height: u64) {
@@ -231,14 +232,12 @@ pub(crate) fn timeout_packet(env: &Env, packet: Packet, proof: Bytes, proof_heig
 
     ibc_store::delete_packet_commitment(env, &packet.source_client, packet.sequence);
 
-    env.events().publish(
-        (
-            Symbol::new(env, "timeout_packet"),
-            packet.source_client.clone(),
-            packet.sequence,
-        ),
+    TimeoutPacket {
+        client_id: packet.source_client.clone(),
+        sequence: packet.sequence,
         packet,
-    );
+    }
+    .publish(env);
 }
 
 fn dispatch_recv_callbacks(env: &Env, packet: &Packet) -> Vec<Bytes> {

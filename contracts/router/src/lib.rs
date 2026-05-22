@@ -3,6 +3,7 @@
 use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, String, Vec};
 
 mod errors;
+mod events;
 mod ibc_store;
 mod ics02_client;
 mod ics24_host;
@@ -12,6 +13,7 @@ mod port_router;
 mod types;
 
 pub use errors::Error;
+pub use events::{AckPacket, RecvPacket, SendPacket, TimeoutPacket, WriteAck};
 pub use types::{
     OnAcknowledgementPacketCallback, OnRecvPacketCallback, OnTimeoutPacketCallback,
 };

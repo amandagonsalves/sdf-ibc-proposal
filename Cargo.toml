@@ -5,6 +5,7 @@ members = [
     "crates/integration-tests",
     "contracts/light-clients/*",
     "contracts/router",
+    "contracts/transfer-app",
 ]
 resolver = "2"
 
