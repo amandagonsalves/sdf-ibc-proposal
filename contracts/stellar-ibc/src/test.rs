@@ -65,7 +65,6 @@ fn register_counterparty_stores_mapping() {
 }
 
 #[test]
-#[should_panic(expected = "counterparty already registered")]
 fn register_counterparty_rejects_duplicate() {
     let (env, _router_id, router, _lc_id) = setup();
     let id = router.create_client(
@@ -77,18 +76,20 @@ fn register_counterparty_rejects_duplicate() {
     let cp_id = String::from_str(&env, "07-tendermint-0");
     let prefix = vec![&env, Bytes::from_slice(&env, b"ibc")];
     router.register_counterparty(&id, &cp_id, &prefix);
-    router.register_counterparty(&id, &cp_id, &prefix);
+
+    let result = router.try_register_counterparty(&id, &cp_id, &prefix);
+    assert_eq!(result, Err(Ok(Error::CounterpartyAlreadyRegistered.into())));
 }
 
 #[test]
-#[should_panic(expected = "client_id not found")]
 fn register_counterparty_rejects_unknown_client() {
     let (env, _router_id, router, _lc_id) = setup();
-    router.register_counterparty(
+    let result = router.try_register_counterparty(
         &String::from_str(&env, "mock-999"),
         &String::from_str(&env, "07-tendermint-0"),
         &vec![&env, Bytes::from_slice(&env, b"ibc")],
     );
+    assert_eq!(result, Err(Ok(Error::ClientIdNotFound.into())));
 }
 
 #[test]
@@ -173,7 +174,6 @@ fn register_port_distinct_ports_isolated() {
 }
 
 #[test]
-#[should_panic(expected = "port already registered")]
 fn register_port_rejects_duplicate() {
     let (env, _router_id, router, _lc_id) = setup();
     let app_a = Address::generate(&env);
@@ -181,7 +181,8 @@ fn register_port_rejects_duplicate() {
     let port_id = String::from_str(&env, "transfer");
 
     router.register_port(&port_id, &app_a);
-    router.register_port(&port_id, &app_b);
+    let result = router.try_register_port(&port_id, &app_b);
+    assert_eq!(result, Err(Ok(Error::PortAlreadyRegistered.into())));
 }
 
 #[test]

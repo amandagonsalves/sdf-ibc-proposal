@@ -1,5 +1,7 @@
-use soroban_sdk::{Address, Bytes, Env, IntoVal, String, Symbol, Val, Vec};
+use soroban_sdk::{panic_with_error, Address, Bytes, Env, IntoVal, String, Symbol, Val, Vec};
 
+use crate::errors::Error;
+use crate::identifiers::{validate_client_type, validate_counterparty_client_id};
 use crate::types::{Counterparty, DataKey};
 
 pub(crate) fn register_client_type(env: &Env, client_type: String, lc_address: Address) {
@@ -7,8 +9,9 @@ pub(crate) fn register_client_type(env: &Env, client_type: String, lc_address: A
         .storage()
         .instance()
         .get(&DataKey::Admin)
-        .expect("admin not set");
+        .unwrap_or_else(|| panic_with_error!(env, Error::AdminNotSet));
     admin.require_auth();
+    validate_client_type(env, &client_type);
 
     env.storage()
         .persistent()
@@ -32,7 +35,7 @@ pub(crate) fn create_client(
         .storage()
         .persistent()
         .get(&DataKey::ClientTypeAddr(client_type.clone()))
-        .expect("unknown client_type");
+        .unwrap_or_else(|| panic_with_error!(env, Error::UnknownClientType));
 
     let client_id = mint_client_id(env, &client_type);
 
@@ -60,19 +63,20 @@ pub(crate) fn register_counterparty(
     counterparty_client_id: String,
     counterparty_commitment_prefix: Vec<Bytes>,
 ) {
+    validate_counterparty_client_id(env, &counterparty_client_id);
     if !env
         .storage()
         .persistent()
         .has(&DataKey::ClientType(client_id.clone()))
     {
-        panic!("client_id not found");
+        panic_with_error!(env, Error::ClientIdNotFound);
     }
     if env
         .storage()
         .persistent()
         .has(&DataKey::Counterparty(client_id.clone()))
     {
-        panic!("counterparty already registered");
+        panic_with_error!(env, Error::CounterpartyAlreadyRegistered);
     }
     let cp = Counterparty {
         client_id: counterparty_client_id,
@@ -96,14 +100,14 @@ pub(crate) fn update_client(env: &Env, client_id: String, client_message: Bytes)
         .get::<DataKey, bool>(&DataKey::Frozen(client_id.clone()))
         .unwrap_or(false)
     {
-        panic!("client frozen");
+        panic_with_error!(env, Error::ClientFrozen);
     }
 
     let lc_addr: Address = env
         .storage()
         .persistent()
         .get(&DataKey::ClientLcAddr(client_id.clone()))
-        .expect("client_id not found");
+        .unwrap_or_else(|| panic_with_error!(env, Error::ClientIdNotFound));
 
     let misbehaviour_args: Vec<Val> = soroban_sdk::vec![
         env,

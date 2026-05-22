@@ -2,11 +2,15 @@
 
 use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, String, Vec};
 
+mod errors;
 mod ibc_store;
 mod ics02_client;
 mod ics24_host;
+mod identifiers;
 mod port_router;
 mod types;
+
+pub use errors::Error;
 
 pub use types::{Counterparty, DataKey, Height, Packet, Payload};
 
