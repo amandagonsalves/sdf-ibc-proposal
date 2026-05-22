@@ -6,12 +6,6 @@ use soroban_sdk::{
     Address, Bytes, Env, IntoVal, String, Symbol, Vec,
 };
 
-// Locally-defined mirror types. These MUST match the XDR shape of the
-// router's structs in `contracts/router/src/types.rs` field-for-field. We
-// hand-roll them here rather than depending on the router crate because two
-// `#[contract]` impls cannot share a Soroban WASM binary (`__constructor`
-// symbol clash). If the router's types change, update these to match — they
-// are the wire contract.
 #[contracttype]
 #[derive(Clone)]
 pub struct Payload {

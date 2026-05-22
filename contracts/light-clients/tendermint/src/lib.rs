@@ -272,7 +272,6 @@ fn decode_header(env: &Env, bytes: &Bytes) -> TendermintHeader {
         .unwrap_or_else(|_| panic_with_error!(env, Error::InvalidHeader))
 }
 
-// Suppress dead-code warning until the production verifier hooks in.
 #[allow(dead_code)]
 fn _proof_specs_carrier(cs: &TendermintClientState) -> &Bytes {
     &cs.proof_specs

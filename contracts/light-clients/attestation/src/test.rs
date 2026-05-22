@@ -20,7 +20,6 @@ impl Attestation {
         BytesN::from_array(env, &self.signing.verifying_key().to_bytes())
     }
     fn sign(&self, env: &Env, msg: &Bytes) -> BytesN<64> {
-        // Materialise Bytes into a stack buffer (msg is small in tests).
         let len = msg.len() as usize;
         let mut buf = [0u8; 4096];
         msg.copy_into_slice(&mut buf[..len]);
@@ -29,7 +28,6 @@ impl Attestation {
     }
 }
 
-// Three attestors is the standard fixture (used as 2-of-3 or 1-of-3 by the tests).
 const N_ATTESTORS: usize = 3;
 
 fn setup(
@@ -142,8 +140,6 @@ fn update_state_rejects_below_quorum() {
 #[test]
 #[should_panic]
 fn update_state_rejects_wrong_signer() {
-    // Attestation at index 0 signs, but we claim it's index 1's signature.
-    // Ed25519 verify panics on mismatch, surfacing as a host error.
     let (env, client, attestors) = setup(1);
     let id = String::from_str(&env, "10-attestation-0");
 

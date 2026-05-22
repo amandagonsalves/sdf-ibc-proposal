@@ -118,9 +118,6 @@ fn update_state_rejected_once_frozen() {
 
 #[test]
 fn verify_membership_accepts_when_consensus_exists() {
-    // Stub verifier — anything passes against a valid (height, client).
-    // Production must walk an ICS-23 proof; this test only locks the
-    // dispatch path through the router today.
     let (env, client, id) = setup();
     assert!(client.verify_membership(
         &id,

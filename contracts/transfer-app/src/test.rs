@@ -118,7 +118,6 @@ fn initiate_transfer_rejects_zero_amount() {
     assert_eq!(result, Err(Ok(Error::AmountMustBePositive.into())));
 }
 
-// ---------- on_recv_packet ----------
 
 fn build_inbound_packet(
     env: &Env,
@@ -166,11 +165,9 @@ fn recv_packet_credits_receiver_and_returns_success_ack() {
         .recv_packet(&packet, &Bytes::from_slice(&f.env, b"proof"), &10);
 
     assert_eq!(f.transfer.balance_of(&receiver, &xlm(&f.env)), 500);
-    // Ack commit was written.
     assert!(f.router.acknowledgement(&f.source_client_id, &1).is_some());
 }
 
-// ---------- on_acknowledgement_packet (refund on error ack) ----------
 
 #[test]
 fn acknowledge_packet_with_error_ack_refunds_sender() {
@@ -189,7 +186,6 @@ fn acknowledge_packet_with_error_ack_refunds_sender() {
     assert_eq!(f.transfer.balance_of(&sender, &xlm(&f.env)), 600);
     assert_eq!(f.transfer.balance_of(&f.transfer_addr, &xlm(&f.env)), 400);
 
-    // Reconstruct the same packet the router stored.
     let packet = stellar_ibc_router::Packet {
         sequence: seq,
         source_client: f.source_client_id.clone(),
@@ -218,7 +214,6 @@ fn acknowledge_packet_with_error_ack_refunds_sender() {
         ],
     };
 
-    // Error ack: any bytes that don't match the SUCCESS_ACK_BYTE marker.
     let err_ack = Bytes::from_slice(&f.env, b"\xff\xff");
     f.router.acknowledge_packet(
         &packet,
@@ -282,12 +277,10 @@ fn acknowledge_packet_with_success_ack_leaves_escrow_released() {
         &10,
     );
 
-    // No refund — escrow stays released.
     assert_eq!(f.transfer.balance_of(&sender, &xlm(&f.env)), 600);
     assert_eq!(f.transfer.balance_of(&f.transfer_addr, &xlm(&f.env)), 400);
 }
 
-// ---------- balance accounting ----------
 
 #[test]
 fn mint_and_balance_of_round_trip() {
