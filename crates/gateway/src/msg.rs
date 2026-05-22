@@ -54,6 +54,8 @@ impl MsgHandler {
             ));
         }
 
+        stellar_strkey::ed25519::PrivateKey::from_string(&self.signing_key)
+            .map_err(|e| Status::internal(format!("signing key parse failed: {e}")))?;
         let keypair = Keypair::from_secret(&self.signing_key)
             .map_err(|e| Status::internal(format!("signing key parse failed: {e}")))?;
         let public_key = keypair.public_key();
