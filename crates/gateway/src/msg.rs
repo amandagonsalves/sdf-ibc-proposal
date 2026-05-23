@@ -316,6 +316,19 @@ mod tests {
         assert!(err.message().contains("signing key parse failed"));
     }
 
+    #[tokio::test]
+    async fn submit_misbehaviour_rejects_missing_client_id() {
+        let h = handler(VALID_CONTRACT_ID, "SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        let req = Request::new(MsgSubmitMisbehaviourRequest {
+            client_id: String::new(),
+            client_message: vec![1, 2, 3],
+            signer: String::new(),
+        });
+        let err = h.submit_misbehaviour(req).await.unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().contains("client_id"));
+    }
+
     #[test]
     fn scval_helpers_produce_expected_variants() {
         let s = scval_string("transfer").unwrap();
