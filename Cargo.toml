@@ -3,6 +3,7 @@ members = [
     "crates/core",
     "crates/gateway",
     "crates/integration-tests",
+    "crates/stellar-lc-wasm",
     "contracts/light-clients/*",
     "contracts/router",
     "contracts/transfer-app",

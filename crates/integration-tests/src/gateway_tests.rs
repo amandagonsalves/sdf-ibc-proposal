@@ -280,6 +280,8 @@ async fn test_msg_create_client_round_trip(channel: Channel) {
             client_state: vec![],
             consensus_state: vec![],
             signer: String::new(),
+            client_type: String::new(),
+            height: 0,
         })
         .await;
     expect_ok_or_unimplemented(label, resp);
