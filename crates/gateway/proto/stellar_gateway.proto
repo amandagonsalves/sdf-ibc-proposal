@@ -109,6 +109,15 @@ message QueryIbcHeaderResponse {
   bytes header = 1;
 }
 
+message StellarHeader {
+  uint32 ledger_seq        = 1;
+  bytes  ledger_header_xdr = 2;
+  bytes  ibc_state_root    = 3;
+  bytes  scp_node_id       = 4;
+  bytes  scp_signature     = 5;
+  bytes  signed_value_xdr  = 6;
+}
+
 message EventsRequest {
   uint32 start_ledger = 1;
   string cursor       = 2;

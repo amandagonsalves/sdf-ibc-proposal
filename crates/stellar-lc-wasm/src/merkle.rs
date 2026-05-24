@@ -3,6 +3,10 @@ use prost::{Message, Oneof};
 use crate::error::ContractError;
 use crate::smt::HASH_SIZE;
 
+pub type Siblings = Vec<[u8; HASH_SIZE]>;
+pub type DecodedMembership = (Vec<u8>, Vec<u8>, Siblings);
+pub type DecodedNonMembership = (Vec<u8>, Siblings);
+
 #[derive(Clone, PartialEq, Message)]
 pub struct MerkleProof {
     #[prost(message, repeated, tag = "1")]
@@ -69,9 +73,7 @@ pub struct InnerOp {
     pub suffix: Vec<u8>,
 }
 
-pub fn decode_membership_proof(
-    bytes: &[u8],
-) -> Result<(Vec<u8>, Vec<u8>, Vec<[u8; HASH_SIZE]>), ContractError> {
+pub fn decode_membership_proof(bytes: &[u8]) -> Result<DecodedMembership, ContractError> {
     let merkle = MerkleProof::decode(bytes)
         .map_err(|e| ContractError::InvalidWire(format!("MerkleProof: {e}")))?;
     let first = merkle
@@ -87,9 +89,7 @@ pub fn decode_membership_proof(
     Ok((existence.key, existence.value, siblings))
 }
 
-pub fn decode_non_membership_proof(
-    bytes: &[u8],
-) -> Result<(Vec<u8>, Vec<[u8; HASH_SIZE]>), ContractError> {
+pub fn decode_non_membership_proof(bytes: &[u8]) -> Result<DecodedNonMembership, ContractError> {
     let merkle = MerkleProof::decode(bytes)
         .map_err(|e| ContractError::InvalidWire(format!("MerkleProof: {e}")))?;
     let first = merkle
@@ -101,7 +101,9 @@ pub fn decode_non_membership_proof(
         Proof::Nonexist(n) => n,
         Proof::Exist(_) => return Err(ContractError::MerkleVerificationFailed),
     };
-    let inner = nonexist.left.ok_or(ContractError::MerkleVerificationFailed)?;
+    let inner = nonexist
+        .left
+        .ok_or(ContractError::MerkleVerificationFailed)?;
     if !inner.value.is_empty() {
         return Err(ContractError::MerkleVerificationFailed);
     }
@@ -109,10 +111,10 @@ pub fn decode_non_membership_proof(
     Ok((nonexist.key, siblings))
 }
 
-fn extract_siblings(ops: &[InnerOp]) -> Result<Vec<[u8; HASH_SIZE]>, ContractError> {
+fn extract_siblings(ops: &[InnerOp]) -> Result<Siblings, ContractError> {
     ops.iter()
         .map(extract_sibling)
-        .collect::<Result<Vec<_>, _>>()
+        .collect::<Result<Siblings, _>>()
 }
 
 fn extract_sibling(op: &InnerOp) -> Result<[u8; HASH_SIZE], ContractError> {
@@ -125,10 +127,7 @@ fn extract_sibling(op: &InnerOp) -> Result<[u8; HASH_SIZE], ContractError> {
             .as_slice()
             .try_into()
             .map_err(|_| ContractError::MerkleVerificationFailed)
-    } else if op.suffix.is_empty()
-        && op.prefix.len() == 1 + HASH_SIZE
-        && op.prefix[0] == 0x01
-    {
+    } else if op.suffix.is_empty() && op.prefix.len() == 1 + HASH_SIZE && op.prefix[0] == 0x01 {
         op.prefix[1..]
             .try_into()
             .map_err(|_| ContractError::MerkleVerificationFailed)
@@ -199,10 +198,7 @@ mod tests {
         (root, merkle.encode_to_vec())
     }
 
-    fn build_non_membership_fixture(
-        key: &[u8],
-        sibling_byte: u8,
-    ) -> ([u8; HASH_SIZE], Vec<u8>) {
+    fn build_non_membership_fixture(key: &[u8], sibling_byte: u8) -> ([u8; HASH_SIZE], Vec<u8>) {
         let siblings: Vec<[u8; HASH_SIZE]> = (0..TREE_DEPTH)
             .map(|i| [sibling_byte.wrapping_add(i as u8); HASH_SIZE])
             .collect();
@@ -275,9 +271,7 @@ mod tests {
         assert_eq!(decoded_key, key);
         assert_eq!(siblings.len(), TREE_DEPTH);
 
-        assert!(crate::smt::verify_non_membership_raw(
-            &root, key, &siblings
-        ));
+        assert!(crate::smt::verify_non_membership_raw(&root, key, &siblings));
     }
 
     #[test]
@@ -353,5 +347,4 @@ mod tests {
         };
         assert_eq!(extract_sibling(&op).unwrap(), s);
     }
-
 }

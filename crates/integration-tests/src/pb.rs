@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 include!(concat!(env!("PROTOS_OUT_DIR"), "/stellar.gateway.v1.rs"));
 
 include!(concat!(

@@ -189,7 +189,9 @@ impl StellarGatewayQuery for QueryHandler {
         request: Request<QueryIbcHeaderRequest>,
     ) -> Result<Response<QueryIbcHeaderResponse>, Status> {
         use prost::Message as _;
-        use soroban_client::xdr::{LedgerHeader, Limits, ReadXdr, StellarValueExt, WriteXdr};
+        use soroban_client::xdr::{
+            LedgerHeader, Limits, PublicKey, ReadXdr, StellarValueExt, WriteXdr,
+        };
 
         let seq = request.into_inner().height as u32;
 
@@ -202,16 +204,20 @@ impl StellarGatewayQuery for QueryHandler {
         let header = LedgerHeader::from_xdr(&ledger.header_xdr, Limits::none())
             .map_err(|e| Status::internal(format!("LedgerHeader XDR decode: {e}")))?;
 
-        let (scp_node_id, scp_signature) = match header.scp_value.ext {
+        let scp_value = header.scp_value;
+        let (scp_node_id, scp_signature) = match &scp_value.ext {
             StellarValueExt::Signed(sig) => {
-                let node_id_xdr = sig
-                    .node_id
-                    .to_xdr(Limits::none())
-                    .map_err(|e| Status::internal(format!("NodeId XDR encode: {e}")))?;
-                (node_id_xdr, sig.signature.to_vec())
+                let PublicKey::PublicKeyTypeEd25519(pubkey) = &sig.node_id.0;
+                (pubkey.0.to_vec(), sig.signature.to_vec())
             }
             StellarValueExt::Basic => (vec![], vec![]),
         };
+
+        let mut basic_scp_value = scp_value.clone();
+        basic_scp_value.ext = StellarValueExt::Basic;
+        let signed_value_xdr = basic_scp_value
+            .to_xdr(Limits::none())
+            .map_err(|e| Status::internal(format!("basic StellarValue XDR encode: {e}")))?;
 
         let ibc_state_root = self
             .tracker
@@ -227,6 +233,7 @@ impl StellarGatewayQuery for QueryHandler {
             ibc_state_root: ibc_state_root.to_vec(),
             scp_node_id,
             scp_signature,
+            signed_value_xdr,
         };
 
         let mut header_bytes = vec![];
@@ -243,9 +250,9 @@ impl StellarGatewayQuery for QueryHandler {
         &self,
         request: Request<EventsRequest>,
     ) -> Result<Response<EventsResponse>, Status> {
+        use soroban_client::soroban_rpc::EventType;
         use soroban_client::xdr::{Limits, WriteXdr};
         use soroban_client::{EventFilter, Pagination};
-        use soroban_client::soroban_rpc::EventType;
 
         let contract_id = self
             .ibc_contract_id
@@ -264,7 +271,11 @@ impl StellarGatewayQuery for QueryHandler {
             ));
         };
 
-        let limit = if req.limit == 0 { None } else { Some(req.limit) };
+        let limit = if req.limit == 0 {
+            None
+        } else {
+            Some(req.limit)
+        };
         let filter = EventFilter::new(EventType::Contract).contract(&contract_id);
 
         let resp = self

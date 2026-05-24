@@ -72,13 +72,12 @@ impl MsgHandler {
             .map_err(|e| Status::invalid_argument(format!("invalid IBC_CONTRACT_ID: {e}")))?;
         let op = contract.call(method, Some(args));
 
-        let tx_to_simulate =
-            TransactionBuilder::new(&mut account, &self.network_passphrase, None)
-                .fee(100_u32)
-                .add_operation(op)
-                .set_timeout(TIMEOUT_INFINITE)
-                .map_err(|e| Status::internal(format!("set_timeout: {e}")))?
-                .build();
+        let tx_to_simulate = TransactionBuilder::new(&mut account, &self.network_passphrase, None)
+            .fee(100_u32)
+            .add_operation(op)
+            .set_timeout(TIMEOUT_INFINITE)
+            .map_err(|e| Status::internal(format!("set_timeout: {e}")))?
+            .build();
 
         let mut tx = self
             .rpc
@@ -290,8 +289,7 @@ mod tests {
 
     const TESTNET_URL: &str = "https://soroban-testnet.stellar.org";
     const NETWORK_PASSPHRASE: &str = "Test SDF Network ; September 2015";
-    const VALID_CONTRACT_ID: &str =
-        "CBHJI5KZOZUPE7ADDBEYDC6VHZAQI7HHK6JIFW2M67KBRY36OYPVFXGB";
+    const VALID_CONTRACT_ID: &str = "CBHJI5KZOZUPE7ADDBEYDC6VHZAQI7HHK6JIFW2M67KBRY36OYPVFXGB";
 
     fn rpc() -> RpcClient {
         RpcClient::new(TESTNET_URL).unwrap()
@@ -308,7 +306,10 @@ mod tests {
 
     #[tokio::test]
     async fn invoke_router_requires_contract_id() {
-        let h = handler("", "SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        let h = handler(
+            "",
+            "SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        );
         let err = h.invoke_router("noop", vec![]).await.unwrap_err();
         assert_eq!(err.code(), tonic::Code::FailedPrecondition);
         assert!(err.message().contains("IBC_CONTRACT_ID"));
@@ -332,7 +333,10 @@ mod tests {
 
     #[tokio::test]
     async fn submit_misbehaviour_rejects_missing_client_id() {
-        let h = handler(VALID_CONTRACT_ID, "SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        let h = handler(
+            VALID_CONTRACT_ID,
+            "SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        );
         let req = Request::new(MsgSubmitMisbehaviourRequest {
             client_id: String::new(),
             client_message: vec![1, 2, 3],

@@ -17,7 +17,12 @@ pub(crate) const PROVABLE_TTL_EXTEND_TO: u32 = 86_400;
 pub(crate) const ERROR_ACK_PREIMAGE: &[u8] = b"UNIVERSAL_ERROR_ACKNOWLEDGEMENT";
 
 pub(crate) fn packet_commitment_path(env: &Env, source_client_id: &String, sequence: u64) -> Bytes {
-    v2_path_key(env, source_client_id, PACKET_COMMITMENT_DISCRIMINATOR, sequence)
+    v2_path_key(
+        env,
+        source_client_id,
+        PACKET_COMMITMENT_DISCRIMINATOR,
+        sequence,
+    )
 }
 
 pub(crate) fn packet_receipt_path(env: &Env, dest_client_id: &String, sequence: u64) -> Bytes {
@@ -28,7 +33,12 @@ pub(crate) fn ack_commitment_path(env: &Env, dest_client_id: &String, sequence: 
     v2_path_key(env, dest_client_id, ACK_COMMITMENT_DISCRIMINATOR, sequence)
 }
 
-pub(crate) fn v2_path_key(env: &Env, client_id: &String, discriminator: u8, sequence: u64) -> Bytes {
+pub(crate) fn v2_path_key(
+    env: &Env,
+    client_id: &String,
+    discriminator: u8,
+    sequence: u64,
+) -> Bytes {
     let id_len = client_id.len() as usize;
     let mut buf = [0u8; 128];
     client_id.copy_into_slice(&mut buf[..id_len]);
@@ -71,7 +81,10 @@ pub(crate) fn commit_v2_packet(env: &Env, packet: &Packet) -> BytesN<32> {
     sha256_bytes(env, &preimage)
 }
 
-pub(crate) fn commit_v2_acknowledgement(env: &Env, app_acks: &soroban_sdk::Vec<Bytes>) -> BytesN<32> {
+pub(crate) fn commit_v2_acknowledgement(
+    env: &Env,
+    app_acks: &soroban_sdk::Vec<Bytes>,
+) -> BytesN<32> {
     let mut concat = Bytes::new(env);
     for ack in app_acks.iter() {
         concat.append(&sha256_bytes(env, &ack).into());
@@ -193,26 +206,36 @@ mod tests {
         let base = commit_v2_packet(&env, &packet);
 
         packet.timeout_timestamp = 2_000;
-        assert_ne!(base, commit_v2_packet(&env, &packet), "timeout must affect commitment");
+        assert_ne!(
+            base,
+            commit_v2_packet(&env, &packet),
+            "timeout must affect commitment"
+        );
 
         packet.timeout_timestamp = 1_000;
         packet.dest_client = String::from_str(&env, "07-tendermint-1");
-        assert_ne!(base, commit_v2_packet(&env, &packet), "dest_client must affect commitment");
+        assert_ne!(
+            base,
+            commit_v2_packet(&env, &packet),
+            "dest_client must affect commitment"
+        );
 
         packet.dest_client = String::from_str(&env, "07-tendermint-0");
         let mut p2 = payload.clone();
         p2.value = Bytes::from_slice(&env, b"world");
         packet.payloads = vec![&env, p2];
-        assert_ne!(base, commit_v2_packet(&env, &packet), "payload value must affect commitment");
+        assert_ne!(
+            base,
+            commit_v2_packet(&env, &packet),
+            "payload value must affect commitment"
+        );
     }
 
     #[test]
     fn commit_v2_acknowledgement_distinguishes_payload_count() {
         let env = test_env();
-        let single = commit_v2_acknowledgement(
-            &env,
-            &vec![&env, Bytes::from_slice(&env, b"\x01\x02\x03")],
-        );
+        let single =
+            commit_v2_acknowledgement(&env, &vec![&env, Bytes::from_slice(&env, b"\x01\x02\x03")]);
         let two = commit_v2_acknowledgement(
             &env,
             &vec![

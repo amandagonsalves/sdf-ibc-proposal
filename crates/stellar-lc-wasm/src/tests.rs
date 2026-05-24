@@ -30,7 +30,7 @@ fn trusted_signing_key() -> SigningKey {
 fn signed_envelope(key: &SigningKey, statement: &[u8]) -> ScpEnvelope {
     let mut preimage = Vec::with_capacity(32 + 4 + statement.len());
     preimage.extend_from_slice(&NETWORK_ID);
-    preimage.extend_from_slice(&[0, 0, 0, 1]);
+    preimage.extend_from_slice(&[0, 0, 0, 4]);
     preimage.extend_from_slice(statement);
     let digest: [u8; 32] = Sha256::digest(&preimage).into();
     let signature = key.sign(&digest);
@@ -111,11 +111,13 @@ fn header_with_envelopes(
     }
 }
 
-fn do_instantiate(deps: &mut cosmwasm_std::OwnedDeps<
-    cosmwasm_std::MemoryStorage,
-    cosmwasm_std::testing::MockApi,
-    cosmwasm_std::testing::MockQuerier,
->) {
+fn do_instantiate(
+    deps: &mut cosmwasm_std::OwnedDeps<
+        cosmwasm_std::MemoryStorage,
+        cosmwasm_std::testing::MockApi,
+        cosmwasm_std::testing::MockQuerier,
+    >,
+) {
     let env = mock_env();
     let info = message_info(&deps.api.addr_make("creator"), &[]);
     let cs = fresh_client_state(100);
@@ -258,10 +260,7 @@ fn update_state_rejects_broken_ledger_chain() {
         client_message: encode(&hdr),
     });
     let err = sudo(deps.as_mut(), mock_env(), msg).unwrap_err();
-    assert!(matches!(
-        err,
-        ContractError::LedgerHashChainBroken { .. }
-    ));
+    assert!(matches!(err, ContractError::LedgerHashChainBroken { .. }));
 }
 
 #[test]
@@ -641,7 +640,14 @@ fn update_state_rejects_when_network_id_is_unconfigured() {
     )
     .unwrap();
 
-    let hdr = header(100, 105, 1_000_500, LEDGER_HASH_INIT, LEDGER_HASH_NEXT, ROOT_NEXT);
+    let hdr = header(
+        100,
+        105,
+        1_000_500,
+        LEDGER_HASH_INIT,
+        LEDGER_HASH_NEXT,
+        ROOT_NEXT,
+    );
     let err = sudo(
         deps.as_mut(),
         mock_env(),
@@ -654,6 +660,37 @@ fn update_state_rejects_when_network_id_is_unconfigured() {
 }
 
 #[test]
+fn update_state_rejects_when_envelopes_carry_empty_statement_xdr() {
+    let mut deps = mock_dependencies();
+    do_instantiate(&mut deps);
+
+    let key = trusted_signing_key();
+    let env_with_empty_statement = ScpEnvelope {
+        node_id: key.verifying_key().to_bytes().to_vec(),
+        statement_xdr: Vec::new(),
+        signature: vec![0u8; 64],
+    };
+    let hdr = header_with_envelopes(
+        100,
+        105,
+        1_000_500,
+        LEDGER_HASH_INIT,
+        LEDGER_HASH_NEXT,
+        ROOT_NEXT,
+        vec![env_with_empty_statement],
+    );
+    let err = sudo(
+        deps.as_mut(),
+        mock_env(),
+        SudoMsg::UpdateState(UpdateStateMsg {
+            client_message: encode(&hdr),
+        }),
+    )
+    .unwrap_err();
+    assert!(matches!(err, ContractError::QuorumNotMet));
+}
+
+#[test]
 fn update_state_rejects_envelope_signed_against_different_network() {
     let mut deps = mock_dependencies();
     do_instantiate(&mut deps);
@@ -662,7 +699,7 @@ fn update_state_rejects_envelope_signed_against_different_network() {
     let key = trusted_signing_key();
     let mut preimage = Vec::with_capacity(32 + 4 + STATEMENT_BYTES.len());
     preimage.extend_from_slice(&other_network);
-    preimage.extend_from_slice(&[0, 0, 0, 1]);
+    preimage.extend_from_slice(&[0, 0, 0, 4]);
     preimage.extend_from_slice(STATEMENT_BYTES);
     let digest: [u8; 32] = Sha256::digest(&preimage).into();
     let signature = key.sign(&digest);

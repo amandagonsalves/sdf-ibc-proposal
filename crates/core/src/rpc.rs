@@ -114,13 +114,12 @@ impl RpcClient {
     }
 
     pub async fn submit_and_wait(&self, tx_xdr: &[u8]) -> anyhow::Result<String> {
-        self.submit_and_wait_for_result(tx_xdr).await.map(|s| s.hash)
+        self.submit_and_wait_for_result(tx_xdr)
+            .await
+            .map(|s| s.hash)
     }
 
-    pub async fn submit_and_wait_for_result(
-        &self,
-        tx_xdr: &[u8],
-    ) -> anyhow::Result<SubmittedTx> {
+    pub async fn submit_and_wait_for_result(&self, tx_xdr: &[u8]) -> anyhow::Result<SubmittedTx> {
         let envelope = TransactionEnvelope::from_xdr(tx_xdr, Limits::none())
             .map_err(|e| anyhow::anyhow!("invalid TransactionEnvelope XDR: {e}"))?;
 

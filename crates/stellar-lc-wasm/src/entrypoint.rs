@@ -16,7 +16,7 @@ use crate::smt::{verify_membership_raw, verify_non_membership_raw, HASH_SIZE};
 use crate::state::{CLIENT_STATE, CONSENSUS_STATES};
 use crate::types::{ClientState, ConsensusState, Height as WireHeight, ScpEnvelope, StellarHeader};
 
-const ENVELOPE_TYPE_SCP: [u8; 4] = [0, 0, 0, 1];
+const ENVELOPE_TYPE_SCPVALUE: [u8; 4] = [0, 0, 0, 4];
 
 #[entry_point]
 pub fn instantiate(
@@ -225,9 +225,9 @@ fn verify_membership(
     msg: VerifyMembershipMsg,
 ) -> Result<(), ContractError> {
     let cs = require_client_state_mut(deps.as_ref())?;
-    if cs.frozen_height.is_some() {
+    if let Some(h) = cs.frozen_height.as_ref() {
         return Err(ContractError::Frozen {
-            height: cs.frozen_height.as_ref().unwrap().revision_height,
+            height: h.revision_height,
         });
     }
     let consensus = require_consensus_state(deps.as_ref(), msg.height.revision_height)?;
@@ -255,9 +255,9 @@ fn verify_non_membership(
     msg: VerifyNonMembershipMsg,
 ) -> Result<(), ContractError> {
     let cs = require_client_state_mut(deps.as_ref())?;
-    if cs.frozen_height.is_some() {
+    if let Some(h) = cs.frozen_height.as_ref() {
         return Err(ContractError::Frozen {
-            height: cs.frozen_height.as_ref().unwrap().revision_height,
+            height: h.revision_height,
         });
     }
     let consensus = require_consensus_state(deps.as_ref(), msg.height.revision_height)?;
@@ -302,10 +302,7 @@ fn require_client_state_mut(deps: Deps<'_>) -> Result<ClientState, ContractError
     require_client_state(deps)
 }
 
-fn require_consensus_state(
-    deps: Deps<'_>,
-    height: u64,
-) -> Result<ConsensusState, ContractError> {
+fn require_consensus_state(deps: Deps<'_>, height: u64) -> Result<ConsensusState, ContractError> {
     CONSENSUS_STATES
         .may_load(deps.storage, height)?
         .ok_or(ContractError::ConsensusStateMissing { height })
@@ -350,10 +347,13 @@ fn verify_scp_quorum(
             continue;
         }
 
+        if env.statement_xdr.is_empty() {
+            continue;
+        }
         let mut preimage =
-            Vec::with_capacity(32 + ENVELOPE_TYPE_SCP.len() + env.statement_xdr.len());
+            Vec::with_capacity(32 + ENVELOPE_TYPE_SCPVALUE.len() + env.statement_xdr.len());
         preimage.extend_from_slice(&client_state.network_id);
-        preimage.extend_from_slice(&ENVELOPE_TYPE_SCP);
+        preimage.extend_from_slice(&ENVELOPE_TYPE_SCPVALUE);
         preimage.extend_from_slice(&env.statement_xdr);
         let digest: [u8; 32] = Sha256::digest(&preimage).into();
 

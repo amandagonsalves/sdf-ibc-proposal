@@ -251,8 +251,11 @@ fn dispatch_recv_callbacks(env: &Env, packet: &Packet) -> Vec<Bytes> {
             sequence: packet.sequence,
             payload,
         };
-        let ack: Bytes =
-            env.invoke_contract(&app, &Symbol::new(env, "on_recv_packet"), vec![env, cb.into_val(env)]);
+        let ack: Bytes = env.invoke_contract(
+            &app,
+            &Symbol::new(env, "on_recv_packet"),
+            vec![env, cb.into_val(env)],
+        );
         acks.push_back(ack);
     }
     if acks.is_empty() {
@@ -400,4 +403,3 @@ fn counterparty_v2_path(
     out.append(&Bytes::from_slice(env, &buf[..id_len + 9]));
     out
 }
-

@@ -32,7 +32,11 @@ const N_ATTESTORS: usize = 3;
 
 fn setup(
     min_required_sigs: u32,
-) -> (Env, AttestationLightClientClient<'static>, [Attestation; N_ATTESTORS]) {
+) -> (
+    Env,
+    AttestationLightClientClient<'static>,
+    [Attestation; N_ATTESTORS],
+) {
     let env = Env::default();
     let contract_id = env.register(AttestationLightClient, ());
     let client = AttestationLightClientClient::new(&env, &contract_id);

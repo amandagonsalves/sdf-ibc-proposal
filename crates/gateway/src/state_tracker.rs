@@ -223,5 +223,5 @@ fn is_v2_provable_path(key: &[u8]) -> bool {
         return false;
     }
     let discriminator = key[key.len() - 9];
-    matches!(discriminator, 0x01 | 0x02 | 0x03)
+    matches!(discriminator, 0x01..=0x03)
 }

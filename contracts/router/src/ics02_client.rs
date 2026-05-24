@@ -137,11 +137,8 @@ pub(crate) fn update_client(env: &Env, client_id: String, client_message: Bytes)
         return 0;
     }
 
-    let args: Vec<Val> = soroban_sdk::vec![
-        env,
-        client_id.into_val(env),
-        client_message.into_val(env),
-    ];
+    let args: Vec<Val> =
+        soroban_sdk::vec![env, client_id.into_val(env), client_message.into_val(env),];
     env.invoke_contract(&lc_addr, &Symbol::new(env, "update_state"), args)
 }
 

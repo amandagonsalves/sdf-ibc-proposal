@@ -27,7 +27,9 @@ pub enum ContractError {
     #[error("header height {target} must be greater than trusted height {trusted}")]
     NonAdvancingHeight { trusted: u64, target: u64 },
 
-    #[error("header ledger_hash chain mismatch (trusted={trusted_hex}, header_previous={header_hex})")]
+    #[error(
+        "header ledger_hash chain mismatch (trusted={trusted_hex}, header_previous={header_hex})"
+    )]
     LedgerHashChainBroken {
         trusted_hex: String,
         header_hex: String,

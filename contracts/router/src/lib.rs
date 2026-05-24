@@ -14,9 +14,7 @@ mod types;
 
 pub use errors::Error;
 pub use events::{AckPacket, RecvPacket, SendPacket, TimeoutPacket, WriteAck};
-pub use types::{
-    OnAcknowledgementPacketCallback, OnRecvPacketCallback, OnTimeoutPacketCallback,
-};
+pub use types::{OnAcknowledgementPacketCallback, OnRecvPacketCallback, OnTimeoutPacketCallback};
 
 pub use types::{Counterparty, DataKey, Height, Packet, Payload};
 

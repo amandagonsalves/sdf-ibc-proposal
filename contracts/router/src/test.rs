@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use super::*;
-use stellar_mock_light_client::{MockLightClient, MockLightClientClient};
 use soroban_sdk::testutils::{Address as _, Ledger};
 use soroban_sdk::{contract, contractimpl, vec, Bytes, BytesN, Env, String};
+use stellar_mock_light_client::{MockLightClient, MockLightClientClient};
 use types::{Packet, Payload};
 
 #[contract]
@@ -208,7 +208,10 @@ fn provable_paths_are_keyed_by_distinct_discriminators() {
     router.set_ack_commitment(&client_id, &1, &same_value);
     router.set_packet_receipt(&client_id, &1);
 
-    assert_eq!(router.packet_commitment(&client_id, &1).unwrap(), same_value);
+    assert_eq!(
+        router.packet_commitment(&client_id, &1).unwrap(),
+        same_value
+    );
     assert_eq!(router.acknowledgement(&client_id, &1).unwrap(), same_value);
     assert!(router.has_packet_receipt(&client_id, &1));
 
@@ -276,8 +279,12 @@ fn send_packet_mints_sequences_and_stores_commitment() {
     let f = setup_packet_flow();
     let payload = mk_payload(&f.env, &f.port_id, b"hello");
 
-    let seq1 = f.router.send_packet(&f.client_id, &2_000, &vec![&f.env, payload.clone()]);
-    let seq2 = f.router.send_packet(&f.client_id, &2_000, &vec![&f.env, payload]);
+    let seq1 = f
+        .router
+        .send_packet(&f.client_id, &2_000, &vec![&f.env, payload.clone()]);
+    let seq2 = f
+        .router
+        .send_packet(&f.client_id, &2_000, &vec![&f.env, payload]);
     assert_eq!(seq1, 1);
     assert_eq!(seq2, 2);
     assert!(f.router.packet_commitment(&f.client_id, &seq1).is_some());
@@ -288,7 +295,9 @@ fn send_packet_mints_sequences_and_stores_commitment() {
 fn send_packet_rejects_expired_timeout() {
     let f = setup_packet_flow();
     let payload = mk_payload(&f.env, &f.port_id, b"x");
-    let result = f.router.try_send_packet(&f.client_id, &500, &vec![&f.env, payload]);
+    let result = f
+        .router
+        .try_send_packet(&f.client_id, &500, &vec![&f.env, payload]);
     assert_eq!(result, Err(Ok(Error::TimeoutAlreadyElapsed.into())));
 }
 
@@ -313,7 +322,9 @@ fn send_packet_rejects_no_counterparty() {
 #[test]
 fn send_packet_rejects_empty_payloads() {
     let f = setup_packet_flow();
-    let result = f.router.try_send_packet(&f.client_id, &2_000, &vec![&f.env]);
+    let result = f
+        .router
+        .try_send_packet(&f.client_id, &2_000, &vec![&f.env]);
     assert_eq!(result, Err(Ok(Error::PayloadsEmpty.into())));
 }
 
@@ -335,7 +346,8 @@ fn recv_packet_stores_receipt_and_ack() {
     let f = setup_packet_flow();
     let packet = recv_packet_for(&f, 1, b"hello");
 
-    f.router.recv_packet(&packet, &Bytes::from_slice(&f.env, b"proof"), &10);
+    f.router
+        .recv_packet(&packet, &Bytes::from_slice(&f.env, b"proof"), &10);
 
     assert!(f.router.has_packet_receipt(&f.client_id, &1));
     assert!(f.router.acknowledgement(&f.client_id, &1).is_some());
@@ -363,7 +375,9 @@ fn recv_packet_rejects_expired_timeout() {
         timeout_timestamp: 500,
         payloads: vec![&f.env, payload],
     };
-    let result = f.router.try_recv_packet(&stale_packet, &Bytes::from_slice(&f.env, b"p"), &10);
+    let result = f
+        .router
+        .try_recv_packet(&stale_packet, &Bytes::from_slice(&f.env, b"p"), &10);
     assert_eq!(result, Err(Ok(Error::TimeoutAlreadyElapsed.into())));
 }
 
@@ -378,9 +392,9 @@ fn recv_packet_rejects_wrong_counterparty() {
         timeout_timestamp: 2_000,
         payloads: vec![&f.env, payload],
     };
-    let result = f
-        .router
-        .try_recv_packet(&mismatched_packet, &Bytes::from_slice(&f.env, b"p"), &10);
+    let result =
+        f.router
+            .try_recv_packet(&mismatched_packet, &Bytes::from_slice(&f.env, b"p"), &10);
     assert_eq!(result, Err(Ok(Error::PacketCounterpartyMismatch.into())));
 }
 
@@ -390,7 +404,8 @@ fn recv_packet_rejects_wrong_counterparty() {
 fn write_acknowledgement_after_recv_rejects_duplicate() {
     let f = setup_packet_flow();
     let packet = recv_packet_for(&f, 1, b"hello");
-    f.router.recv_packet(&packet, &Bytes::from_slice(&f.env, b"proof"), &10);
+    f.router
+        .recv_packet(&packet, &Bytes::from_slice(&f.env, b"proof"), &10);
 
     // recv_packet wrote the ack; a second direct call must reject.
     let result = f.router.try_write_acknowledgement(
@@ -418,7 +433,9 @@ fn write_acknowledgement_rejects_when_no_receipt() {
 fn acknowledge_packet_clears_commitment() {
     let f = setup_packet_flow();
     let payload = mk_payload(&f.env, &f.port_id, b"hello");
-    let seq = f.router.send_packet(&f.client_id, &2_000, &vec![&f.env, payload.clone()]);
+    let seq = f
+        .router
+        .send_packet(&f.client_id, &2_000, &vec![&f.env, payload.clone()]);
     assert!(f.router.packet_commitment(&f.client_id, &seq).is_some());
 
     let packet = Packet {
@@ -461,7 +478,9 @@ fn acknowledge_packet_rejects_when_no_commitment() {
 fn timeout_packet_clears_commitment_when_elapsed() {
     let f = setup_packet_flow();
     let payload = mk_payload(&f.env, &f.port_id, b"hello");
-    let seq = f.router.send_packet(&f.client_id, &2_000, &vec![&f.env, payload.clone()]);
+    let seq = f
+        .router
+        .send_packet(&f.client_id, &2_000, &vec![&f.env, payload.clone()]);
     assert!(f.router.packet_commitment(&f.client_id, &seq).is_some());
 
     // Mock LC returns 0 for get_timestamp_at_height, so `proof_ts > timeout_timestamp`

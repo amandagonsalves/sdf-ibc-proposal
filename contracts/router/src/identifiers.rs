@@ -22,7 +22,7 @@ pub(crate) fn validate_port_id(env: &Env, s: &String) {
 
 fn validate_custom_identifier(env: &Env, s: &String) {
     let len = s.len() as usize;
-    if len < MIN_LEN || len > MAX_LEN {
+    if !(MIN_LEN..=MAX_LEN).contains(&len) {
         panic_with_error!(env, Error::InvalidIdentifierLength);
     }
 
