@@ -1,27 +1,22 @@
-.PHONY: test upload-wasm health-check hermes-health docker-health docker-health-local upload-stellar-lc create-stellar-client
+.PHONY: f0 hermes-image gateway-image upload-lc-wasm deploy-contracts caribic-preflight
 
-SCRIPT_DIR  := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-REPO_ROOT   := $(abspath $(SCRIPT_DIR)..)
-TESTS_DIR   := $(SCRIPT_DIR)tests
-WASM_FILE   := $(REPO_ROOT)/target/wasm32-unknown-unknown/release/stellar_ibc_light_client.wasm
+SCRIPT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+FLOWS_DIR  := $(SCRIPT_DIR)flows
 
+f0:
+	@bash $(FLOWS_DIR)/f0-bootstrap.sh
 
-test: upload-wasm health-check
-	@echo ""
-	@echo "All tests passed."
+hermes-image:
+	@bash $(FLOWS_DIR)/build-hermes-image.sh
 
-upload-wasm:
-	@test -f "$(WASM_FILE)" || (echo "ERROR: WASM not built. Run: bash ci/entrypoint.sh" && exit 1)
-	@bash $(TESTS_DIR)/upload-wasm.sh
+gateway-image:
+	@bash $(FLOWS_DIR)/build-gateway-image.sh
 
-health-check:
-	@bash $(TESTS_DIR)/health-check.sh
+upload-lc-wasm:
+	@bash $(FLOWS_DIR)/upload-lc-wasm.sh
 
-hermes-health:
-	@bash $(SCRIPT_DIR)hermes-health.sh
+deploy-contracts:
+	@bash $(FLOWS_DIR)/upload-and-deploy-contracts.sh
 
-upload-stellar-lc:
-	@bash $(SCRIPT_DIR)upload-stellar-lc.sh
-
-create-stellar-client:
-	@bash $(SCRIPT_DIR)create-stellar-client.sh $(CHECKSUM)
+caribic-preflight:
+	@bash $(FLOWS_DIR)/caribic-preflight.sh
