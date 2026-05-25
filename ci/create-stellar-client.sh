@@ -1,27 +1,4 @@
 #!/bin/bash
-#
-# Task 2 phase 2: create a Stellar 08-wasm client on `cardanoentrypoint`,
-# verify it shows up under `hermes query clients`, drive an `update_client`
-# tx, and assert the new ConsensusState advances the height.
-#
-# Requires:
-#   - `make -C ci upload-stellar-lc` already succeeded — provides the wasm
-#     checksum that must be plumbed into `wasm_checksum_hex` of the
-#     stellar-testnet block in `~/.hermes/config.toml`.
-#   - The stellar-hermes-gateway is up at the URL in the config block
-#     (default http://127.0.0.1:50052).
-#   - The cardano-entrypoint chain is up at localhost:26657.
-#   - A funded hermes key is registered for both chains (see
-#     `ci/entrypoint.sh` for the cardano relayer key import).
-#
-# Behavior:
-#   - Reads the checksum from arg 1 OR auto-detects from the cardano chain's
-#     `query ibc-wasm checksums` (picks the most recently registered).
-#   - Patches the checksum into `~/.hermes/config.toml`'s `wasm_checksum_hex`.
-#   - Runs the create / query / update sequence in order. Each step prints
-#     its result. Exits non-zero on the first failure.
-#   - Skips with exit 0 if either chain or the gateway is unreachable.
-#
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -47,7 +24,6 @@ if [[ ! -f "${HERMES_CONFIG}" ]]; then
   exit 1
 fi
 
-# ── Preconditions ─────────────────────────────────────────────────────────────
 
 echo ""
 echo "Step 1: Probing ${HOST_CHAIN} at ${CARDANO_REST}..."
@@ -65,7 +41,6 @@ if ! curl -sf "${GATEWAY_HTTP}/health" > /dev/null 2>&1; then
 fi
 echo "  Reachable."
 
-# ── Resolve the wasm checksum ─────────────────────────────────────────────────
 
 CHECKSUM_HEX="${1:-}"
 if [[ -z "${CHECKSUM_HEX}" ]]; then
@@ -96,7 +71,6 @@ else
   echo "Step 3: Using checksum from arg 1: ${CHECKSUM_HEX}"
 fi
 
-# ── Patch the checksum into the hermes config ─────────────────────────────────
 
 echo ""
 echo "Step 4: Patching wasm_checksum_hex into ${HERMES_CONFIG}..."
@@ -120,7 +94,6 @@ path.write_text(new)
 print(f"  Patched.")
 PY
 
-# ── Create client ─────────────────────────────────────────────────────────────
 
 echo ""
 echo "Step 5: hermes create client --host-chain ${HOST_CHAIN} --reference-chain ${REFERENCE_CHAIN}"
@@ -144,7 +117,6 @@ if [[ -z "${CLIENT_ID}" ]]; then
 fi
 echo "  Created: ${CLIENT_ID}"
 
-# ── Query clients ─────────────────────────────────────────────────────────────
 
 echo ""
 echo "Step 6: hermes query clients --host-chain ${HOST_CHAIN}"
@@ -158,7 +130,6 @@ if ! echo "${QUERY_OUTPUT}" | grep -q "${CLIENT_ID}"; then
 fi
 echo "  ${CLIENT_ID} present in clients list."
 
-# Snapshot initial height for the update assertion below.
 INITIAL_HEIGHT=$(hermes --config "${HERMES_CONFIG}" \
   query client state \
   --chain "${HOST_CHAIN}" \
@@ -168,10 +139,8 @@ INITIAL_HEIGHT=$(hermes --config "${HERMES_CONFIG}" \
   | awk '{print $2}')
 echo "  Initial client latest_height: ${INITIAL_HEIGHT:-<unknown>}"
 
-# Give the gateway a few seconds so its LatestHeight advances past the initial.
 sleep 8
 
-# ── Update client ─────────────────────────────────────────────────────────────
 
 echo ""
 echo "Step 7: hermes update client --host-chain ${HOST_CHAIN} --client ${CLIENT_ID}"

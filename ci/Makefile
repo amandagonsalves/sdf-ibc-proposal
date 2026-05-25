@@ -23,7 +23,5 @@ hermes-health:
 upload-stellar-lc:
 	@bash $(SCRIPT_DIR)upload-stellar-lc.sh
 
-# Task 2 phase 2: create + query + update the 08-wasm Stellar client on cardanoentrypoint.
-# Optionally accept CHECKSUM=<hex>; otherwise auto-detect from the chain.
 create-stellar-client:
 	@bash $(SCRIPT_DIR)create-stellar-client.sh $(CHECKSUM)

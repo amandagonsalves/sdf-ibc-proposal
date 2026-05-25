@@ -1,35 +1,4 @@
 #!/bin/bash
-#
-# Task 2: Upload `stellar-lc-wasm` to the cardano-entrypoint Cosmos chain via
-# 08-wasm. Runs the full lifecycle:
-#
-#   1. Build `stellar-lc-wasm` for `wasm32-unknown-unknown` (release).
-#   2. Lower bulk-memory ops via `wasm-opt` (the cardano-entrypoint wasmvm
-#      validator rejects them; matches the workaround in entrypoint.sh).
-#   3. `docker cp` the wasm into the running cardano-entrypoint container.
-#   4. Submit a gov proposal `tx ibc-wasm store-code` from the `relayer` key.
-#   5. Vote yes from `alice` (the genesis validator).
-#   6. Wait out the voting period (must exceed `gov.params.voting_period`
-#      — set to 15s in cardano-ibc-incubator's devnet config; we use 20s).
-#   7. Verify the wasm checksum is registered under
-#      `query ibc-wasm checksums` and echo it for use in
-#      `hermes create client --wasm-checksum <hex>`.
-#
-# This script does NOT create or update a client — those follow-up steps need
-# the stellar-testnet block added to `~/.hermes/config.toml` and a running
-# gateway. Once this script prints the checksum, the next manual step is:
-#
-#   hermes create client \
-#     --host-chain cardanoentrypoint \
-#     --reference-chain stellar-testnet \
-#     --client-type 08-wasm \
-#     --wasm-checksum <hex from this script>
-#
-# Behavior:
-#   - Skips (exit 0) when the chain or container isn't reachable, matching
-#     the pattern in ci/tests/upload-wasm.sh, so this script can run in CI
-#     without a chain available.
-#
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -45,8 +14,6 @@ REST="http://localhost:1317"
 VOTING_PERIOD="${VOTING_PERIOD:-20}"
 
 echo "=== Task 2: upload ${CRATE} to ${CHAIN_ID} ==="
-
-# ── Phase A: Build wasm ───────────────────────────────────────────────────────
 
 echo ""
 echo "Step 1: Building ${CRATE} for wasm32-unknown-unknown (release)..."
@@ -77,7 +44,6 @@ LOCAL_SHA=$(shasum -a 256 "${WASM_FILE}" | awk '{print $1}')
 echo "  ${WASM_FILE}"
 echo "  ${WASM_SIZE} bytes, sha256=${LOCAL_SHA}"
 
-# ── Phase B: Chain + container preconditions ──────────────────────────────────
 
 echo ""
 echo "Step 3: Checking ${CHAIN_ID} is reachable at ${REST}..."
@@ -95,7 +61,6 @@ if ! docker inspect "${CONTAINER}" > /dev/null 2>&1; then
 fi
 echo "  Container present."
 
-# ── Phase C: Copy + submit gov proposal + vote ────────────────────────────────
 
 echo ""
 echo "Step 5: Copying wasm into container..."
@@ -142,7 +107,6 @@ docker exec "${CONTAINER}" \
 echo "  Voted YES. Waiting ${VOTING_PERIOD}s for the voting period to elapse..."
 sleep "${VOTING_PERIOD}"
 
-# ── Phase D: Verify checksum + print it ───────────────────────────────────────
 
 echo ""
 echo "Step 9: Querying registered checksums on-chain..."
