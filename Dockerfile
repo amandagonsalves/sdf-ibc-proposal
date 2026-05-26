@@ -31,11 +31,11 @@ WORKDIR /app
 COPY --from=builder /build/target/release/stellar-gateway /usr/local/bin/stellar-gateway
 
 EXPOSE 50052
-EXPOSE 8001
+EXPOSE 8101
 
 ENV STELLAR_GATEWAY_HOST=0.0.0.0
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
-    CMD curl -sf "http://127.0.0.1:${STELLAR_GATEWAY_HTTP_PORT:-8001}/health" > /dev/null || exit 1
+    CMD curl -sf "http://127.0.0.1:${STELLAR_GATEWAY_HTTP_PORT:-8101}/health" > /dev/null || exit 1
 
 ENTRYPOINT ["stellar-gateway"]

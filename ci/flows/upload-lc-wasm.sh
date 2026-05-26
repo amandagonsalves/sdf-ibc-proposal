@@ -13,12 +13,15 @@ WASM_FILE="${REPO_ROOT}/target/wasm32-unknown-unknown/release/stellar_lc_wasm.wa
 HERMES_CONFIG="${HERMES_CONFIG:-${CI_DIR}/hermes-config.toml}"
 PATCH_HERMES_CONFIG="${PATCH_HERMES_CONFIG:-1}"
 
-CONTAINER="${CONTAINER:-cardano-entrypoint-node-prod}"
-CHAIN_BIN="${CHAIN_BIN:-/go/bin/cardano-entrypointd}"
-CHAIN_HOME="${CHAIN_HOME:-/root/.cardano-entrypoint-data/node}"
-CHAIN_ID="${CHAIN_ID:-cardanoentrypoint}"
+CONTAINER="${CONTAINER:-$(docker ps -qf name=osmosisd | head -n1)}"
+CHAIN_BIN="${CHAIN_BIN:-osmosisd}"
+CHAIN_HOME="${CHAIN_HOME:-/osmosis/.osmosisd}"
+CHAIN_ID="${COSMOS_CHAIN_ID:-localosmosis}"
 NODE="${NODE:-tcp://localhost:26657}"
-CARDANO_REST="${CARDANO_REST:-http://localhost:1317}"
+COSMOS_REST="${COSMOS_REST_URL:-http://127.0.0.1:1318}"
+COSMOS_PROPOSER_KEY="${COSMOS_PROPOSER_KEY:-val}"
+COSMOS_VOTER_KEY="${COSMOS_VOTER_KEY:-val}"
+COSMOS_GAS_DENOM="${COSMOS_GAS_DENOM:-uosmo}"
 
 VOTING_PERIOD="${VOTING_PERIOD:-20}"
 
@@ -57,9 +60,9 @@ LOCAL_SHA=$(shasum -a 256 "${WASM_FILE}" | awk '{print $1}')
 echo "  ${WASM_SIZE} bytes, sha256=${LOCAL_SHA}"
 
 echo ""
-echo "Step 2: Probing Cosmos REST at ${CARDANO_REST}..."
-if ! curl -sf "${CARDANO_REST}/cosmos/base/tendermint/v1beta1/node_info" > /dev/null 2>&1; then
-  echo "  SKIP: ${CHAIN_ID} REST not reachable. Start it with: caribic start"
+echo "Step 2: Probing Cosmos REST at ${COSMOS_REST}..."
+if ! curl -sf "${COSMOS_REST}/cosmos/base/tendermint/v1beta1/node_info" > /dev/null 2>&1; then
+  echo "  SKIP: ${CHAIN_ID} REST not reachable. Start it with: make -C ci cosmos-only"
   exit 0
 fi
 echo "  Reachable."
@@ -83,10 +86,10 @@ echo ""
 echo "Step 5: Submitting governance proposal to store wasm..."
 PROPOSAL_OUTPUT=$(docker exec "${CONTAINER}" \
   "${CHAIN_BIN}" tx ibc-wasm store-code /tmp/stellar_lc_wasm.wasm \
-  --from relayer \
+  --from "${COSMOS_PROPOSER_KEY}" \
   --title "upload-lc-wasm: ${CRATE}" \
   --summary "Registers stellar_lc_wasm.wasm as the 10-stellar client type for 08-wasm" \
-  --deposit "1stake" \
+  --deposit "1${COSMOS_GAS_DENOM}" \
   ${TX_FLAGS} 2>&1) || {
   echo "  ERROR: gov proposal submission failed:"
   echo "${PROPOSAL_OUTPUT}"
@@ -98,7 +101,7 @@ sleep 4
 
 echo ""
 echo "Step 6: Locating the new proposal in voting period..."
-PROPOSAL_ID=$(curl -sf "${CARDANO_REST}/cosmos/gov/v1/proposals?proposal_status=PROPOSAL_STATUS_VOTING_PERIOD" 2>/dev/null \
+PROPOSAL_ID=$(curl -sf "${COSMOS_REST}/cosmos/gov/v1/proposals?proposal_status=PROPOSAL_STATUS_VOTING_PERIOD" 2>/dev/null \
   | python3 -c "import sys,json; ps=json.load(sys.stdin).get('proposals',[]); print(ps[-1]['id'] if ps else '')" 2>/dev/null || true)
 
 if [[ -z "${PROPOSAL_ID}" ]]; then
@@ -108,10 +111,10 @@ fi
 echo "  Proposal ID: ${PROPOSAL_ID}"
 
 echo ""
-echo "Step 7: Voting YES from alice (genesis validator)..."
+echo "Step 7: Voting YES from ${COSMOS_VOTER_KEY} (genesis validator)..."
 docker exec "${CONTAINER}" \
   "${CHAIN_BIN}" tx gov vote "${PROPOSAL_ID}" yes \
-  --from alice \
+  --from "${COSMOS_VOTER_KEY}" \
   ${TX_FLAGS} > /dev/null 2>&1
 
 echo "  Voted YES. Waiting ${VOTING_PERIOD}s for the voting period to elapse..."

@@ -8,10 +8,10 @@ REPO_ROOT=$(cd "${CI_DIR}/.." && pwd)
 source "${SCRIPT_DIR}/_env.sh"
 load_env_file "${REPO_ROOT}/.env"
 
-CHAIN_ID="${CHAIN_ID:-cardanoentrypoint}"
-CARDANO_REST="${CARDANO_REST:-http://localhost:1317}"
-GATEWAY_HTTP="${GATEWAY_HTTP:-http://127.0.0.1:8001}"
-GATEWAY_GRPC="${GATEWAY_GRPC:-127.0.0.1:50052}"
+CHAIN_ID="${COSMOS_CHAIN_ID:-localosmosis}"
+COSMOS_REST="${COSMOS_REST_URL:-http://127.0.0.1:1318}"
+GATEWAY_HTTP="${GATEWAY_HTTP:-http://127.0.0.1:${STELLAR_GATEWAY_HTTP_PORT:-8101}}"
+GATEWAY_GRPC="${GATEWAY_GRPC:-127.0.0.1:${STELLAR_GATEWAY_GRPC_PORT:-50052}}"
 HERMES_CONFIG="${HERMES_CONFIG:-${CI_DIR}/hermes-config.toml}"
 
 echo "=== F0: bootstrap (images + chain probes + lc-wasm upload + hermes config patch) ==="
@@ -30,10 +30,10 @@ else
 fi
 
 echo ""
-echo "Step 1: Probing Cosmos ${CHAIN_ID} REST at ${CARDANO_REST}..."
-if ! curl -sf "${CARDANO_REST}/cosmos/base/tendermint/v1beta1/node_info" > /dev/null 2>&1; then
+echo "Step 1: Probing Cosmos ${CHAIN_ID} REST at ${COSMOS_REST}..."
+if ! curl -sf "${COSMOS_REST}/cosmos/base/tendermint/v1beta1/node_info" > /dev/null 2>&1; then
   echo "  SKIP: ${CHAIN_ID} not reachable."
-  echo "  Start it with: caribic start --clean (inside cardano-ibc-incubator)"
+  echo "  Start it with: make -C ci cosmos-only"
   exit 0
 fi
 echo "  Reachable."
