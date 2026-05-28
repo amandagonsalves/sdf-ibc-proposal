@@ -1,4 +1,4 @@
-.PHONY: f0 hermes-image gateway-image upload-lc-wasm deploy-contracts caribic-preflight cosmos-only
+.PHONY: f0 hermes-image gateway-image api-image upload-lc-wasm deploy-contracts caribic-preflight cosmos-only
 
 SCRIPT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FLOWS_DIR  := $(SCRIPT_DIR)flows
@@ -11,6 +11,9 @@ hermes-image:
 
 gateway-image:
 	@bash $(FLOWS_DIR)/build-gateway-image.sh
+
+api-image:
+	@bash $(FLOWS_DIR)/build-api-image.sh
 
 upload-lc-wasm:
 	@bash $(FLOWS_DIR)/upload-lc-wasm.sh

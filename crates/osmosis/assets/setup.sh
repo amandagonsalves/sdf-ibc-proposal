@@ -32,7 +32,7 @@ init_chain () {
 
     CHAIN_ID="${OSMOSIS_CHAIN_ID:-$(jq -r '.chain_id' "$CONFIG_JSON")}"
     MONIKER="$(jq -r '.moniker' "$CONFIG_JSON")"
-    GENESIS_TIME="${OSMOSIS_LOCAL_GENESIS_TIME:-$(jq -r '.genesis_time' "$CONFIG_JSON")}"
+    GENESIS_TIME="${OSMOSIS_LOCAL_GENESIS_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
     GENTX_KEY="$(jq -r '.gentx.key' "$CONFIG_JSON")"
     GENTX_AMOUNT="$(jq -r '.gentx.amount' "$CONFIG_JSON")"
 

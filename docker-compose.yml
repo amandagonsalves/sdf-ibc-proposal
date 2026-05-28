@@ -1,5 +1,5 @@
 services:
-  stellar-node:
+  node:
     profiles: [local]
     image: stellar/quickstart:latest
     platform: linux/amd64
@@ -28,7 +28,6 @@ services:
       - ${HOME}/.osmosisd-local:/osmosis/.osmosisd
     environment:
       OSMOSIS_CHAIN_ID: "${COSMOS_CHAIN_ID:-localosmosis}"
-      OSMOSIS_LOCAL_GENESIS_TIME: "${OSMOSIS_LOCAL_GENESIS_TIME:-2025-12-31T23:59:00Z}"
     ports:
       - "26658:26657"
       - "1318:1317"
@@ -41,7 +40,7 @@ services:
       retries: 40
       start_period: 20s
 
-  stellar-gateway:
+  gateway:
     build:
       context: .
       dockerfile: Dockerfile
@@ -49,7 +48,7 @@ services:
     profiles: [local, staging]
     restart: unless-stopped
     depends_on:
-      stellar-api:
+      api:
         condition: service_healthy
         required: false
     ports:
@@ -57,7 +56,7 @@ services:
     environment:
       STELLAR_GATEWAY_HOST: "0.0.0.0"
       STELLAR_GATEWAY_GRPC_PORT: "${STELLAR_GATEWAY_GRPC_PORT}"
-      STELLAR_API_URL: "http://stellar-api:${STELLAR_API_PORT}"
+      STELLAR_API_URL: "http://api:${STELLAR_API_PORT}"
       IBC_CONTRACT_ID: "${IBC_CONTRACT_ID}"
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost ${STELLAR_GATEWAY_GRPC_PORT}"]
@@ -66,16 +65,16 @@ services:
       retries: 6
       start_period: 15s
 
-  stellar-api:
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${GATEWAY_IMAGE}:${GATEWAY_TAG}
+    image: ${API_IMAGE}:${API_TAG}
     entrypoint: ["stellar-api"]
     profiles: [local, staging]
     restart: unless-stopped
     depends_on:
-      stellar-node:
+      node:
         condition: service_healthy
         required: false
     ports:
@@ -100,7 +99,7 @@ services:
     image: ${HERMES_IMAGE}:${HERMES_TAG}
     restart: unless-stopped
     depends_on:
-      stellar-gateway:
+      gateway:
         condition: service_healthy
         required: false
     volumes:

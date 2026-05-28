@@ -88,5 +88,11 @@ health-osmosis:
 push-hermes:
 	bash ci/flows/build-hermes-image.sh
 
+push-gateway:
+	bash ci/flows/build-gateway-image.sh
+
+push-api:
+	bash ci/flows/build-api-image.sh
+
 start-stellar-ibc:
-	docker compose --profile local --profile hermes up
+	docker compose --profile local --profile hermes up --build
