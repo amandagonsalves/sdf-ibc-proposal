@@ -1,0 +1,73 @@
+{
+  "chain_id": "localosmosis",
+  "moniker": "val",
+  "genesis_time": "2025-12-31T23:59:00Z",
+  "keys": {
+    "val": "bottom loan skill merry east cradle onion journey palm apology verb edit desert impose absurd oil bubble sweet glove shallow size build burst effort",
+    "pools": "traffic cool olive pottery elegant innocent aisle dial genuine install shy uncle ride federal soon shift flight program cave famous provide cute pole struggle"
+  },
+  "gentx": {
+    "key": "val",
+    "amount": "500000000uosmo"
+  },
+  "genesis_accounts": [
+    { "address": "osmo12smx2wdlyttvyzvzg54y2vnqwq2qjateuf7thj", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks", "coins": "9999999999999999999999999999999999999999999999999uosmo,9999999999999999999999999999999999999999999999999uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo18s5lynnmx37hq4wlrw9gdn68sg2uxp5rgk26vv", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo1qwexv7c6sm95lwhzn9027vyu2ccneaqad4w8ka", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo14hcxlnwlqtq75ttaxf674vk6mafspg8xwgnn53", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo12rr534cer5c0vj53eq4y32lcwguyy7nndt0u2t", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo1nt33cjd5auzh36syym6azgc8tve0jlvklnq7jq", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo10qfrpash5g2vk3hppvu45x0g860czur8ff5yx0", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo1f4tvsdukfwh6s9swrc24gkuz23tp8pd3e9r5fa", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo1myv43sqgnj5sm4zl98ftl45af9cfzk7nhjxjqh", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo14gs9zqh8m49yy9kscjqu9h72exyf295afg6kgk", "coins": "100000000000uosmo,100000000000uion,100000000000stake,100000000000uusdc,100000000000uweth" },
+    { "address": "osmo1jllfytsz4dryxhz5tl7u73v29exsf80vz52ucc", "coins": "1000000000000uosmo,1000000000000uion,1000000000000stake,1000000000000uusdc,1000000000000uweth" }
+  ],
+  "genesis": [
+    { "path": ".app_state.staking.params.bond_denom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.bank.denom_metadata.[].description", "type": "string", "value": "Registered denom uion for localosmosis testing" },
+    { "path": ".app_state.bank.denom_metadata.[0].denom_units.[].denom", "type": "string", "value": "uion" },
+    { "path": ".app_state.bank.denom_metadata.[0].denom_units.[0].exponent", "type": "int", "value": 0 },
+    { "path": ".app_state.bank.denom_metadata.[0].base", "type": "string", "value": "uion" },
+    { "path": ".app_state.bank.denom_metadata.[0].display", "type": "string", "value": "uion" },
+    { "path": ".app_state.bank.denom_metadata.[0].name", "type": "string", "value": "uion" },
+    { "path": ".app_state.bank.denom_metadata.[0].symbol", "type": "string", "value": "uion" },
+    { "path": ".app_state.bank.denom_metadata.[].description", "type": "string", "value": "Registered denom uosmo for localosmosis testing" },
+    { "path": ".app_state.bank.denom_metadata.[1].denom_units.[].denom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.bank.denom_metadata.[1].denom_units.[0].exponent", "type": "int", "value": 0 },
+    { "path": ".app_state.bank.denom_metadata.[1].base", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.bank.denom_metadata.[1].display", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.bank.denom_metadata.[1].name", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.bank.denom_metadata.[1].symbol", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.crisis.constant_fee.denom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.gov.params.min_deposit.[0].denom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.poolincentives.params.minted_denom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.incentives.params.distr_epoch_identifier", "type": "string", "value": "hour" },
+    { "path": ".app_state.mint.params.mint_denom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.mint.params.epoch_identifier", "type": "string", "value": "hour" },
+    { "path": ".app_state.poolmanager.params.pool_creation_fee.[0].denom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.txfees.basedenom", "type": "string", "value": "uosmo" },
+    { "path": ".app_state.wasm.params.code_upload_access.permission", "type": "string", "value": "Everybody" },
+    { "path": ".app_state.concentratedliquidity.params.is_permissionless_pool_creation_enabled", "type": "bool", "value": true }
+  ],
+  "app": [
+    { "path": ".api.enable", "type": "bool", "value": true },
+    { "path": ".api.address", "type": "string", "value": "tcp://0.0.0.0:1317" },
+    { "path": ".grpc.address", "type": "string", "value": "0.0.0.0:9090" },
+    { "path": ".grpc-web.address", "type": "string", "value": "0.0.0.0:9091" },
+    { "path": ".api.swagger", "type": "bool", "value": true },
+    { "path": ".api.enabled-unsafe-cors", "type": "bool", "value": true },
+    { "path": ".grpc-web.enable-unsafe-cors", "type": "bool", "value": true }
+  ],
+  "config": [
+    { "path": ".p2p.seeds", "type": "string", "value": "" },
+    { "path": ".rpc.laddr", "type": "string", "value": "tcp://0.0.0.0:26657" },
+    { "path": ".rpc.cors_allowed_origins.[]", "type": "string", "value": "*" },
+    { "path": ".rpc.cors_allowed_headers.[]", "type": "string", "value": "Accept-Encoding" },
+    { "path": ".rpc.cors_allowed_methods.[]", "type": "string", "value": "DELETE" },
+    { "path": ".rpc.cors_allowed_methods.[]", "type": "string", "value": "OPTIONS" },
+    { "path": ".rpc.cors_allowed_methods.[]", "type": "string", "value": "PATCH" },
+    { "path": ".rpc.cors_allowed_methods.[]", "type": "string", "value": "PUT" }
+  ]
+}

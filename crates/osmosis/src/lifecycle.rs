@@ -77,14 +77,14 @@ pub async fn start(stateful: bool) -> Result<()> {
         println!("Starting Osmosis appchain (keeping existing state) ...");
     } else {
         println!("Starting Osmosis appchain (fresh state) ...");
-        clean_local_state(&compose_file.as_path());
+        clean_local_state(compose_file.as_path());
     }
 
-    compose(&compose_file.as_path(), &["up", "-d", config::SERVICE])?;
+    compose(compose_file.as_path(), &["up", "-d", config::SERVICE])?;
     health::wait_until_healthy().await
 }
 
 pub fn stop() -> Result<()> {
     let compose_file = find_compose_file()?;
-    compose(&compose_file.as_path(), &["down"])
+    compose(compose_file.as_path(), &["down"])
 }

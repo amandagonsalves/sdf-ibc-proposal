@@ -71,3 +71,6 @@ stop-osmosis:
 
 health-osmosis:
 	cargo run -p stellar-osmosis -- health
+
+push-hermes:
+	bash ci/flows/build-hermes-image.sh

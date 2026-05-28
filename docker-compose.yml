@@ -24,6 +24,7 @@ services:
     entrypoint: ["sh", "/setup.sh"]
     volumes:
       - ./crates/osmosis/assets/setup.sh:/setup.sh:ro
+      - ./crates/osmosis/assets/default-config.json:/config/default-config.json:ro
       - ${HOME}/.osmosisd-local:/osmosis/.osmosisd
     environment:
       OSMOSIS_CHAIN_ID: "${COSMOS_CHAIN_ID:-localosmosis}"
