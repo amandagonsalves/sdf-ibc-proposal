@@ -13,26 +13,26 @@ use crate::proto::{
     QueryPacketReceiptRequest, QueryPacketReceiptResponse,
 };
 use crate::state_tracker::{PathLookup, StateTracker};
+use stellar_ibc_core::api_client::{ApiClient, EventCursor};
 use stellar_ibc_core::commitment::{
     ack_commitment_path, packet_commitment_path, packet_receipt_path,
 };
-use stellar_ibc_core::rpc::RpcClient;
 
 #[derive(Clone)]
 pub struct QueryHandler {
-    pub rpc: RpcClient,
+    pub api: ApiClient,
     pub tracker: Arc<Mutex<StateTracker>>,
     pub ibc_contract_id: Option<String>,
 }
 
 impl QueryHandler {
     pub fn new(
-        rpc: RpcClient,
+        api: ApiClient,
         tracker: Arc<Mutex<StateTracker>>,
         ibc_contract_id: Option<String>,
     ) -> Self {
         Self {
-            rpc,
+            api,
             tracker,
             ibc_contract_id,
         }
@@ -50,7 +50,7 @@ impl StellarGatewayQuery for QueryHandler {
         _request: Request<LatestHeightRequest>,
     ) -> Result<Response<LatestHeightResponse>, Status> {
         let latest_sequence: u32 = self
-            .rpc
+            .api
             .latest_ledger_sequence()
             .await
             .map_err(|e| Status::internal(format!("latest_ledger_sequence failed: {e}")))?;
@@ -196,7 +196,7 @@ impl StellarGatewayQuery for QueryHandler {
         let seq = request.into_inner().height as u32;
 
         let ledger = self
-            .rpc
+            .api
             .get_ledger(seq)
             .await
             .map_err(|e| Status::internal(format!("getLedger failed: {e}")))?;
@@ -250,10 +250,6 @@ impl StellarGatewayQuery for QueryHandler {
         &self,
         request: Request<EventsRequest>,
     ) -> Result<Response<EventsResponse>, Status> {
-        use soroban_client::soroban_rpc::EventType;
-        use soroban_client::xdr::{Limits, WriteXdr};
-        use soroban_client::{EventFilter, Pagination};
-
         let contract_id = self
             .ibc_contract_id
             .clone()
@@ -261,10 +257,10 @@ impl StellarGatewayQuery for QueryHandler {
             .ok_or_else(|| Status::failed_precondition("ibc_contract_id is not configured"))?;
 
         let req = request.into_inner();
-        let pagination = if !req.cursor.is_empty() {
-            Pagination::Cursor(req.cursor.clone())
+        let cursor = if !req.cursor.is_empty() {
+            EventCursor::Cursor(req.cursor.clone())
         } else if req.start_ledger > 0 {
-            Pagination::From(req.start_ledger)
+            EventCursor::StartLedger(req.start_ledger)
         } else {
             return Err(Status::invalid_argument(
                 "events: must set either start_ledger or cursor",
@@ -276,43 +272,30 @@ impl StellarGatewayQuery for QueryHandler {
         } else {
             Some(req.limit)
         };
-        let filter = EventFilter::new(EventType::Contract).contract(&contract_id);
 
-        let resp = self
-            .rpc
-            .server
-            .get_events(pagination, vec![filter], limit)
+        let page = self
+            .api
+            .get_events(&contract_id, cursor, limit)
             .await
-            .map_err(|e| Status::internal(format!("getEvents RPC failed: {e}")))?;
+            .map_err(|e| Status::internal(format!("getEvents failed: {e}")))?;
 
-        let mut events = Vec::with_capacity(resp.events.len());
-        for ev in &resp.events {
-            let topics_xdr = ev
-                .topic()
-                .into_iter()
-                .map(|t| {
-                    t.to_xdr(Limits::none())
-                        .map_err(|e| Status::internal(format!("topic XDR encode: {e}")))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            let value_xdr = ev
-                .value()
-                .to_xdr(Limits::none())
-                .map_err(|e| Status::internal(format!("value XDR encode: {e}")))?;
-            events.push(GatewayContractEvent {
-                id: ev.id.clone(),
-                ledger: ev.ledger,
-                ledger_closed_at: ev.ledger_closed_at.clone(),
-                contract_id: ev.contract_id.clone(),
-                tx_hash: ev.tx_hash.clone(),
-                topics_xdr,
-                value_xdr,
-            });
-        }
+        let events = page
+            .events
+            .into_iter()
+            .map(|ev| GatewayContractEvent {
+                id: ev.id,
+                ledger: ev.ledger.into(),
+                ledger_closed_at: ev.ledger_closed_at,
+                contract_id: ev.contract_id,
+                tx_hash: ev.tx_hash,
+                topics_xdr: ev.topics_xdr,
+                value_xdr: ev.value_xdr,
+            })
+            .collect();
 
         Ok(Response::new(EventsResponse {
-            latest_ledger: resp.latest_ledger,
-            cursor: resp.cursor.unwrap_or_default(),
+            latest_ledger: page.latest_ledger.into(),
+            cursor: page.cursor,
             events,
         }))
     }

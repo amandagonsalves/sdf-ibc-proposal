@@ -1,8 +1,8 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 pub mod config;
-pub(crate) mod endpoints;
 pub mod runner;
+pub(crate) mod services;
 mod state;
 
 pub use state::AppState;

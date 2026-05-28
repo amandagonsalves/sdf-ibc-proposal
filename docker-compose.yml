@@ -49,7 +49,7 @@ services:
     profiles: [local, staging]
     restart: unless-stopped
     depends_on:
-      stellar-node:
+      stellar-api:
         condition: service_healthy
         required: false
     ports:
@@ -57,11 +57,8 @@ services:
     environment:
       STELLAR_GATEWAY_HOST: "0.0.0.0"
       STELLAR_GATEWAY_GRPC_PORT: "${STELLAR_GATEWAY_GRPC_PORT}"
-      STELLAR_RPC_URL: "${STELLAR_RPC_URL}"
-      NETWORK_PASSPHRASE: "${NETWORK_PASSPHRASE}"
-      STELLAR_SIGNING_KEY: "${STELLAR_SIGNING_KEY}"
+      STELLAR_API_URL: "http://stellar-api:${STELLAR_API_PORT}"
       IBC_CONTRACT_ID: "${IBC_CONTRACT_ID}"
-      TRANSFER_CONTRACT_ID: "${TRANSFER_CONTRACT_ID}"
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost ${STELLAR_GATEWAY_GRPC_PORT}"]
       interval: 10s
@@ -87,7 +84,10 @@ services:
       STELLAR_API_HOST: "0.0.0.0"
       STELLAR_API_PORT: "${STELLAR_API_PORT}"
       STELLAR_RPC_URL: "${STELLAR_RPC_URL}"
+      NETWORK_PASSPHRASE: "${NETWORK_PASSPHRASE}"
       STELLAR_SIGNING_KEY: "${STELLAR_SIGNING_KEY}"
+      IBC_CONTRACT_ID: "${IBC_CONTRACT_ID}"
+      TRANSFER_CONTRACT_ID: "${TRANSFER_CONTRACT_ID}"
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:${STELLAR_API_PORT}/health"]
       interval: 10s

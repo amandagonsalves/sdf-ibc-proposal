@@ -4297,6 +4297,7 @@ name = "stellar-ibc-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hex",
  "ics23",
  "prost 0.13.5",
  "reqwest 0.12.28",

@@ -5,10 +5,10 @@ use soroban_client::xdr::{
     LedgerCloseMeta, LedgerEntryChange, LedgerEntryData, LedgerKey, Limits, ReadXdr, ScAddress,
     ScVal, TransactionMeta,
 };
+use stellar_ibc_core::api_client::ApiClient;
 use stellar_ibc_core::proof::{
     serialize_membership_proof_with_index, serialize_non_membership_proof_with_index,
 };
-use stellar_ibc_core::rpc::RpcClient;
 use stellar_ibc_core::smt::Smt;
 
 pub enum PathLookup {
@@ -27,16 +27,16 @@ fn key_index(key: &[u8]) -> u64 {
 }
 
 pub struct StateTracker {
-    rpc: RpcClient,
+    api: ApiClient,
     roots: HashMap<u32, [u8; 32]>,
     ibc_contract_id: Option<[u8; 32]>,
     smt: Smt,
 }
 
 impl StateTracker {
-    pub fn new(rpc: RpcClient, ibc_contract_id: Option<[u8; 32]>) -> Self {
+    pub fn new(api: ApiClient, ibc_contract_id: Option<[u8; 32]>) -> Self {
         Self {
-            rpc,
+            api,
             roots: HashMap::new(),
             ibc_contract_id,
             smt: Smt::new(),
@@ -79,7 +79,7 @@ impl StateTracker {
     }
 
     async fn process(&mut self, seq: u32) -> anyhow::Result<[u8; 32]> {
-        let ledger = self.rpc.get_ledger(seq).await?;
+        let ledger = self.api.get_ledger(seq).await?;
 
         if let Some(meta_xdr) = ledger.metadata_xdr {
             let meta = LedgerCloseMeta::from_xdr(&meta_xdr, Limits::none())

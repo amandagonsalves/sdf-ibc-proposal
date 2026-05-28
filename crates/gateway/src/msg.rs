@@ -6,37 +6,19 @@ use crate::proto::{
     MsgTimeoutPacketRequest, MsgTimeoutPacketResponse, MsgUpdateClientRequest,
     MsgUpdateClientResponse, SubmitSignedTxRequest, SubmitSignedTxResponse,
 };
-use soroban_client::{
-    contract::{ContractBehavior, Contracts},
-    keypair::{Keypair, KeypairBehavior},
-    transaction::TransactionBehavior,
-    transaction_builder::{TransactionBuilder, TransactionBuilderBehavior, TIMEOUT_INFINITE},
-    xdr::{Limits, ReadXdr, ScBytes, ScString, ScVal, ScVec, StringM, VecM, WriteXdr},
-};
-use stellar_ibc_core::rpc::{RpcClient, SubmittedTx};
+use soroban_client::xdr::{Limits, ReadXdr, ScBytes, ScString, ScVal, ScVec, StringM, VecM};
+use stellar_ibc_core::api_client::ApiClient;
+use stellar_ibc_core::rpc::SubmittedTx;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
 pub struct MsgHandler {
-    pub rpc: RpcClient,
-    pub ibc_contract_id: String,
-    pub signing_key: String,
-    pub network_passphrase: String,
+    pub api: ApiClient,
 }
 
 impl MsgHandler {
-    pub fn new(
-        rpc: RpcClient,
-        ibc_contract_id: String,
-        signing_key: String,
-        network_passphrase: String,
-    ) -> Self {
-        Self {
-            rpc,
-            ibc_contract_id,
-            signing_key,
-            network_passphrase,
-        }
+    pub fn new(api: ApiClient) -> Self {
+        Self { api }
     }
 
     pub fn into_server(self) -> StellarGatewayMsgServer<Self> {
@@ -44,61 +26,10 @@ impl MsgHandler {
     }
 
     async fn invoke_router(&self, method: &str, args: Vec<ScVal>) -> Result<SubmittedTx, Status> {
-        if self.ibc_contract_id.is_empty() {
-            return Err(Status::failed_precondition(
-                "gateway IBC_CONTRACT_ID is not configured",
-            ));
-        }
-        if self.signing_key.is_empty() {
-            return Err(Status::failed_precondition(
-                "gateway STELLAR_SIGNING_KEY is not configured",
-            ));
-        }
-
-        stellar_strkey::ed25519::PrivateKey::from_string(&self.signing_key)
-            .map_err(|e| Status::internal(format!("signing key parse failed: {e}")))?;
-        let keypair = Keypair::from_secret(&self.signing_key)
-            .map_err(|e| Status::internal(format!("signing key parse failed: {e}")))?;
-        let public_key = keypair.public_key();
-
-        let mut account = self
-            .rpc
-            .server
-            .get_account(&public_key)
+        self.api
+            .invoke_router(method, args)
             .await
-            .map_err(|e| Status::internal(format!("get_account({public_key}): {e:?}")))?;
-
-        let contract = Contracts::new(&self.ibc_contract_id)
-            .map_err(|e| Status::invalid_argument(format!("invalid IBC_CONTRACT_ID: {e}")))?;
-        let op = contract.call(method, Some(args));
-
-        let tx_to_simulate = TransactionBuilder::new(&mut account, &self.network_passphrase, None)
-            .fee(100_u32)
-            .add_operation(op)
-            .set_timeout(TIMEOUT_INFINITE)
-            .map_err(|e| Status::internal(format!("set_timeout: {e}")))?
-            .build();
-
-        let mut tx = self
-            .rpc
-            .server
-            .prepare_transaction(&tx_to_simulate)
-            .await
-            .map_err(|e| Status::internal(format!("prepare_transaction({method}): {e:?}")))?;
-
-        tx.sign(&[keypair]);
-
-        let envelope = tx
-            .to_envelope()
-            .map_err(|e| Status::internal(format!("to_envelope: {e}")))?;
-        let envelope_bytes = envelope
-            .to_xdr(Limits::none())
-            .map_err(|e| Status::internal(format!("envelope XDR encode: {e}")))?;
-
-        self.rpc
-            .submit_and_wait_for_result(&envelope_bytes)
-            .await
-            .map_err(|e| Status::internal(format!("submit_and_wait({method}): {e}")))
+            .map_err(|e| Status::internal(format!("invoke_router({method}): {e}")))
     }
 }
 
@@ -152,7 +83,7 @@ impl StellarGatewayMsg for MsgHandler {
     ) -> Result<Response<SubmitSignedTxResponse>, Status> {
         let tx_xdr = request.into_inner().tx_xdr;
         let tx_hash = self
-            .rpc
+            .api
             .submit_and_wait(&tx_xdr)
             .await
             .map_err(|e| Status::internal(format!("submit_and_wait: {e}")))?;
@@ -287,56 +218,13 @@ impl StellarGatewayMsg for MsgHandler {
 mod tests {
     use super::*;
 
-    const TESTNET_URL: &str = "https://soroban-testnet.stellar.org";
-    const NETWORK_PASSPHRASE: &str = "Test SDF Network ; September 2015";
-    const VALID_CONTRACT_ID: &str = "CBHJI5KZOZUPE7ADDBEYDC6VHZAQI7HHK6JIFW2M67KBRY36OYPVFXGB";
-
-    fn rpc() -> RpcClient {
-        RpcClient::new(TESTNET_URL).unwrap()
-    }
-
-    fn handler(contract: &str, signing_key: &str) -> MsgHandler {
-        MsgHandler::new(
-            rpc(),
-            contract.to_string(),
-            signing_key.to_string(),
-            NETWORK_PASSPHRASE.to_string(),
-        )
-    }
-
-    #[tokio::test]
-    async fn invoke_router_requires_contract_id() {
-        let h = handler(
-            "",
-            "SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        );
-        let err = h.invoke_router("noop", vec![]).await.unwrap_err();
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("IBC_CONTRACT_ID"));
-    }
-
-    #[tokio::test]
-    async fn invoke_router_requires_signing_key() {
-        let h = handler(VALID_CONTRACT_ID, "");
-        let err = h.invoke_router("noop", vec![]).await.unwrap_err();
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("STELLAR_SIGNING_KEY"));
-    }
-
-    #[tokio::test]
-    async fn invoke_router_rejects_invalid_signing_key() {
-        let h = handler(VALID_CONTRACT_ID, "not-a-real-strkey");
-        let err = h.invoke_router("noop", vec![]).await.unwrap_err();
-        assert_eq!(err.code(), tonic::Code::Internal);
-        assert!(err.message().contains("signing key parse failed"));
+    fn handler() -> MsgHandler {
+        MsgHandler::new(ApiClient::new("http://127.0.0.1:8101"))
     }
 
     #[tokio::test]
     async fn submit_misbehaviour_rejects_missing_client_id() {
-        let h = handler(
-            VALID_CONTRACT_ID,
-            "SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        );
+        let h = handler();
         let req = Request::new(MsgSubmitMisbehaviourRequest {
             client_id: String::new(),
             client_message: vec![1, 2, 3],

@@ -5,10 +5,10 @@ use tokio::sync::Mutex;
 use crate::{
     config::GatewayConfig, msg::MsgHandler, query::QueryHandler, state_tracker::StateTracker,
 };
-use stellar_ibc_core::rpc::RpcClient;
+use stellar_ibc_core::api_client::ApiClient;
 
 pub async fn run(cfg: GatewayConfig) {
-    let rpc = RpcClient::new(cfg.rpc_url.as_str()).expect("could not create a new rpc client");
+    let api = ApiClient::new(&cfg.api_url);
 
     let ibc_contract_id = if cfg.ibc_contract_id.is_empty() {
         None
@@ -18,7 +18,7 @@ pub async fn run(cfg: GatewayConfig) {
             .map(|c| c.0)
     };
 
-    let tracker = Arc::new(Mutex::new(StateTracker::new(rpc.clone(), ibc_contract_id)));
+    let tracker = Arc::new(Mutex::new(StateTracker::new(api.clone(), ibc_contract_id)));
 
     let grpc_addr = cfg.grpc_addr();
 
@@ -43,21 +43,13 @@ pub async fn run(cfg: GatewayConfig) {
         .add_service(health_service)
         .add_service(
             QueryHandler::new(
-                rpc.clone(),
+                api.clone(),
                 tracker,
                 Some(cfg.ibc_contract_id.clone()).filter(|s| !s.is_empty()),
             )
             .into_server(),
         )
-        .add_service(
-            MsgHandler::new(
-                rpc.clone(),
-                cfg.ibc_contract_id.clone(),
-                cfg.signing_key.clone(),
-                cfg.network_passphrase.clone(),
-            )
-            .into_server(),
-        )
+        .add_service(MsgHandler::new(api.clone()).into_server())
         .serve(grpc_addr)
         .await
         .expect("gRPC server failed");

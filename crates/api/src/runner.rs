@@ -7,17 +7,17 @@ use std::sync::Arc;
 use stellar_ibc_core::rpc::RpcClient;
 use tokio::net::TcpListener;
 
-use crate::{config::ApiConfig, endpoints, AppState};
+use crate::{config::ApiConfig, services, AppState};
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(health))
-        .route("/account/{address}", get(endpoints::account::account))
-        .route("/balance/{address}", get(endpoints::balance::balance))
-        .route("/tx/xdr", get(endpoints::tx::get_unsigned_tx))
-        .route("/tx/{tx_hash}", get(endpoints::tx::get_signed_tx))
-        .route("/tx/sign", post(endpoints::tx::sign_tx))
-        .route("/tx/submit", post(endpoints::tx::submit_signed_tx))
+        .route("/account/{address}", get(services::account::account))
+        .route("/balance/{address}", get(services::balance::balance))
+        .route("/tx/xdr", get(services::tx::get_unsigned_tx))
+        .route("/tx/{tx_hash}", get(services::tx::get_signed_tx))
+        .route("/tx/sign", post(services::tx::sign_tx))
+        .route("/tx/submit", post(services::tx::submit_signed_tx))
         .with_state(state)
 }
 

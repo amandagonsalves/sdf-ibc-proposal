@@ -3,11 +3,8 @@ use std::net::SocketAddr;
 pub struct GatewayConfig {
     pub host: String,
     pub grpc_port: u16,
-    pub rpc_url: String,
+    pub api_url: String,
     pub ibc_contract_id: String,
-    pub transfer_contract_id: String,
-    pub network_passphrase: String,
-    pub signing_key: String,
 }
 
 impl GatewayConfig {
@@ -18,13 +15,9 @@ impl GatewayConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(50052),
-            rpc_url: std::env::var("STELLAR_RPC_URL")
-                .unwrap_or_else(|_| "https://soroban-testnet.stellar.org".to_string()),
+            api_url: std::env::var("STELLAR_API_URL")
+                .unwrap_or_else(|_| "http://127.0.0.1:8101".to_string()),
             ibc_contract_id: std::env::var("IBC_CONTRACT_ID").unwrap_or_default(),
-            transfer_contract_id: std::env::var("TRANSFER_CONTRACT_ID").unwrap_or_default(),
-            network_passphrase: std::env::var("NETWORK_PASSPHRASE")
-                .unwrap_or_else(|_| "Test SDF Network ; September 2015".to_string()),
-            signing_key: std::env::var("STELLAR_SIGNING_KEY").unwrap_or_default(),
         }
     }
 
