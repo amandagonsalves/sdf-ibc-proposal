@@ -8,14 +8,27 @@ use crate::{
 use stellar_ibc_core::api_client::ApiClient;
 
 pub async fn run(cfg: GatewayConfig) {
+    tracing::info!(
+        host = %cfg.host,
+        grpc_port = cfg.grpc_port,
+        api_url = %cfg.api_url,
+        ibc_contract_id = %cfg.ibc_contract_id,
+        "starting stellar-gateway"
+    );
+
     let api = ApiClient::new(&cfg.api_url);
 
     let ibc_contract_id = if cfg.ibc_contract_id.is_empty() {
+        tracing::warn!("IBC_CONTRACT_ID is empty — state tracker will accept any contract");
         None
     } else {
-        stellar_strkey::Contract::from_string(&cfg.ibc_contract_id)
-            .ok()
-            .map(|c| c.0)
+        match stellar_strkey::Contract::from_string(&cfg.ibc_contract_id) {
+            Ok(contract) => Some(contract.0),
+            Err(error) => {
+                tracing::warn!(%error, "IBC_CONTRACT_ID could not be parsed as a Stellar contract strkey");
+                None
+            }
+        }
     };
 
     let tracker = Arc::new(Mutex::new(StateTracker::new(api.clone(), ibc_contract_id)));
@@ -36,7 +49,7 @@ pub async fn run(cfg: GatewayConfig) {
         .build_v1()
         .expect("gRPC reflection service failed to build");
 
-    tracing::info!("gRPC server listening on {}", grpc_addr);
+    tracing::info!(%grpc_addr, "gRPC server listening");
 
     tonic::transport::Server::builder()
         .add_service(reflection_service)

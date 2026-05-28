@@ -15,13 +15,12 @@ enabled = false
 [mode.packets]
 enabled = false
 
-# Cosmos cardano-entrypoint chain (ibc-go v10, 08-wasm enabled)
 [[chains]]
 id = 'localosmosis'
 type = 'CosmosSdk'
-rpc_addr = 'http://127.0.0.1:26658'
-grpc_addr = 'http://127.0.0.1:9094'
-event_source = { mode = 'push', url = 'ws://127.0.0.1:26658/websocket', batch_delay = '500ms' }
+rpc_addr = 'http://osmosis:26657'
+grpc_addr = 'http://osmosis:9090'
+event_source = { mode = 'push', url = 'ws://osmosis:26657/websocket', batch_delay = '500ms' }
 rpc_timeout = '10s'
 trusted_node = false
 account_prefix = 'osmo'
@@ -43,7 +42,7 @@ id = 'stellar-testnet'
 type = 'Stellar'
 event_poll_interval = 2
 event_replay_window = 256
-gateway_url = 'http://127.0.0.1:50052'
+gateway_url = 'http://gateway:50052'
 network_passphrase = 'Test SDF Network ; September 2015'
 ibc_contract_id = ''
 key_name = 'stellar-relayer'

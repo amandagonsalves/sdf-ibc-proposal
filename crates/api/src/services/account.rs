@@ -15,10 +15,12 @@ struct AccountResponse {
     account_id: String,
 }
 
+#[tracing::instrument(skip(_state))]
 pub async fn account(
     State(_state): State<Arc<AppState>>,
     Path(address): Path<String>,
 ) -> impl IntoResponse {
+    tracing::info!(%address, "GET /account/{address}");
     (
         StatusCode::OK,
         Json(AccountResponse {

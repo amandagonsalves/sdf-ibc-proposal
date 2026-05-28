@@ -94,5 +94,50 @@ push-gateway:
 push-api:
 	bash ci/flows/build-api-image.sh
 
+COMPOSE := docker compose --profile local --profile hermes
+
+# Whole stack
 start-stellar-ibc:
-	docker compose --profile local --profile hermes up --build
+	$(COMPOSE) up -d --build
+	@echo ""
+	@$(COMPOSE) ps
+
+logs-stellar-ibc:
+	$(COMPOSE) logs -f api gateway hermes
+
+stop-stellar-ibc:
+	$(COMPOSE) down
+
+ps-stellar-ibc:
+	$(COMPOSE) ps
+
+# Per-service: restart (recreate, picks up compose-file changes), logs, shell
+
+restart-api:
+	$(COMPOSE) rm -sf api
+	$(COMPOSE) up -d api
+
+logs-api:
+	$(COMPOSE) logs -f api
+
+restart-gateway:
+	$(COMPOSE) rm -sf gateway
+	$(COMPOSE) up -d gateway
+
+logs-gateway:
+	$(COMPOSE) logs -f gateway
+
+restart-hermes:
+	$(COMPOSE) rm -sf hermes
+	$(COMPOSE) up -d hermes
+
+logs-hermes:
+	$(COMPOSE) logs -f hermes
+
+shell-hermes:
+	$(COMPOSE) exec hermes sh
+
+# Hermes keystore (one-shot import of testkey + stellar-relayer from
+# crates/osmosis/assets/default-config.json into the hermes-keys volume)
+hermes-keys:
+	@$(MAKE) -C ci hermes-keys

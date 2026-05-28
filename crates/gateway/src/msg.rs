@@ -26,10 +26,24 @@ impl MsgHandler {
     }
 
     async fn invoke_router(&self, method: &str, args: Vec<ScVal>) -> Result<SubmittedTx, Status> {
-        self.api
-            .invoke_router(method, args)
-            .await
-            .map_err(|e| Status::internal(format!("invoke_router({method}): {e}")))
+        tracing::info!(method, args = args.len(), "invoke_router via api");
+        match self.api.invoke_router(method, args).await {
+            Ok(submitted) => {
+                tracing::info!(
+                    method,
+                    hash = %submitted.hash,
+                    has_return_value = submitted.return_value.is_some(),
+                    "invoke_router ok"
+                );
+                Ok(submitted)
+            }
+            Err(error) => {
+                tracing::error!(%error, method, "invoke_router failed");
+                Err(Status::internal(format!(
+                    "invoke_router({method}): {error}"
+                )))
+            }
+        }
     }
 }
 
@@ -82,11 +96,12 @@ impl StellarGatewayMsg for MsgHandler {
         request: Request<SubmitSignedTxRequest>,
     ) -> Result<Response<SubmitSignedTxResponse>, Status> {
         let tx_xdr = request.into_inner().tx_xdr;
-        let tx_hash = self
-            .api
-            .submit_and_wait(&tx_xdr)
-            .await
-            .map_err(|e| Status::internal(format!("submit_and_wait: {e}")))?;
+        tracing::info!(tx_bytes = tx_xdr.len(), "gRPC SubmitSignedTx");
+        let tx_hash = self.api.submit_and_wait(&tx_xdr).await.map_err(|error| {
+            tracing::error!(%error, "submit_and_wait failed");
+            Status::internal(format!("submit_and_wait: {error}"))
+        })?;
+        tracing::info!(%tx_hash, "submit_signed_tx ok");
         Ok(Response::new(SubmitSignedTxResponse {
             tx_hash,
             events: Vec::new(),

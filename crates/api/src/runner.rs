@@ -12,6 +12,8 @@ use crate::{config::ApiConfig, services, AppState};
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(health))
+        .route("/ledger/latest", get(services::ledgers::latest))
+        .route("/ledger/{sequence}", get(services::ledgers::get_one))
         .route("/account/{address}", get(services::account::account))
         .route("/balance/{address}", get(services::balance::balance))
         .route("/tx/xdr", get(services::tx::get_unsigned_tx))
@@ -22,13 +24,14 @@ pub fn router(state: Arc<AppState>) -> Router {
 }
 
 async fn health() -> &'static str {
+    tracing::debug!("GET /health");
     "Stellar IBC API is healthy."
 }
 
 pub async fn serve(addr: SocketAddr, state: Arc<AppState>) -> anyhow::Result<()> {
     let listener = TcpListener::bind(addr).await?;
 
-    tracing::info!("HTTP server listening on {}", addr);
+    tracing::info!(%addr, "stellar-api HTTP server listening");
 
     axum::serve(listener, router(state)).await?;
 
@@ -36,6 +39,14 @@ pub async fn serve(addr: SocketAddr, state: Arc<AppState>) -> anyhow::Result<()>
 }
 
 pub async fn run(cfg: ApiConfig) -> anyhow::Result<()> {
+    tracing::info!(
+        host = %cfg.host,
+        port = cfg.port,
+        rpc_url = %cfg.rpc_url,
+        signing_key_configured = !cfg.signing_key.is_empty(),
+        "starting stellar-api"
+    );
+
     let rpc = RpcClient::new(cfg.rpc_url.as_str()).expect("could not create a new rpc client");
 
     let state = Arc::new(AppState::new(rpc, cfg.signing_key.clone()));

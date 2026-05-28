@@ -1,6 +1,6 @@
 services:
   node:
-    profiles: [local]
+    profiles: [local-stellar]
     image: stellar/quickstart:latest
     platform: linux/amd64
     command: --local --enable-soroban-rpc
@@ -75,7 +75,7 @@ services:
     restart: unless-stopped
     depends_on:
       node:
-        condition: service_healthy
+        condition: service_started
         required: false
     ports:
       - "${STELLAR_API_PORT}:${STELLAR_API_PORT}"
@@ -97,18 +97,25 @@ services:
   hermes:
     profiles: [hermes, staging]
     image: ${HERMES_IMAGE}:${HERMES_TAG}
-    restart: unless-stopped
+    restart: on-failure
+    user: "0:0"
     depends_on:
       gateway:
         condition: service_healthy
         required: false
+    command: ["--config", "/home/hermes/.hermes/config.toml", "start"]
     volumes:
       - ./ci/hermes-config.toml:/home/hermes/.hermes/config.toml:ro
+      - hermes-keys:/home/hermes/.hermes/keys
     environment:
       RUST_LOG: "${HERMES_LOG_LEVEL:-info}"
+      HOME: "/home/hermes"
     healthcheck:
-      test: ["CMD", "hermes", "health-check"]
+      test: ["CMD", "hermes", "--config", "/home/hermes/.hermes/config.toml", "health-check"]
       interval: 15s
       timeout: 10s
       retries: 5
       start_period: 20s
+
+volumes:
+  hermes-keys:

@@ -49,12 +49,13 @@ impl StellarGatewayQuery for QueryHandler {
         &self,
         _request: Request<LatestHeightRequest>,
     ) -> Result<Response<LatestHeightResponse>, Status> {
-        let latest_sequence: u32 = self
-            .api
-            .latest_ledger_sequence()
-            .await
-            .map_err(|e| Status::internal(format!("latest_ledger_sequence failed: {e}")))?;
+        tracing::info!("gRPC LatestHeight");
+        let latest_sequence: u32 = self.api.latest_ledger_sequence().await.map_err(|error| {
+            tracing::error!(%error, "latest_ledger_sequence failed");
+            Status::internal(format!("latest_ledger_sequence failed: {error}"))
+        })?;
 
+        tracing::info!(revision_height = latest_sequence, "served latest height");
         Ok(Response::new(LatestHeightResponse {
             revision_height: latest_sequence.into(),
             revision_number: 0,
@@ -194,12 +195,12 @@ impl StellarGatewayQuery for QueryHandler {
         };
 
         let seq = request.into_inner().height as u32;
+        tracing::info!(sequence = seq, "gRPC QueryIbcHeader");
 
-        let ledger = self
-            .api
-            .get_ledger(seq)
-            .await
-            .map_err(|e| Status::internal(format!("getLedger failed: {e}")))?;
+        let ledger = self.api.get_ledger(seq).await.map_err(|error| {
+            tracing::error!(%error, sequence = seq, "get_ledger failed");
+            Status::internal(format!("getLedger failed: {error}"))
+        })?;
 
         let header = LedgerHeader::from_xdr(&ledger.header_xdr, Limits::none())
             .map_err(|e| Status::internal(format!("LedgerHeader XDR decode: {e}")))?;
@@ -257,6 +258,13 @@ impl StellarGatewayQuery for QueryHandler {
             .ok_or_else(|| Status::failed_precondition("ibc_contract_id is not configured"))?;
 
         let req = request.into_inner();
+        tracing::info!(
+            %contract_id,
+            cursor = %req.cursor,
+            start_ledger = req.start_ledger,
+            limit = req.limit,
+            "gRPC Events"
+        );
         let cursor = if !req.cursor.is_empty() {
             EventCursor::Cursor(req.cursor.clone())
         } else if req.start_ledger > 0 {
@@ -277,7 +285,16 @@ impl StellarGatewayQuery for QueryHandler {
             .api
             .get_events(&contract_id, cursor, limit)
             .await
-            .map_err(|e| Status::internal(format!("getEvents failed: {e}")))?;
+            .map_err(|error| {
+                tracing::error!(%error, %contract_id, "get_events failed");
+                Status::internal(format!("getEvents failed: {error}"))
+            })?;
+
+        tracing::info!(
+            events = page.events.len(),
+            latest_ledger = page.latest_ledger,
+            "served events"
+        );
 
         let events = page
             .events

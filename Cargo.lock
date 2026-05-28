@@ -4229,7 +4229,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "hex",
  "serde",
+ "serde_json",
  "stellar-ibc-core",
  "tokio",
  "tracing",
@@ -4271,6 +4273,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dotenvy",
+ "hex",
  "ibc",
  "prost 0.14.3",
  "prost-build",

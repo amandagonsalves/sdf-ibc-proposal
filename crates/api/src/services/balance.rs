@@ -15,10 +15,12 @@ struct BalanceResponse {
     balance: String,
 }
 
+#[tracing::instrument(skip(_state))]
 pub async fn balance(
     State(_state): State<Arc<AppState>>,
-    Path(_address): Path<String>,
+    Path(address): Path<String>,
 ) -> impl IntoResponse {
+    tracing::info!(%address, "GET /balance/{address}");
     (
         StatusCode::OK,
         Json(BalanceResponse {

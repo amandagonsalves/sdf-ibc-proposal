@@ -79,19 +79,28 @@ impl StateTracker {
     }
 
     async fn process(&mut self, seq: u32) -> anyhow::Result<[u8; 32]> {
+        tracing::debug!(sequence = seq, "fetching ledger via api");
         let ledger = self.api.get_ledger(seq).await?;
 
+        let mut changes_applied = 0usize;
         if let Some(meta_xdr) = ledger.metadata_xdr {
             let meta = LedgerCloseMeta::from_xdr(&meta_xdr, Limits::none())
                 .map_err(|e| anyhow::anyhow!("LedgerCloseMeta XDR decode: {e}"))?;
 
             for change in ledger_changes(&meta) {
                 self.apply(change);
+                changes_applied += 1;
             }
         }
 
         let root = self.smt.root();
         self.roots.insert(seq, root);
+        tracing::info!(
+            sequence = seq,
+            changes_applied,
+            root = %hex::encode(root),
+            "ledger processed into SMT"
+        );
         Ok(root)
     }
 
