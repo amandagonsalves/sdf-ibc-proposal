@@ -1,18 +1,23 @@
 # stellar-osmosis
 
 Bootstraps and manages a local Osmosis appchain (`localosmosis`) for stellar-ibc
-devnets. This is the stellar-ibc port of caribic's `caribic chain start --chain
-osmosis --network local`: instead of downloading the Osmosis source and building
-`osmosisd` from a Dockerfile, it runs the prebuilt `osmolabs/osmosis:<ver>-alpine`
-image as a service inside the repo-root `docker-compose.yml`, initialising genesis
-through a mounted entrypoint script.
+devnets. It runs the prebuilt `osmolabs/osmosis:<ver>-alpine` image as a service
+inside the repo-root `docker-compose.yml` and builds genesis from scratch through
+a mounted entrypoint script — no Dockerfile, no source build, no caribic.
+
+The chain config is **minimal and IBC-tailored**: it starts from `osmosisd init`
+defaults and overrides only what relaying and the 08-wasm light client need —
+`uosmo` as bond/mint/fee denom, a funded validator + relayer account, and a short
+gov voting period + tiny deposit so the `ci/flows/upload-lc-wasm.sh` governance
+proposal lands deterministically. It deliberately omits the LocalOsmosis
+DEX-testing extras (denom metadata, balancer/stable/CL pools, incentive epochs).
 
 ## Layout
 
 | File | Role |
 |---|---|
-| `assets/default-config.json` | Declarative chain config: chain id, moniker, genesis time, validator/pools mnemonics, funded genesis accounts, and the `genesis`/`app`/`config` override lists (each entry is a `{path, type, value}` applied with `dasel`). Edit this rather than the script. Ported from caribic's `chains/osmosis/scripts/setup_osmosis_local.sh` (itself adapted from upstream Osmosis `tests/localosmosis/scripts/setup.sh`). |
-| `assets/setup.sh` | Container entrypoint. On first boot it `apk add jq dasel`, runs `osmosisd init`, then applies every override from `default-config.json` (via `jq` + `dasel`), funds genesis accounts, builds the gentx, and `osmosisd start`. Data-driven — it holds no hardcoded chain values. Mounted into the `osmosis` service alongside the config. |
+| `assets/default-config.json` | Declarative chain config: chain id, moniker, genesis time, the `val`/`relayer` key mnemonics + their funded balances, the gentx, and the `genesis`/`app`/`config` override lists (each entry a `{path, type, value}` applied with `dasel`). Edit this, not the script. |
+| `assets/setup.sh` | Container entrypoint. On first boot it `apk add jq dasel`, runs `osmosisd init`, applies every override from `default-config.json` (via `jq` + `dasel`), recovers each key and funds a genesis account at its derived address, builds the gentx, then `osmosisd start`. Data-driven — holds no hardcoded chain values. |
 | `src/lifecycle.rs` | Locates the repo `docker-compose.yml` and drives `docker compose --profile osmosis up/down`. Resets `~/.osmosisd-local` for a fresh start unless `--stateful`. |
 | `src/health.rs` | Polls `http://127.0.0.1:26658/status` until `latest_block_height > 0`. |
 | `src/main.rs` | CLI: `start [--stateful]`, `stop`, `health`. |
@@ -44,14 +49,15 @@ docker compose --profile osmosis up -d osmosis
 | Tendermint RPC / websocket | `http://127.0.0.1:26658` | `26657` |
 | REST (LCD) | `http://127.0.0.1:1318` | `1317` |
 | gRPC | `127.0.0.1:9094` | `9090` |
-| gRPC-web | `127.0.0.1:9091` | `9091` |
 
 Chain id `localosmosis`, account prefix `osmo`, gas denom `uosmo`. These match
 `COSMOS_*` in `.env` and the `localosmosis` chain block in `ci/hermes-config.toml`.
 
-The validator (`val`) and `pools` key mnemonics used for the funded genesis
-accounts are in `assets/setup.sh`; import them with
-`osmosisd keys add <name> --recover` or `hermes keys add` to fund a relayer.
+Two keys are recovered into the genesis: `val` (the validator) and `relayer`
+(a separately funded account for Hermes). Both mnemonics live in
+`assets/default-config.json`. Point Hermes at the chain by importing the
+`relayer` mnemonic under the `localosmosis` key name in `ci/hermes-config.toml`:
+`hermes keys add --chain localosmosis --mnemonic-file <relayer-mnemonic>`.
 
 ## Config
 
