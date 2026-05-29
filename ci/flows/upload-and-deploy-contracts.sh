@@ -23,7 +23,7 @@ TENDERMINT_LC_WASM="${WASM_DIR}/stellar_tendermint_light_client.wasm"
 DEPLOY_ATTESTATION_LC="${DEPLOY_ATTESTATION_LC:-0}"
 DEPLOY_TENDERMINT_LC="${DEPLOY_TENDERMINT_LC:-0}"
 FORCE_REDEPLOY="${FORCE_REDEPLOY:-0}"
-DEPLOYER_IDENTITY="${DEPLOYER_IDENTITY:-stellar-ibc-deployer}"
+DEPLOYER_IDENTITY="${DEPLOYER_IDENTITY:-admin}"
 TRANSFER_PORT="${TRANSFER_PORT:-transfer}"
 MOCK_CLIENT_TYPE="${MOCK_CLIENT_TYPE:-mock}"
 ATTESTATION_CLIENT_TYPE="${ATTESTATION_CLIENT_TYPE:-attestation}"
@@ -57,22 +57,20 @@ if [[ -n "${IBC_CONTRACT_ID:-}" && "${FORCE_REDEPLOY}" != "1" ]]; then
   exit 0
 fi
 
-echo "Step 1: registering deployer identity '${DEPLOYER_IDENTITY}'..."
-stellar keys remove "${DEPLOYER_IDENTITY}" > /dev/null 2>&1 || true
-echo "${STELLAR_SIGNING_KEY}" | stellar keys add "${DEPLOYER_IDENTITY}" --secret-key > /dev/null
-DEPLOYER_ADDRESS=$(stellar keys address "${DEPLOYER_IDENTITY}")
-echo "  Address: ${DEPLOYER_ADDRESS}"
-
-echo ""
-echo "Step 2: ensuring deployer is funded on the target network..."
-if ! stellar keys fund "${DEPLOYER_IDENTITY}" \
-      --rpc-url "${STELLAR_RPC_URL}" \
-      --network-passphrase "${NETWORK_PASSPHRASE}" > /dev/null 2>&1; then
-  echo "  WARN: friendbot fund failed — account may already be funded, or the network has no friendbot."
+if [[ -z "${DEPLOYER_ADDRESS:-}" ]]; then
+  echo "  DEPLOYER_ADDRESS not set in .env; deriving from '${DEPLOYER_IDENTITY}' keystore identity..."
+  DEPLOYER_ADDRESS=$(stellar keys address "${DEPLOYER_IDENTITY}" 2>/dev/null || true)
+  if [[ -z "${DEPLOYER_ADDRESS}" ]]; then
+    echo "ERROR: could not resolve '${DEPLOYER_IDENTITY}' in the stellar keystore."
+    echo "  Available identities: $(stellar keys ls 2>/dev/null | tr '\n' ' ')"
+    echo "  Either register it (stellar keys add ${DEPLOYER_IDENTITY} ...) or set DEPLOYER_IDENTITY to an existing one."
+    exit 1
+  fi
+  echo "  Resolved: ${DEPLOYER_ADDRESS}"
 fi
 
 echo ""
-echo "Step 3: building all Soroban contracts (stellar contract build)..."
+echo "Step 1: building all Soroban contracts (stellar contract build)..."
 cd "${REPO_ROOT}/contracts"
 stellar contract build --profile contract
 cd "${REPO_ROOT}"
@@ -92,40 +90,40 @@ STELLAR_NET_FLAGS=(
 upload_wasm() {
   local label="$1"
   local wasm="$2"
-  echo "  upload ${label} (${wasm})..."
+  echo "  upload ${label} (${wasm})..." >&2
   stellar contract upload \
     --source "${DEPLOYER_IDENTITY}" \
     "${STELLAR_NET_FLAGS[@]}" \
-    --wasm "${wasm}" 2>&1 | tail -1
+    --wasm "${wasm}" | tail -1
 }
 
 deploy_no_args() {
   local label="$1"
   local wasm="$2"
-  echo "  deploy ${label} (${wasm})..."
+  echo "  deploy ${label} (${wasm})..." >&2
   stellar contract deploy \
     --source "${DEPLOYER_IDENTITY}" \
     "${STELLAR_NET_FLAGS[@]}" \
-    --wasm "${wasm}" 2>&1 | tail -1
+    --wasm "${wasm}" | tail -1
 }
 
 deploy_with_args() {
   local label="$1"
   local wasm="$2"
   shift 2
-  echo "  deploy ${label} with constructor args..."
+  echo "  deploy ${label} with constructor args..." >&2
   stellar contract deploy \
     --source "${DEPLOYER_IDENTITY}" \
     "${STELLAR_NET_FLAGS[@]}" \
     --wasm "${wasm}" \
-    -- "$@" 2>&1 | tail -1
+    -- "$@" 2>/dev/null | tail -1
 }
 
 invoke() {
   local label="$1"
   local contract="$2"
   shift 2
-  echo "  invoke ${label} on ${contract}..."
+  echo "  invoke ${label} on ${contract}..." >&2
   stellar contract invoke \
     --source "${DEPLOYER_IDENTITY}" \
     "${STELLAR_NET_FLAGS[@]}" \
@@ -134,7 +132,7 @@ invoke() {
 }
 
 echo ""
-echo "Step 4: uploading + deploying contracts..."
+echo "Step 3: uploading + deploying contracts..."
 
 upload_wasm "mock-light-client"  "${MOCK_LC_WASM}"        > /dev/null
 upload_wasm "router"             "${ROUTER_WASM}"         > /dev/null
@@ -167,7 +165,7 @@ if [[ "${DEPLOY_TENDERMINT_LC}" == "1" || "${DEPLOY_TENDERMINT_LC}" == "true" ]]
 fi
 
 echo ""
-echo "Step 5: wiring router (register_client_type + register_port)..."
+echo "Step 4: wiring router (register_client_type + register_port)..."
 
 invoke "register_client_type mock" "${IBC_CONTRACT_ID}" \
   register_client_type \
@@ -194,7 +192,7 @@ invoke "register_port transfer" "${IBC_CONTRACT_ID}" \
   --app_address "${TRANSFER_CONTRACT_ID}"
 
 echo ""
-echo "Step 6: writing contract IDs into ${ENV_FILE}..."
+echo "Step 5: writing contract IDs into ${ENV_FILE}..."
 python3 - "${ENV_FILE}" \
   "IBC_CONTRACT_ID=${IBC_CONTRACT_ID}" \
   "TRANSFER_CONTRACT_ID=${TRANSFER_CONTRACT_ID}" \

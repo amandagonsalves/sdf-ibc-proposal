@@ -14,7 +14,7 @@ GATEWAY_HTTP="${GATEWAY_HTTP:-http://127.0.0.1:${STELLAR_GATEWAY_HTTP_PORT:-8101
 GATEWAY_GRPC="${GATEWAY_GRPC:-127.0.0.1:${STELLAR_GATEWAY_GRPC_PORT:-50052}}"
 HERMES_CONFIG="${HERMES_CONFIG:-${CI_DIR}/hermes-config.toml}"
 
-echo "=== F0: bootstrap (images + chain probes + lc-wasm upload + hermes config patch) ==="
+echo "=== F0: bootstrap (images + chain probes + Soroban contract deploy + lc-wasm upload + hermes config patch) ==="
 
 if [[ "${SKIP_IMAGE_BUILD:-0}" != "1" ]]; then
   echo ""
@@ -47,24 +47,50 @@ if ! curl -sf "${GATEWAY_HTTP}/health" > /dev/null 2>&1; then
 fi
 echo "  Reachable. gRPC expected at ${GATEWAY_GRPC}."
 
+echo ""
+echo "================================================================="
+echo "Step 3: Soroban contracts — build + upload + deploy + wire router"
+echo "================================================================="
 if [[ "${SKIP_CONTRACT_DEPLOY:-0}" != "1" ]]; then
-  echo ""
-  echo "Step 3: Build + upload + deploy + wire Soroban contracts..."
   bash "${SCRIPT_DIR}/upload-and-deploy-contracts.sh"
   load_env_file "${REPO_ROOT}/.env"
+
+  if command -v docker > /dev/null 2>&1 \
+      && docker compose --profile local --profile hermes ps -q gateway 2>/dev/null | grep -q .; then
+    echo ""
+    echo "  Restarting gateway so it picks up the new IBC_CONTRACT_ID..."
+    docker compose --profile local --profile hermes rm -sf gateway > /dev/null
+    docker compose --profile local --profile hermes up -d gateway > /dev/null
+    echo "  Gateway recreated."
+  else
+    echo ""
+    echo "  Gateway container not found via docker compose. If you run the gateway"
+    echo "  on the host, restart it manually so it reads the new IBC_CONTRACT_ID."
+  fi
 else
-  echo ""
-  echo "Step 3: SKIP contract deploy (SKIP_CONTRACT_DEPLOY=1)."
+  echo "  SKIP contract deploy (SKIP_CONTRACT_DEPLOY=1)."
 fi
 
 echo ""
 echo "Step 4: Upload light-client-wasm + patch hermes config..."
-bash "${SCRIPT_DIR}/upload-lc-wasm.sh"
+if [[ "${SKIP_LC_WASM_UPLOAD:-0}" != "1" ]]; then
+  bash "${SCRIPT_DIR}/upload-lc-wasm.sh"
+else
+  echo "  SKIP lc-wasm upload (SKIP_LC_WASM_UPLOAD=1)."
+fi
+
+load_env_file "${REPO_ROOT}/.env"
 
 echo ""
 echo "=== F0 done ==="
-echo "  Cosmos chain  : ${CHAIN_ID} (reachable)"
-echo "  Stellar GW    : ${GATEWAY_HTTP} (reachable, gRPC ${GATEWAY_GRPC})"
-echo "  Hermes config : ${HERMES_CONFIG}"
+echo "  Cosmos chain    : ${CHAIN_ID} (reachable)"
+echo "  Stellar GW      : ${GATEWAY_HTTP} (reachable, gRPC ${GATEWAY_GRPC})"
+echo "  Hermes config   : ${HERMES_CONFIG}"
+echo "  Deployer addr   : ${DEPLOYER_ADDRESS:-(unset)}"
+echo "  IBC router      : ${IBC_CONTRACT_ID:-(unset)}"
+echo "  Transfer app    : ${TRANSFER_CONTRACT_ID:-(unset)}"
+echo "  Mock LC         : ${MOCK_LC_CONTRACT_ID:-(unset)}"
+[[ -n "${ATTESTATION_LC_CONTRACT_ID:-}" ]] && echo "  Attestation LC  : ${ATTESTATION_LC_CONTRACT_ID}"
+[[ -n "${TENDERMINT_LC_CONTRACT_ID:-}" ]]  && echo "  Tendermint LC   : ${TENDERMINT_LC_CONTRACT_ID}"
 echo ""
-echo "Next flow: F1 (initial setup — create clients + register counterparties)."
+echo "Next: import hermes keys (make hermes-keys) and create clients."
