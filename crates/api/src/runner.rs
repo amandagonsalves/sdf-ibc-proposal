@@ -14,6 +14,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/health", get(health))
         .route("/ledger/latest", get(services::ledgers::latest))
         .route("/ledger/{sequence}", get(services::ledgers::get_one))
+        .route("/events", get(services::events::list))
         .route("/account/{address}", get(services::account::account))
         .route("/balance/{address}", get(services::balance::balance))
         .route("/tx/xdr", get(services::tx::get_unsigned_tx))

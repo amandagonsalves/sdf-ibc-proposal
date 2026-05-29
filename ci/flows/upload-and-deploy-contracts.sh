@@ -13,10 +13,10 @@ STELLAR_RPC_URL="${STELLAR_RPC_URL:-https://soroban-testnet.stellar.org}"
 NETWORK_PASSPHRASE="${NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}"
 STELLAR_SIGNING_KEY="${STELLAR_SIGNING_KEY:-}"
 
-WASM_DIR="${REPO_ROOT}/target/wasm32v1-none/release"
+WASM_DIR="${REPO_ROOT}/contracts/target/wasm32v1-none/contract"
 ROUTER_WASM="${WASM_DIR}/stellar_ibc_router.wasm"
 TRANSFER_WASM="${WASM_DIR}/stellar_transfer_app.wasm"
-MOCK_LC_WASM="${WASM_DIR}/mock_light_client.wasm"
+MOCK_LC_WASM="${WASM_DIR}/stellar_mock_light_client.wasm"
 ATTESTATION_LC_WASM="${WASM_DIR}/stellar_attestation_light_client.wasm"
 TENDERMINT_LC_WASM="${WASM_DIR}/stellar_tendermint_light_client.wasm"
 
