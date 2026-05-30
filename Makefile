@@ -148,3 +148,14 @@ hermes-keys:
 
 deploy-contracts:
 	bash ci/flows/upload-and-deploy-contracts.sh
+
+api-doc:
+	@$(MAKE) -C ci api-doc
+
+up-hermes: push-hermes restart-hermes
+
+up-api: push-api restart-api
+
+up-gateway: push-gateway restart-gateway
+
+up-hermes-config: up-api up-hermes

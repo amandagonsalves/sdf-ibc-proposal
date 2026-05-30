@@ -66,7 +66,7 @@ trust_threshold = { numerator = '1', denominator = '3' }
 [[chains]]
 id = 'stellar-testnet'
 type = 'Stellar'
-event_poll_interval = 2
+event_poll_interval = 20
 event_replay_window = 256
 gateway_url = 'http://gateway:50052'
 network_passphrase = 'Test SDF Network ; September 2015'

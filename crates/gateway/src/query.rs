@@ -45,6 +45,7 @@ impl QueryHandler {
 
 #[tonic::async_trait]
 impl StellarGatewayQuery for QueryHandler {
+    #[tracing::instrument(skip(self, _request), name = "grpc.latest_height")]
     async fn latest_height(
         &self,
         _request: Request<LatestHeightRequest>,
@@ -62,29 +63,40 @@ impl StellarGatewayQuery for QueryHandler {
         }))
     }
 
+    #[tracing::instrument(skip(self, _request), name = "grpc.query_client_state")]
     async fn query_client_state(
         &self,
         _request: Request<QueryClientStateRequest>,
     ) -> Result<Response<QueryClientStateResponse>, Status> {
+        tracing::debug!("gRPC QueryClientState (unimplemented in v2)");
         Err(Status::unimplemented(
             "ClientState path is non-provable in IBC v2",
         ))
     }
 
+    #[tracing::instrument(skip(self, _request), name = "grpc.query_consensus_state")]
     async fn query_consensus_state(
         &self,
         _request: Request<QueryConsensusStateRequest>,
     ) -> Result<Response<QueryConsensusStateResponse>, Status> {
+        tracing::debug!("gRPC QueryConsensusState (unimplemented in v2)");
         Err(Status::unimplemented(
             "ConsensusState path is non-provable in IBC v2",
         ))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.query_packet_commitment")]
     async fn query_packet_commitment(
         &self,
         request: Request<QueryPacketCommitmentRequest>,
     ) -> Result<Response<QueryPacketCommitmentResponse>, Status> {
         let req = request.into_inner();
+        tracing::info!(
+            client_id = %req.client_id,
+            sequence = req.sequence,
+            height = req.height,
+            "gRPC QueryPacketCommitment"
+        );
         let seq = u32::try_from(req.height).map_err(|_| {
             Status::invalid_argument(format!("height {} does not fit in u32", req.height))
         })?;
@@ -96,7 +108,10 @@ impl StellarGatewayQuery for QueryHandler {
             .await
             .proof_for_path(seq, &key)
             .await
-            .map_err(|e| Status::internal(format!("proof_for_path failed: {e}")))?;
+            .map_err(|e| {
+                tracing::error!(error = %e, sequence = req.sequence, "proof_for_path failed");
+                Status::internal(format!("proof_for_path failed: {e}"))
+            })?;
 
         let (commitment, proof) = match lookup {
             PathLookup::Found {
@@ -105,6 +120,11 @@ impl StellarGatewayQuery for QueryHandler {
             } => (value_hash.to_vec(), proof_bytes),
             PathLookup::Absent { proof_bytes } => (Vec::new(), proof_bytes),
         };
+        tracing::info!(
+            commitment_bytes = commitment.len(),
+            proof_bytes = proof.len(),
+            "served packet commitment"
+        );
 
         Ok(Response::new(QueryPacketCommitmentResponse {
             commitment,
@@ -113,11 +133,18 @@ impl StellarGatewayQuery for QueryHandler {
         }))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.query_packet_receipt")]
     async fn query_packet_receipt(
         &self,
         request: Request<QueryPacketReceiptRequest>,
     ) -> Result<Response<QueryPacketReceiptResponse>, Status> {
         let req = request.into_inner();
+        tracing::info!(
+            client_id = %req.client_id,
+            sequence = req.sequence,
+            height = req.height,
+            "gRPC QueryPacketReceipt"
+        );
         let seq = u32::try_from(req.height).map_err(|_| {
             Status::invalid_argument(format!("height {} does not fit in u32", req.height))
         })?;
@@ -135,6 +162,7 @@ impl StellarGatewayQuery for QueryHandler {
             PathLookup::Found { proof_bytes, .. } => (true, proof_bytes),
             PathLookup::Absent { proof_bytes } => (false, proof_bytes),
         };
+        tracing::info!(received, proof_bytes = proof.len(), "served packet receipt");
 
         Ok(Response::new(QueryPacketReceiptResponse {
             received,
@@ -143,11 +171,18 @@ impl StellarGatewayQuery for QueryHandler {
         }))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.query_acknowledgement")]
     async fn query_acknowledgement(
         &self,
         request: Request<QueryAcknowledgementRequest>,
     ) -> Result<Response<QueryAcknowledgementResponse>, Status> {
         let req = request.into_inner();
+        tracing::info!(
+            client_id = %req.client_id,
+            sequence = req.sequence,
+            height = req.height,
+            "gRPC QueryAcknowledgement"
+        );
         let seq = u32::try_from(req.height).map_err(|_| {
             Status::invalid_argument(format!("height {} does not fit in u32", req.height))
         })?;
@@ -168,6 +203,11 @@ impl StellarGatewayQuery for QueryHandler {
             } => (value_hash.to_vec(), proof_bytes),
             PathLookup::Absent { proof_bytes } => (Vec::new(), proof_bytes),
         };
+        tracing::info!(
+            ack_bytes = acknowledgement.len(),
+            proof_bytes = proof.len(),
+            "served acknowledgement"
+        );
 
         Ok(Response::new(QueryAcknowledgementResponse {
             acknowledgement,
@@ -176,15 +216,18 @@ impl StellarGatewayQuery for QueryHandler {
         }))
     }
 
+    #[tracing::instrument(skip(self, _request), name = "grpc.query_next_seq_recv")]
     async fn query_next_seq_recv(
         &self,
         _request: Request<QueryNextSeqRecvRequest>,
     ) -> Result<Response<QueryNextSeqRecvResponse>, Status> {
+        tracing::debug!("gRPC QueryNextSeqRecv (unimplemented in v2)");
         Err(Status::unimplemented(
             "QueryNextSeqRecv: nextSequenceSend path was removed in IBC v2",
         ))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.query_ibc_header")]
     async fn query_ibc_header(
         &self,
         request: Request<QueryIbcHeaderRequest>,
@@ -247,6 +290,7 @@ impl StellarGatewayQuery for QueryHandler {
         }))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.events")]
     async fn events(
         &self,
         request: Request<EventsRequest>,

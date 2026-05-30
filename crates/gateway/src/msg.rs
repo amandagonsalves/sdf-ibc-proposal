@@ -91,6 +91,7 @@ fn decode_packet_scval(bytes: &[u8]) -> Result<ScVal, Status> {
 
 #[tonic::async_trait]
 impl StellarGatewayMsg for MsgHandler {
+    #[tracing::instrument(skip(self, request), name = "grpc.submit_signed_tx")]
     async fn submit_signed_tx(
         &self,
         request: Request<SubmitSignedTxRequest>,
@@ -108,6 +109,7 @@ impl StellarGatewayMsg for MsgHandler {
         }))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.create_client")]
     async fn create_client(
         &self,
         request: Request<MsgCreateClientRequest>,
@@ -118,6 +120,13 @@ impl StellarGatewayMsg for MsgHandler {
                 "MsgCreateClientRequest.client_type is required",
             ));
         }
+        tracing::info!(
+            client_type = %req.client_type,
+            client_state_bytes = req.client_state.len(),
+            consensus_state_bytes = req.consensus_state.len(),
+            height = req.height,
+            "gRPC CreateClient"
+        );
         let args = vec![
             scval_string(&req.client_type)?,
             scval_bytes(&req.client_state)?,
@@ -129,9 +138,11 @@ impl StellarGatewayMsg for MsgHandler {
             .return_value
             .and_then(scval_into_string)
             .unwrap_or_default();
+        tracing::info!(%client_id, "create_client minted");
         Ok(Response::new(MsgCreateClientResponse { client_id }))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.update_client")]
     async fn update_client(
         &self,
         request: Request<MsgUpdateClientRequest>,
@@ -142,11 +153,17 @@ impl StellarGatewayMsg for MsgHandler {
                 "MsgUpdateClientRequest.client_id is required",
             ));
         }
+        tracing::info!(
+            client_id = %req.client_id,
+            header_bytes = req.header.len(),
+            "gRPC UpdateClient"
+        );
         let args = vec![scval_string(&req.client_id)?, scval_bytes(&req.header)?];
         let _ = self.invoke_router("update_client", args).await?;
         Ok(Response::new(MsgUpdateClientResponse {}))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.register_counterparty")]
     async fn register_counterparty(
         &self,
         request: Request<MsgRegisterCounterpartyRequest>,
@@ -157,6 +174,12 @@ impl StellarGatewayMsg for MsgHandler {
                 "client_id and counterparty_client_id are required",
             ));
         }
+        tracing::info!(
+            client_id = %req.client_id,
+            counterparty_client_id = %req.counterparty_client_id,
+            prefix_segments = req.counterparty_commitment_prefix.len(),
+            "gRPC RegisterCounterparty"
+        );
         let args = vec![
             scval_string(&req.client_id)?,
             scval_string(&req.counterparty_client_id)?,
@@ -166,11 +189,18 @@ impl StellarGatewayMsg for MsgHandler {
         Ok(Response::new(MsgRegisterCounterpartyResponse {}))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.recv_packet")]
     async fn recv_packet(
         &self,
         request: Request<MsgRecvPacketRequest>,
     ) -> Result<Response<MsgRecvPacketResponse>, Status> {
         let req = request.into_inner();
+        tracing::info!(
+            packet_bytes = req.packet.len(),
+            proof_bytes = req.proof.len(),
+            proof_height = req.proof_height,
+            "gRPC RecvPacket"
+        );
         let args = vec![
             decode_packet_scval(&req.packet)?,
             scval_bytes(&req.proof)?,
@@ -180,11 +210,19 @@ impl StellarGatewayMsg for MsgHandler {
         Ok(Response::new(MsgRecvPacketResponse {}))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.ack_packet")]
     async fn ack_packet(
         &self,
         request: Request<MsgAckPacketRequest>,
     ) -> Result<Response<MsgAckPacketResponse>, Status> {
         let req = request.into_inner();
+        tracing::info!(
+            packet_bytes = req.packet.len(),
+            ack_bytes = req.acknowledgement.len(),
+            proof_bytes = req.proof.len(),
+            proof_height = req.proof_height,
+            "gRPC AckPacket"
+        );
         let acks = scval_vec_of_bytes(&[req.acknowledgement])?;
         let args = vec![
             decode_packet_scval(&req.packet)?,
@@ -196,11 +234,18 @@ impl StellarGatewayMsg for MsgHandler {
         Ok(Response::new(MsgAckPacketResponse {}))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.timeout_packet")]
     async fn timeout_packet(
         &self,
         request: Request<MsgTimeoutPacketRequest>,
     ) -> Result<Response<MsgTimeoutPacketResponse>, Status> {
         let req = request.into_inner();
+        tracing::info!(
+            packet_bytes = req.packet.len(),
+            proof_bytes = req.proof.len(),
+            proof_height = req.proof_height,
+            "gRPC TimeoutPacket"
+        );
         let args = vec![
             decode_packet_scval(&req.packet)?,
             scval_bytes(&req.proof)?,
@@ -210,6 +255,7 @@ impl StellarGatewayMsg for MsgHandler {
         Ok(Response::new(MsgTimeoutPacketResponse {}))
     }
 
+    #[tracing::instrument(skip(self, request), name = "grpc.submit_misbehaviour")]
     async fn submit_misbehaviour(
         &self,
         request: Request<MsgSubmitMisbehaviourRequest>,
@@ -220,6 +266,11 @@ impl StellarGatewayMsg for MsgHandler {
                 "MsgSubmitMisbehaviourRequest.client_id is required",
             ));
         }
+        tracing::info!(
+            client_id = %req.client_id,
+            client_message_bytes = req.client_message.len(),
+            "gRPC SubmitMisbehaviour"
+        );
         let args = vec![
             scval_string(&req.client_id)?,
             scval_bytes(&req.client_message)?,
