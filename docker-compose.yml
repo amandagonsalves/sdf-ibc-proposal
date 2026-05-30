@@ -98,6 +98,7 @@ services:
       COSMOS_ACCOUNT_PREFIX: "${COSMOS_ACCOUNT_PREFIX}"
       COSMOS_GAS_DENOM: "${COSMOS_GAS_DENOM}"
       COSMOS_PROPOSER_PRIVATE_KEY: "${COSMOS_PROPOSER_PRIVATE_KEY}"
+      COSMOS_FUNDER_PRIVATE_KEY: "${COSMOS_FUNDER_PRIVATE_KEY}"
       HERMES_CONFIG_PATH: "/etc/hermes/config.toml"
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:${STELLAR_API_PORT}/health"]

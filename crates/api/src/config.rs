@@ -16,6 +16,7 @@ pub struct CosmosConfig {
     pub account_prefix: String,
     pub gas_denom: String,
     pub proposer_private_key_hex: String,
+    pub funder_private_key_hex: String,
 }
 
 impl ApiConfig {
@@ -56,6 +57,8 @@ impl CosmosConfig {
             gas_denom: std::env::var("COSMOS_GAS_DENOM")
                 .unwrap_or_else(|_| "uosmo".to_string()),
             proposer_private_key_hex: std::env::var("COSMOS_PROPOSER_PRIVATE_KEY")
+                .unwrap_or_default(),
+            funder_private_key_hex: std::env::var("COSMOS_FUNDER_PRIVATE_KEY")
                 .unwrap_or_default(),
         }
     }

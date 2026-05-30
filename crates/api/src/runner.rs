@@ -25,6 +25,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/tx/submit", post(services::tx::submit_signed_tx))
         .route("/cosmos/node-info", get(services::cosmos::node_info))
         .route("/cosmos/proposer", get(services::cosmos::proposer_info))
+        .route("/cosmos/funder", get(services::cosmos::funder_info))
+        .route("/cosmos/bank/send", post(services::cosmos::submit_bank_send))
         .route("/cosmos/gov/proposals", get(services::cosmos::proposals))
         .route(
             "/cosmos/gov/proposals/{id}",

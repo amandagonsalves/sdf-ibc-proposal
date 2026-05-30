@@ -179,6 +179,27 @@ pub async fn submit_store_code(
         .wait_for_tx(&result.tx_hash, Duration::from_secs(req.wait_timeout_secs))
         .await
         .map_err(bad_gateway)?;
+
+    let landed_code = landed
+        .pointer("/tx_response/code")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let landed_raw_log = landed
+        .pointer("/tx_response/raw_log")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    if landed_code != 0 {
+        return Err(err(
+            StatusCode::BAD_GATEWAY,
+            format!(
+                "tx failed on-chain (code {landed_code}, hash {}): {landed_raw_log}",
+                result.tx_hash
+            ),
+        ));
+    }
+
     let proposal_id = CosmosClient::extract_proposal_id(&landed);
 
     Ok(Json(json!({
@@ -233,4 +254,64 @@ pub async fn proposer_info(
     Json(json!({
         "address": state.cosmos.proposer_address(),
     }))
+}
+
+pub async fn funder_info(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    Json(json!({
+        "address": state.cosmos.funder_address(),
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct BankSendRequest {
+    pub to: String,
+    pub amount: u128,
+    pub gas_limit: u64,
+    pub fee_amount: u128,
+    #[serde(default)]
+    pub skip_if_account_exists: bool,
+}
+
+pub async fn submit_bank_send(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<BankSendRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    if req.skip_if_account_exists {
+        let exists = state
+            .cosmos
+            .account_exists(&req.to)
+            .await
+            .map_err(bad_gateway)?;
+        if exists {
+            return Ok(Json(json!({
+                "skipped": true,
+                "reason": "account already exists on chain",
+                "to": req.to,
+            })));
+        }
+    }
+
+    let result = state
+        .cosmos
+        .submit_bank_send(req.to.clone(), req.amount, req.gas_limit, req.fee_amount)
+        .await
+        .map_err(bad_gateway)?;
+
+    if result.code != 0 {
+        return Err(err(
+            StatusCode::BAD_GATEWAY,
+            format!("bank send rejected (code {}): {}", result.code, result.raw_log),
+        ));
+    }
+
+    Ok(Json(json!({
+        "skipped": false,
+        "to": req.to,
+        "amount": req.amount.to_string(),
+        "tx_hash": result.tx_hash,
+        "code": result.code,
+        "raw_log": result.raw_log,
+    })))
 }

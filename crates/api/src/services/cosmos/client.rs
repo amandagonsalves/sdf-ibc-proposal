@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use cosmrs::crypto::secp256k1::SigningKey;
+use cosmrs::proto::cosmos::bank::v1beta1::MsgSend;
 use cosmrs::proto::cosmos::base::v1beta1::Coin as ProtoCoin;
 use cosmrs::proto::cosmos::gov::v1::{MsgSubmitProposal, MsgVote};
 use cosmrs::tendermint::chain::Id as ChainId;
@@ -18,8 +19,27 @@ use crate::config::CosmosConfig;
 pub struct CosmosClient {
     pub config: CosmosConfig,
     http: HttpClient,
-    signing_key: Option<SigningKey>,
+    proposer_key: Option<SigningKey>,
     proposer_address: Option<String>,
+    funder_key: Option<SigningKey>,
+    funder_address: Option<String>,
+}
+
+fn load_key(hex_str: &str, prefix: &str, label: &str) -> Result<Option<(SigningKey, String)>> {
+    let trimmed = hex_str.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let bytes = hex::decode(trimmed)
+        .with_context(|| format!("{label} is not valid hex"))?;
+    let key = SigningKey::from_slice(&bytes)
+        .map_err(|e| anyhow!("invalid {label} secp256k1 key: {e}"))?;
+    let addr = key
+        .public_key()
+        .account_id(prefix)
+        .map_err(|e| anyhow!("derive {label} account id: {e}"))?
+        .to_string();
+    Ok(Some((key, addr)))
 }
 
 #[derive(Debug, Clone)]
@@ -38,31 +58,38 @@ pub struct BroadcastResult {
 
 impl CosmosClient {
     pub fn new(config: CosmosConfig) -> Result<Self> {
-        let (signing_key, proposer_address) = if config.proposer_private_key_hex.is_empty() {
-            (None, None)
-        } else {
-            let bytes = hex::decode(config.proposer_private_key_hex.trim())
-                .context("COSMOS_PROPOSER_PRIVATE_KEY is not valid hex")?;
-            let key = SigningKey::from_slice(&bytes)
-                .map_err(|e| anyhow!("invalid secp256k1 signing key: {e}"))?;
-            let addr = key
-                .public_key()
-                .account_id(&config.account_prefix)
-                .map_err(|e| anyhow!("derive account id: {e}"))?
-                .to_string();
-            (Some(key), Some(addr))
-        };
+        let (proposer_key, proposer_address) = load_key(
+            &config.proposer_private_key_hex,
+            &config.account_prefix,
+            "COSMOS_PROPOSER_PRIVATE_KEY",
+        )?
+        .map(|(k, a)| (Some(k), Some(a)))
+        .unwrap_or((None, None));
+
+        let (funder_key, funder_address) = load_key(
+            &config.funder_private_key_hex,
+            &config.account_prefix,
+            "COSMOS_FUNDER_PRIVATE_KEY",
+        )?
+        .map(|(k, a)| (Some(k), Some(a)))
+        .unwrap_or((None, None));
 
         Ok(Self {
             config,
             http: HttpClient::new(),
-            signing_key,
+            proposer_key,
             proposer_address,
+            funder_key,
+            funder_address,
         })
     }
 
     pub fn proposer_address(&self) -> Option<&str> {
         self.proposer_address.as_deref()
+    }
+
+    pub fn funder_address(&self) -> Option<&str> {
+        self.funder_address.as_deref()
     }
 
     fn rest(&self, path: &str) -> String {
@@ -111,6 +138,16 @@ impl CosmosClient {
         Ok(resp.json().await?)
     }
 
+    pub async fn account_exists(&self, address: &str) -> Result<bool> {
+        let url = self.rest(&format!("/cosmos/auth/v1beta1/accounts/{}", address));
+        let resp = self.http.get(&url).send().await?;
+        if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(false);
+        }
+        resp.error_for_status()?;
+        Ok(true)
+    }
+
     pub async fn account_info(&self, address: &str) -> Result<AccountInfo> {
         let url = self.rest(&format!("/cosmos/auth/v1beta1/accounts/{}", address));
         let body: Value = self.http.get(&url).send().await?.error_for_status()?.json().await?;
@@ -145,28 +182,30 @@ impl CosmosClient {
             .ok_or_else(|| anyhow!("gov module address not found in response: {body}"))
     }
 
-    fn signer(&self) -> Result<&SigningKey> {
-        self.signing_key
-            .as_ref()
-            .ok_or_else(|| anyhow!("COSMOS_PROPOSER_PRIVATE_KEY not configured"))
+    fn proposer_pair(&self) -> Result<(&SigningKey, &str)> {
+        match (&self.proposer_key, &self.proposer_address) {
+            (Some(k), Some(a)) => Ok((k, a.as_str())),
+            _ => Err(anyhow!("COSMOS_PROPOSER_PRIVATE_KEY not configured")),
+        }
     }
 
-    fn proposer(&self) -> Result<&str> {
-        self.proposer_address
-            .as_deref()
-            .ok_or_else(|| anyhow!("proposer address not derived (missing signing key)"))
+    fn funder_pair(&self) -> Result<(&SigningKey, &str)> {
+        match (&self.funder_key, &self.funder_address) {
+            (Some(k), Some(a)) => Ok((k, a.as_str())),
+            _ => Err(anyhow!("COSMOS_FUNDER_PRIVATE_KEY not configured")),
+        }
     }
 
     async fn sign_and_broadcast(
         &self,
+        signing_key: &SigningKey,
+        from_address: &str,
         msg_any: Any,
         memo: &str,
         gas_limit: u64,
         fee_amount: u128,
     ) -> Result<BroadcastResult> {
-        let signing_key = self.signer()?;
-        let proposer = self.proposer()?;
-        let account = self.account_info(proposer).await?;
+        let account = self.account_info(from_address).await?;
 
         let body = Body::new(vec![msg_any], memo, 0u32);
         let fee = Fee::from_amount_and_gas(
@@ -258,7 +297,8 @@ impl CosmosClient {
         fee_amount: u128,
     ) -> Result<BroadcastResult> {
         let gov_addr = self.gov_module_address().await?;
-        let proposer = self.proposer()?.to_string();
+        let (signing_key, proposer) = self.proposer_pair()?;
+        let proposer = proposer.to_string();
 
         let store_code = MsgStoreCode {
             signer: gov_addr,
@@ -278,7 +318,7 @@ impl CosmosClient {
                 denom: self.config.gas_denom.clone(),
                 amount: deposit_amount.to_string(),
             }],
-            proposer,
+            proposer: proposer.clone(),
             metadata: String::new(),
             title,
             summary,
@@ -290,7 +330,7 @@ impl CosmosClient {
             value: msg.encode_to_vec(),
         };
 
-        self.sign_and_broadcast(msg_any, "upload-lc-wasm", gas_limit, fee_amount)
+        self.sign_and_broadcast(signing_key, &proposer, msg_any, "upload-lc-wasm", gas_limit, fee_amount)
             .await
     }
 
@@ -301,10 +341,13 @@ impl CosmosClient {
         gas_limit: u64,
         fee_amount: u128,
     ) -> Result<BroadcastResult> {
-        let voter = self.proposer()?.to_string();
+        let (signing_key, voter) = self
+            .funder_pair()
+            .or_else(|_| self.proposer_pair())?;
+        let voter = voter.to_string();
         let msg = MsgVote {
             proposal_id,
-            voter,
+            voter: voter.clone(),
             option,
             metadata: String::new(),
         };
@@ -312,7 +355,32 @@ impl CosmosClient {
             type_url: "/cosmos.gov.v1.MsgVote".to_string(),
             value: msg.encode_to_vec(),
         };
-        self.sign_and_broadcast(msg_any, "upload-lc-wasm-vote", gas_limit, fee_amount)
+        self.sign_and_broadcast(signing_key, &voter, msg_any, "upload-lc-wasm-vote", gas_limit, fee_amount)
+            .await
+    }
+
+    pub async fn submit_bank_send(
+        &self,
+        to_address: String,
+        amount: u128,
+        gas_limit: u64,
+        fee_amount: u128,
+    ) -> Result<BroadcastResult> {
+        let (signing_key, funder) = self.funder_pair()?;
+        let funder = funder.to_string();
+        let msg = MsgSend {
+            from_address: funder.clone(),
+            to_address,
+            amount: vec![ProtoCoin {
+                denom: self.config.gas_denom.clone(),
+                amount: amount.to_string(),
+            }],
+        };
+        let msg_any = Any {
+            type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
+            value: msg.encode_to_vec(),
+        };
+        self.sign_and_broadcast(signing_key, &funder, msg_any, "bank-send", gas_limit, fee_amount)
             .await
     }
 
