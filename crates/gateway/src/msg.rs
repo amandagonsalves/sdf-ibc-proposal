@@ -6,7 +6,7 @@ use crate::proto::{
     MsgTimeoutPacketRequest, MsgTimeoutPacketResponse, MsgUpdateClientRequest,
     MsgUpdateClientResponse, SubmitSignedTxRequest, SubmitSignedTxResponse,
 };
-use soroban_client::xdr::{Limits, ReadXdr, ScBytes, ScString, ScVal, ScVec, StringM, VecM};
+use soroban_client::xdr::{Limits, ReadXdr, ScBytes, ScString, ScVal, ScVec, StringM, VecM, WriteXdr};
 use stellar_ibc_core::api_client::ApiClient;
 use stellar_ibc_core::rpc::SubmittedTx;
 use tonic::{Request, Response, Status};
@@ -23,6 +23,27 @@ impl MsgHandler {
 
     pub fn into_server(self) -> StellarGatewayMsgServer<Self> {
         StellarGatewayMsgServer::new(self)
+    }
+
+    async fn prepare_router(
+        &self,
+        method: &str,
+        args: Vec<ScVal>,
+        signer: &str,
+    ) -> Result<Vec<u8>, Status> {
+        if signer.is_empty() {
+            return Err(Status::invalid_argument(
+                "signer (relayer source account) is required to prepare an unsigned tx",
+            ));
+        }
+        tracing::info!(method, args = args.len(), %signer, "prepare_router via api");
+        self.api
+            .prepare_invoke(method, args, signer)
+            .await
+            .map_err(|error| {
+                tracing::error!(%error, method, "prepare_invoke failed");
+                Status::internal(format!("prepare_invoke({method}): {error}"))
+            })
     }
 
     async fn invoke_router(&self, method: &str, args: Vec<ScVal>) -> Result<SubmittedTx, Status> {
@@ -98,14 +119,23 @@ impl StellarGatewayMsg for MsgHandler {
     ) -> Result<Response<SubmitSignedTxResponse>, Status> {
         let tx_xdr = request.into_inner().tx_xdr;
         tracing::info!(tx_bytes = tx_xdr.len(), "gRPC SubmitSignedTx");
-        let tx_hash = self.api.submit_and_wait(&tx_xdr).await.map_err(|error| {
-            tracing::error!(%error, "submit_and_wait failed");
-            Status::internal(format!("submit_and_wait: {error}"))
-        })?;
-        tracing::info!(%tx_hash, "submit_signed_tx ok");
+        let submitted = self
+            .api
+            .submit_and_wait_for_result(&tx_xdr)
+            .await
+            .map_err(|error| {
+                tracing::error!(%error, "submit_and_wait_for_result failed");
+                Status::internal(format!("submit_and_wait: {error}"))
+            })?;
+        let return_value = submitted
+            .return_value
+            .and_then(|v| v.to_xdr(Limits::none()).ok())
+            .unwrap_or_default();
+        tracing::info!(tx_hash = %submitted.hash, "submit_signed_tx ok");
         Ok(Response::new(SubmitSignedTxResponse {
-            tx_hash,
+            tx_hash: submitted.hash,
             events: Vec::new(),
+            return_value,
         }))
     }
 
@@ -133,13 +163,14 @@ impl StellarGatewayMsg for MsgHandler {
             scval_bytes(&req.consensus_state)?,
             scval_u64(req.height),
         ];
-        let submitted = self.invoke_router("create_client", args).await?;
-        let client_id = submitted
-            .return_value
-            .and_then(scval_into_string)
-            .unwrap_or_default();
-        tracing::info!(%client_id, "create_client minted");
-        Ok(Response::new(MsgCreateClientResponse { client_id }))
+        let tx_xdr = self
+            .prepare_router("create_client", args, &req.signer)
+            .await?;
+        tracing::info!(tx_bytes = tx_xdr.len(), "create_client prepared (unsigned)");
+        Ok(Response::new(MsgCreateClientResponse {
+            client_id: String::new(),
+            tx_xdr,
+        }))
     }
 
     #[tracing::instrument(skip(self, request), name = "grpc.update_client")]

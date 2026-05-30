@@ -187,6 +187,8 @@ pub struct SubmitSignedTxResponse {
     pub tx_hash: String,
     #[prost(bytes = "vec", repeated, tag = "2")]
     pub events: Vec<Vec<u8>>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub return_value: Vec<u8>,
 }
 
 #[derive(Clone, Message)]
@@ -207,6 +209,8 @@ pub struct MsgCreateClientRequest {
 pub struct MsgCreateClientResponse {
     #[prost(string, tag = "1")]
     pub client_id: String,
+    #[prost(bytes = "vec", tag = "2")]
+    pub tx_xdr: Vec<u8>,
 }
 
 #[derive(Clone, Message)]
