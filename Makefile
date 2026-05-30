@@ -161,3 +161,6 @@ f0:
 
 f1:
 	@$(MAKE) -C ci f1
+
+f1-2:
+	@$(MAKE) -C ci f1-create-client

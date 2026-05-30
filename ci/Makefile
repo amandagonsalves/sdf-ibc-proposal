@@ -1,4 +1,4 @@
-.PHONY: f0 f1 hermes-image gateway-image api-image hermes-keys upload-lc-wasm deploy-contracts caribic-preflight cosmos-only api-doc
+.PHONY: f0 f1 f1-create-client f1-create-stellar-client hermes-image gateway-image api-image hermes-keys upload-lc-wasm deploy-contracts caribic-preflight cosmos-only api-doc
 
 SCRIPT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FLOWS_DIR  := $(SCRIPT_DIR)flows
@@ -8,6 +8,12 @@ f0:
 
 f1:
 	@bash $(FLOWS_DIR)/f1-create-cosmos-client.sh
+
+f1-create-client:
+	@bash $(FLOWS_DIR)/f1-create-client.sh
+
+f1-create-stellar-client:
+	@bash $(FLOWS_DIR)/f1-create-stellar-client.sh
 
 hermes-image:
 	@bash $(FLOWS_DIR)/build-hermes-image.sh

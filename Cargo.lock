@@ -796,17 +796,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-storage-plus"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f13360e9007f51998d42b1bc6b7fa0141f74feae61ed5fd1e5b0a89eec7b5de1"
-dependencies = [
- "cosmwasm-std",
- "schemars 0.8.22",
- "serde",
-]
-
-[[package]]
 name = "darling"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2609,7 +2598,6 @@ name = "light-client-wasm"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
- "cw-storage-plus",
  "ed25519-dalek",
  "prost 0.14.3",
  "serde",
