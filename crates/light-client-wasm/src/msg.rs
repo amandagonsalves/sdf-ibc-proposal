@@ -84,7 +84,6 @@ pub struct StatusResult {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
 pub enum ClientStatus {
     Active,
     Frozen,
