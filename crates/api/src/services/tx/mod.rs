@@ -3,66 +3,46 @@ use std::sync::Arc;
 mod types;
 
 use crate::state::AppState;
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
-use types::{GetSignedTxResponse, GetUnsignedTxResponse, SignTxResponse, SubmitSignedTxResponse};
+use axum::{extract::State, http::StatusCode, Json};
+use serde_json::{json, Value};
+use soroban_client::xdr::{Limits, WriteXdr};
+use types::SubmitSignedTxRequest;
 
-#[tracing::instrument(skip(_state))]
+fn err<E: std::fmt::Display>(status: StatusCode, e: E) -> (StatusCode, Json<Value>) {
+    (status, Json(json!({ "error": e.to_string() })))
+}
+
+#[tracing::instrument(skip(state, req), fields(tx_bytes = req.tx_xdr.len()))]
 pub async fn submit_signed_tx(
-    State(_state): State<Arc<AppState>>,
-    Path(address): Path<String>,
-) -> impl IntoResponse {
-    tracing::info!(%address, "POST /tx/submit");
-    (
-        StatusCode::OK,
-        Json(SubmitSignedTxResponse {
-            account_id: address,
-        }),
-    )
-}
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<SubmitSignedTxRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    tracing::info!("POST /tx/submit");
 
-#[tracing::instrument(skip(_state))]
-pub async fn sign_tx(
-    State(_state): State<Arc<AppState>>,
-    Path(address): Path<String>,
-) -> impl IntoResponse {
-    tracing::info!(%address, "POST /tx/sign");
-    (
-        StatusCode::OK,
-        Json(SignTxResponse {
-            account_id: address,
-        }),
-    )
-}
+    let tx_xdr = hex::decode(&req.tx_xdr)
+        .map_err(|e| err(StatusCode::BAD_REQUEST, format!("tx_xdr hex: {e}")))?;
 
-#[tracing::instrument(skip(_state))]
-pub async fn get_unsigned_tx(
-    State(_state): State<Arc<AppState>>,
-    Path(address): Path<String>,
-) -> impl IntoResponse {
-    tracing::info!(%address, "GET /tx/xdr");
-    (
-        StatusCode::OK,
-        Json(GetUnsignedTxResponse {
-            account_id: address,
-        }),
-    )
-}
+    let submitted = state
+        .rpc
+        .submit_and_wait_for_result(&tx_xdr)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "submit_and_wait_for_result failed");
+            err(StatusCode::BAD_GATEWAY, e)
+        })?;
 
-#[tracing::instrument(skip(_state))]
-pub async fn get_signed_tx(
-    State(_state): State<Arc<AppState>>,
-    Path(address): Path<String>,
-) -> impl IntoResponse {
-    tracing::info!(%address, "GET /tx/<tx_hash>");
-    (
-        StatusCode::OK,
-        Json(GetSignedTxResponse {
-            account_id: address,
-        }),
-    )
+    let return_value_xdr = match submitted.return_value {
+        Some(value) => value
+            .to_xdr(Limits::none())
+            .map(hex::encode)
+            .map_err(|e| err(StatusCode::BAD_GATEWAY, format!("return_value XDR encode: {e}")))?,
+        None => String::new(),
+    };
+
+    tracing::info!(hash = %submitted.hash, "tx submitted");
+
+    Ok(Json(json!({
+        "hash": submitted.hash,
+        "return_value_xdr": return_value_xdr,
+    })))
 }
