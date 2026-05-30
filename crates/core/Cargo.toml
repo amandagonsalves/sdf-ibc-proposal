@@ -18,6 +18,11 @@ ibc-proto = { version = "0.51", default-features = false, features = ["std"] }
 ics23 = "0.12"
 sha2 = { workspace = true }
 hex = { workspace = true }
-
+stellar-xdr = { version = "26.0.1", default-features = true, features = [
+  "base64",
+  "std",
+  "serde",
+  "alloc",
+] }
 [dev-dependencies]
 tokio = { workspace = true }

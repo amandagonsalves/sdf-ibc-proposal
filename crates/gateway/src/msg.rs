@@ -113,32 +113,30 @@ impl StellarGatewayMsg for MsgHandler {
             height = req.height,
             "gRPC CreateClient"
         );
-        let (client_state_bytes, height) = match AnyClientState::decode_value(&req.client_state) {
-            Ok(cs) => {
-                tracing::info!(
-                    chain_id = %cs.chain_id(),
-                    revision_number = cs.revision_number(),
-                    latest_height = cs.latest_height(),
-                    "decoded tendermint client state"
-                );
-                (cs.encode_value(), cs.latest_height())
-            }
-            Err(error) => {
-                tracing::warn!(%error, request_height = req.height, "could not decode tendermint client state; forwarding as-is");
-                (req.client_state.clone(), req.height)
-            }
-        };
-        let consensus_state_bytes = match AnyConsensusState::decode_value(&req.consensus_state) {
-            Ok(cons) => cons.encode_value(),
-            Err(error) => {
-                tracing::warn!(%error, "could not decode tendermint consensus state; forwarding as-is");
-                req.consensus_state.clone()
-            }
-        };
+        let client_state = AnyClientState::decode_value(&req.client_state)
+            .map_err(|e| Status::invalid_argument(format!("decode client state: {e}")))?;
+
+        let height = client_state.latest_height();
+        tracing::info!(
+            chain_id = %client_state.chain_id(),
+            revision_number = client_state.revision_number(),
+            latest_height = height,
+            "decoded tendermint client state"
+        );
+        let client_state_xdr = client_state
+            .to_soroban_xdr()
+            .map_err(|e| Status::internal(format!("client state to soroban xdr: {e}")))?;
+
+        let consensus_state = AnyConsensusState::decode_value(&req.consensus_state)
+            .map_err(|e| Status::invalid_argument(format!("decode consensus state: {e}")))?;
+        let consensus_state_xdr = consensus_state
+            .to_soroban_xdr()
+            .map_err(|e| Status::internal(format!("consensus state to soroban xdr: {e}")))?;
+
         let args = vec![
             scval_string(&req.client_type)?,
-            scval_bytes(&client_state_bytes)?,
-            scval_bytes(&consensus_state_bytes)?,
+            scval_bytes(&client_state_xdr)?,
+            scval_bytes(&consensus_state_xdr)?,
             scval_u64(height),
         ];
         let tx_xdr = self.prepare_msg_tx("create_client", args).await?;
