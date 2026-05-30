@@ -7,9 +7,48 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use stellar_ibc_core::rpc::RpcClient;
 use tokio::net::TcpListener;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::services::cosmos::client::CosmosClient;
 use crate::{config::ApiConfig, services, AppState};
+
+/// OpenAPI document for the cosmos + hermes endpoints. Served as JSON at
+/// `/api-docs/openapi.json` and rendered as Swagger UI at `/docs`.
+#[derive(OpenApi)]
+#[openapi(
+    info(
+        title = "stellar-api",
+        description = "HTTP service that fronts the Stellar IBC stack, a configured Cosmos chain, and the hermes relayer config.",
+        version = "0.1.0",
+    ),
+    tags(
+        (name = "Cosmos read", description = "Read-only proxies to the configured Cosmos REST endpoint."),
+        (name = "Cosmos write", description = "Signed Cosmos SDK transactions broadcast via the api's proposer/funder keys."),
+        (name = "Hermes", description = "Mutations to the bound hermes config file."),
+    ),
+    paths(
+        services::cosmos::node_info,
+        services::cosmos::proposals,
+        services::cosmos::proposal_by_id,
+        services::cosmos::gov_deposit_params,
+        services::cosmos::tx_by_hash,
+        services::cosmos::ibc_wasm_checksums,
+        services::cosmos::proposer_info,
+        services::cosmos::funder_info,
+        services::cosmos::submit_store_code,
+        services::cosmos::submit_vote,
+        services::cosmos::submit_bank_send,
+        services::hermes::patch_wasm_checksum,
+    ),
+    components(schemas(
+        services::cosmos::StoreCodeRequest,
+        services::cosmos::VoteRequest,
+        services::cosmos::BankSendRequest,
+        services::hermes::PatchChecksumRequest,
+    )),
+)]
+pub struct ApiDoc;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -51,6 +90,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             post(services::hermes::patch_wasm_checksum),
         )
         .with_state(state)
+        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }
 
 async fn health(State(state): State<Arc<AppState>>) -> String {

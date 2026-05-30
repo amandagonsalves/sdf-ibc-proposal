@@ -16,6 +16,14 @@ use tokio::time::{sleep, Duration};
 
 use crate::config::CosmosConfig;
 
+/// Cosmos chain client: REST queries (`reqwest`) plus signed-tx building and
+/// broadcasting (`cosmrs` + `ibc-proto`).
+///
+/// Holds up to two secp256k1 signers, both optional:
+/// - `proposer` — signs `MsgSubmitProposal` and `MsgVote` by default.
+/// - `funder` — signs `MsgSend`; also used to vote when present, so the vote
+///   carries the funder's stake weight (typically the genesis validator on
+///   localnets).
 pub struct CosmosClient {
     pub config: CosmosConfig,
     http: HttpClient,
@@ -30,8 +38,7 @@ fn load_key(hex_str: &str, prefix: &str, label: &str) -> Result<Option<(SigningK
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let bytes = hex::decode(trimmed)
-        .with_context(|| format!("{label} is not valid hex"))?;
+    let bytes = hex::decode(trimmed).with_context(|| format!("{label} is not valid hex"))?;
     let key = SigningKey::from_slice(&bytes)
         .map_err(|e| anyhow!("invalid {label} secp256k1 key: {e}"))?;
     let addr = key
@@ -42,6 +49,7 @@ fn load_key(hex_str: &str, prefix: &str, label: &str) -> Result<Option<(SigningK
     Ok(Some((key, addr)))
 }
 
+/// Cached account state used as input to a `SignDoc`.
 #[derive(Debug, Clone)]
 pub struct AccountInfo {
     pub address: String,
@@ -49,6 +57,11 @@ pub struct AccountInfo {
     pub sequence: u64,
 }
 
+/// CheckTx-level outcome of a sync broadcast.
+///
+/// `code: 0` means the tx is in the mempool; it does **not** guarantee
+/// DeliverTx success. Use [`CosmosClient::wait_for_tx`] and inspect the
+/// landed `tx_response.code` to confirm on-chain execution.
 #[derive(Debug, Clone)]
 pub struct BroadcastResult {
     pub tx_hash: String,
@@ -150,7 +163,14 @@ impl CosmosClient {
 
     pub async fn account_info(&self, address: &str) -> Result<AccountInfo> {
         let url = self.rest(&format!("/cosmos/auth/v1beta1/accounts/{}", address));
-        let body: Value = self.http.get(&url).send().await?.error_for_status()?.json().await?;
+        let body: Value = self
+            .http
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         let account = body
             .get("account")
             .ok_or_else(|| anyhow!("response missing 'account': {body}"))?;
@@ -173,7 +193,14 @@ impl CosmosClient {
 
     pub async fn gov_module_address(&self) -> Result<String> {
         let url = self.rest("/cosmos/auth/v1beta1/module_accounts/gov");
-        let body: Value = self.http.get(&url).send().await?.error_for_status()?.json().await?;
+        let body: Value = self
+            .http
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         body.pointer("/account/value/address")
             .or_else(|| body.pointer("/account/base_account/address"))
             .or_else(|| body.pointer("/account/address"))
@@ -216,9 +243,8 @@ impl CosmosClient {
             },
             gas_limit,
         );
-        let auth_info =
-            SignerInfo::single_direct(Some(signing_key.public_key()), account.sequence)
-                .auth_info(fee);
+        let auth_info = SignerInfo::single_direct(Some(signing_key.public_key()), account.sequence)
+            .auth_info(fee);
         let chain_id = ChainId::try_from(self.config.chain_id.clone())
             .map_err(|e| anyhow!("invalid chain id: {e}"))?;
         let sign_doc = SignDoc::new(&body, &auth_info, &chain_id, account.account_number)
@@ -330,8 +356,15 @@ impl CosmosClient {
             value: msg.encode_to_vec(),
         };
 
-        self.sign_and_broadcast(signing_key, &proposer, msg_any, "upload-lc-wasm", gas_limit, fee_amount)
-            .await
+        self.sign_and_broadcast(
+            signing_key,
+            &proposer,
+            msg_any,
+            "upload-lc-wasm",
+            gas_limit,
+            fee_amount,
+        )
+        .await
     }
 
     pub async fn submit_vote(
@@ -341,9 +374,7 @@ impl CosmosClient {
         gas_limit: u64,
         fee_amount: u128,
     ) -> Result<BroadcastResult> {
-        let (signing_key, voter) = self
-            .funder_pair()
-            .or_else(|_| self.proposer_pair())?;
+        let (signing_key, voter) = self.funder_pair().or_else(|_| self.proposer_pair())?;
         let voter = voter.to_string();
         let msg = MsgVote {
             proposal_id,
@@ -355,8 +386,15 @@ impl CosmosClient {
             type_url: "/cosmos.gov.v1.MsgVote".to_string(),
             value: msg.encode_to_vec(),
         };
-        self.sign_and_broadcast(signing_key, &voter, msg_any, "upload-lc-wasm-vote", gas_limit, fee_amount)
-            .await
+        self.sign_and_broadcast(
+            signing_key,
+            &voter,
+            msg_any,
+            "upload-lc-wasm-vote",
+            gas_limit,
+            fee_amount,
+        )
+        .await
     }
 
     pub async fn submit_bank_send(
@@ -380,12 +418,21 @@ impl CosmosClient {
             type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
             value: msg.encode_to_vec(),
         };
-        self.sign_and_broadcast(signing_key, &funder, msg_any, "bank-send", gas_limit, fee_amount)
-            .await
+        self.sign_and_broadcast(
+            signing_key,
+            &funder,
+            msg_any,
+            "bank-send",
+            gas_limit,
+            fee_amount,
+        )
+        .await
     }
 
     pub fn extract_proposal_id(tx_response: &Value) -> Option<u64> {
-        let events = tx_response.pointer("/tx_response/events").or_else(|| tx_response.get("events"))?;
+        let events = tx_response
+            .pointer("/tx_response/events")
+            .or_else(|| tx_response.get("events"))?;
         for event in events.as_array()? {
             let kind = event.get("type").and_then(|v| v.as_str()).unwrap_or("");
             if kind == "submit_proposal" {
@@ -404,4 +451,3 @@ impl CosmosClient {
         None
     }
 }
-
