@@ -1,7 +1,11 @@
-.PHONY: f0 f1 f1-create-client f1-create-stellar-client hermes-image gateway-image api-image hermes-keys upload-lc-wasm deploy-contracts caribic-preflight cosmos-only api-doc
+.PHONY: install f0 f1 f1-create-client f1-create-stellar-client hermes-image gateway-image api-image hermes-keys upload-lc-wasm deploy-contracts caribic-preflight cosmos-only api-doc
 
 SCRIPT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FLOWS_DIR  := $(SCRIPT_DIR)flows
+REPO_ROOT  := $(SCRIPT_DIR)..
+
+install:
+	@cargo install --path $(REPO_ROOT)/crates/cli --force
 
 f0:
 	@bash $(FLOWS_DIR)/f0-bootstrap.sh
