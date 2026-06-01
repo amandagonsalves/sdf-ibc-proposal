@@ -3,7 +3,7 @@
 The core IBC v2 router contract. Equivalent of Eureka's `ICS26Router.sol`
 combined with the `ICS02ClientUpgradeable` (client registry) and
 `IBCStoreUpgradeable` (commitment store) mixins. Lives at
-`contracts/router/`.
+`contracts/soroban/ibc-router/`.
 
 ## What it does
 

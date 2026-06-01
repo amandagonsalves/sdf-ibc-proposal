@@ -8,8 +8,8 @@ a mounted entrypoint script — no Dockerfile, no source build, no caribic.
 The chain config is **minimal and IBC-tailored**: it starts from `osmosisd init`
 defaults and overrides only what relaying and the 08-wasm light client need —
 `uosmo` as bond/mint/fee denom, a funded validator + relayer account, and a short
-gov voting period + tiny deposit so the `ci/flows/upload-lc-wasm.sh` governance
-proposal lands deterministically. It deliberately omits the LocalOsmosis
+gov voting period + tiny deposit so the `stellaribc contracts upload-wasm`
+governance proposal lands deterministically. It deliberately omits the LocalOsmosis
 DEX-testing extras (denom metadata, balancer/stable/CL pools, incentive epochs).
 
 ## Layout
@@ -28,13 +28,13 @@ under the `osmosis` (and `local`) compose profiles.
 ## Usage
 
 ```sh
-make start-osmosis            # fresh local chain, wait for first block
-make start-osmosis-stateful   # reuse existing ~/.osmosisd-local state
-make health-osmosis
-make stop-osmosis
+# via the orchestrator CLI (from anywhere in the repo)
+stellaribc osmosis start       # start the devnet, wait for first block
+stellaribc osmosis status
+stellaribc osmosis stop
 
-# or directly
-cargo run -p stellar-osmosis -- start [--stateful]
+# or this crate directly
+cargo run -p stellar-osmosis -- start [--stateful]   # --stateful keeps ~/.osmosisd-local
 cargo run -p stellar-osmosis -- stop
 cargo run -p stellar-osmosis -- health
 
@@ -56,7 +56,7 @@ Chain id `localosmosis`, account prefix `osmo`, gas denom `uosmo`. These match
 Two keys are recovered into the genesis: `val` (the validator) and `relayer`
 (a separately funded account for Hermes). Both mnemonics live in
 `assets/default-config.json`. Point Hermes at the chain by importing the
-`relayer` mnemonic under the `localosmosis` key name in `ci/hermes-config.toml`:
+`relayer` mnemonic under the `localosmosis` key name in `hermes-config.toml`:
 `hermes keys add --chain localosmosis --mnemonic-file <relayer-mnemonic>`.
 
 ## Config
