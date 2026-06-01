@@ -19,7 +19,7 @@ pub async fn run(
     skip_keys: bool,
     force_redeploy: bool,
 ) -> Result<()> {
-    logger::banner("bootstrap");
+    logger::banner("start");
 
     if !run::has("docker") {
         bail!("docker not found in PATH — required to bring up the stack");
@@ -75,7 +75,7 @@ pub async fn run(
         hermes::keys::import(cfg, root)?;
     }
 
-    logger::ok("bootstrap complete");
+    logger::ok("start complete");
     logger::hint("check: stellaribc status   then: stellaribc clients cosmos");
 
     Ok(())
