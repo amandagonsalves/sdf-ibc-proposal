@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Result};
 
 use crate::config::Config;
 use crate::{logger, run};
@@ -8,7 +8,9 @@ use crate::{logger, run};
 pub fn import(cfg: &Config, root: &Path) -> Result<()> {
     logger::banner("hermes keys-import (relayer key = router admin key)");
 
-    let mnemonic = read_relayer_mnemonic(&cfg.cosmos.config_json)?;
+    if cfg.osmosis.relayer_mnemonic.is_empty() {
+        bail!("OSMOSIS_RELAYER_MNEMONIC is empty in .env — set the cosmos relayer mnemonic (a faucet-funded account)");
+    }
 
     if cfg.stellar.signing_key.is_empty() {
         bail!("STELLAR_SIGNING_KEY is empty in .env — it must be the funded contract admin/deployer secret so it can pay fees and satisfy admin.require_auth()");
@@ -19,10 +21,16 @@ pub fn import(cfg: &Config, root: &Path) -> Result<()> {
 
     logger::step(&format!(
         "importing {} for {} (cosmos mnemonic)",
-        cfg.cosmos.key_name,
-        cfg.cosmos.chain_id.as_str()
+        cfg.osmosis.key_name,
+        cfg.osmosis.chain_id.as_str()
     ));
-    import_mnemonic(cfg, root, cfg.cosmos.chain_id.as_str(), &cfg.cosmos.key_name, &mnemonic)?;
+    import_mnemonic(
+        cfg,
+        root,
+        cfg.osmosis.chain_id.as_str(),
+        &cfg.osmosis.key_name,
+        &cfg.osmosis.relayer_mnemonic,
+    )?;
 
     logger::step(&format!(
         "importing {} for {} (from STELLAR_SIGNING_KEY)",
@@ -43,18 +51,6 @@ pub fn import(cfg: &Config, root: &Path) -> Result<()> {
     logger::ok("keys imported into the hermes-keys volume (persists across restarts)");
 
     Ok(())
-}
-
-fn read_relayer_mnemonic(path: &str) -> Result<String> {
-    let text = std::fs::read_to_string(path).with_context(|| format!("reading {path}"))?;
-    let json: serde_json::Value =
-        serde_json::from_str(&text).with_context(|| format!("parsing {path}"))?;
-
-    json.get("keys")
-        .and_then(|k| k.get("relayer"))
-        .and_then(|v| v.as_str())
-        .map(str::to_string)
-        .ok_or_else(|| anyhow!("{path} is missing .keys.relayer"))
 }
 
 fn import_mnemonic(

@@ -2,14 +2,14 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::config::ImageRef;
+use crate::hermes::config::HermesConfig;
 use crate::{logger, run};
 
 const SERVICE: &str = "hermes";
 
-pub fn start(image: &ImageRef, root: &Path, pull: bool) -> Result<()> {
+pub fn start(cfg: &HermesConfig, root: &Path, pull: bool) -> Result<()> {
     logger::banner("hermes start (relayer container)");
-    logger::detail(&format!("image: {}", image.reference()));
+    logger::detail(&format!("image: {}", cfg.image.reference()));
 
     if pull {
         run::compose(root, &["pull", SERVICE])?;
@@ -34,9 +34,9 @@ pub fn stop(root: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn restart(image: &ImageRef, root: &Path, pull: bool) -> Result<()> {
+pub fn restart(cfg: &HermesConfig, root: &Path, pull: bool) -> Result<()> {
     logger::banner("hermes restart");
-    logger::detail(&format!("image: {}", image.reference()));
+    logger::detail(&format!("image: {}", cfg.image.reference()));
 
     if pull {
         run::compose(root, &["pull", SERVICE])?;
