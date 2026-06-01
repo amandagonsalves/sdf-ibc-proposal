@@ -1,7 +1,7 @@
 [workspace]
 members = [
+    "cli",
     "crates/api",
-    "crates/cli",
     "crates/core",
     "crates/gateway",
     "crates/osmosis",
@@ -50,6 +50,7 @@ tonic-prost = "0.14.6"
 tonic-reflection = "0.14.1"
 
 async-trait = "0.1.89"
+clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["time", "rt-multi-thread", "macros", "sync"] }
 axum = "0.8.9"
 
