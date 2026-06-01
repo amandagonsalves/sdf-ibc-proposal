@@ -60,9 +60,9 @@ impl OsmosisConfig {
 
         Self {
             network,
-            chain_id: ChainId::Cosmos(get("OSMOSIS_CHAIN_ID", chain_id)),
-            rpc_url: get("OSMOSIS_RPC_URL", rpc),
-            rest_url: get("OSMOSIS_REST_URL", rest),
+            chain_id: ChainId::Cosmos(get("COSMOS_CHAIN_ID", chain_id)),
+            rpc_url: get("COSMOS_RPC_URL", rpc),
+            rest_url: get("COSMOS_REST_URL", rest),
             grpc_url: get("OSMOSIS_GRPC_URL", grpc),
             key_name: get("OSMOSIS_KEY_NAME", key),
             relayer_mnemonic,

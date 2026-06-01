@@ -307,7 +307,10 @@ pub async fn submit_store_code(
     State(state): State<Arc<AppState>>,
     Json(req): Json<StoreCodeRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!(wasm_b64_len = req.wasm_base64.len(), "POST /cosmos/ibc-wasm/store-code");
+    tracing::info!(
+        wasm_b64_len = req.wasm_base64.len(),
+        "POST /cosmos/ibc-wasm/store-code"
+    );
 
     let wasm = BASE64.decode(req.wasm_base64.as_bytes()).map_err(|e| {
         tracing::error!(error = %e, "wasm_base64 decode failed");
@@ -340,7 +343,10 @@ pub async fn submit_store_code(
         );
         return Err(err(
             StatusCode::BAD_GATEWAY,
-            format!("broadcast rejected (code {}): {}", result.code, result.raw_log),
+            format!(
+                "broadcast rejected (code {}): {}",
+                result.code, result.raw_log
+            ),
         ));
     }
 
@@ -494,9 +500,7 @@ pub async fn submit_vote(
     )
 )]
 #[tracing::instrument(skip(state))]
-pub async fn proposer_info(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+pub async fn proposer_info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let address = state.cosmos.proposer_address();
     tracing::info!(?address, "GET /cosmos/proposer");
     Json(json!({ "address": address }))
@@ -513,9 +517,7 @@ pub async fn proposer_info(
     )
 )]
 #[tracing::instrument(skip(state))]
-pub async fn funder_info(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+pub async fn funder_info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let address = state.cosmos.funder_address();
     tracing::info!(?address, "GET /cosmos/funder");
     Json(json!({ "address": address }))
@@ -568,14 +570,10 @@ pub async fn submit_bank_send(
     tracing::info!("POST /cosmos/bank/send");
 
     if req.skip_if_account_exists {
-        let exists = state
-            .cosmos
-            .account_exists(&req.to)
-            .await
-            .map_err(|e| {
-                tracing::error!(error = %e, to = %req.to, "account_exists check failed");
-                bad_gateway(e)
-            })?;
+        let exists = state.cosmos.account_exists(&req.to).await.map_err(|e| {
+            tracing::error!(error = %e, to = %req.to, "account_exists check failed");
+            bad_gateway(e)
+        })?;
         if exists {
             tracing::info!(to = %req.to, "bank-send skipped: account exists");
             return Ok(Json(json!({
@@ -604,7 +602,10 @@ pub async fn submit_bank_send(
         );
         return Err(err(
             StatusCode::BAD_GATEWAY,
-            format!("bank send rejected (code {}): {}", result.code, result.raw_log),
+            format!(
+                "bank send rejected (code {}): {}",
+                result.code, result.raw_log
+            ),
         ));
     }
 

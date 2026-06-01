@@ -63,7 +63,7 @@ impl ApiConfig {
             cosmos: CosmosConfig::from_env(),
             hermes_config_path: std::env::var("HERMES_CONFIG_PATH")
                 .unwrap_or_else(|_| "/etc/hermes/config.toml".to_string()),
-            ibc_contract_id: std::env::var("IBC_CONTRACT_ID").unwrap_or_default(),
+            ibc_contract_id: std::env::var("ROUTER_CONTRACT_ADDRESS").unwrap_or_default(),
             network_passphrase: std::env::var("NETWORK_PASSPHRASE")
                 .unwrap_or_else(|_| "Test SDF Network ; September 2015".to_string()),
         }
@@ -87,12 +87,10 @@ impl CosmosConfig {
                 .unwrap_or_else(|_| "http://127.0.0.1:26658".to_string()),
             account_prefix: std::env::var("COSMOS_ACCOUNT_PREFIX")
                 .unwrap_or_else(|_| "osmo".to_string()),
-            gas_denom: std::env::var("COSMOS_GAS_DENOM")
-                .unwrap_or_else(|_| "uosmo".to_string()),
+            gas_denom: std::env::var("COSMOS_GAS_DENOM").unwrap_or_else(|_| "uosmo".to_string()),
             proposer_private_key_hex: std::env::var("COSMOS_PROPOSER_PRIVATE_KEY")
                 .unwrap_or_default(),
-            funder_private_key_hex: std::env::var("COSMOS_FUNDER_PRIVATE_KEY")
-                .unwrap_or_default(),
+            funder_private_key_hex: std::env::var("COSMOS_FUNDER_PRIVATE_KEY").unwrap_or_default(),
         }
     }
 }

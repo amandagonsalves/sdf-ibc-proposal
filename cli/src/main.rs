@@ -27,7 +27,7 @@ use config::Config;
     version,
     about = "Orchestrator for the Stellar<->Cosmos IBC v2 bridge",
     long_about = "A caribic-style orchestrator for the Stellar<->Cosmos bridge, grouped by \
-component: ops (install/doctor/status/up/down/bootstrap), clients, hermes, gateway, api, \
+component: ops (install/check/status/up/down/start), clients, hermes, gateway, api, \
 contracts, and tx. Drives docker, the stellar CLI, and the api directly — no shell scripts.",
     propagate_version = true
 )]
@@ -49,9 +49,9 @@ enum Command {
     #[command(about = "Stop the stack via docker compose")]
     Down(DownArgs),
     #[command(
-        about = "Full bootstrap: build images, start chains, deploy contracts, upload wasm, import keys"
+        about = "Full start: pull images, start chains, deploy contracts, upload wasm, import keys"
     )]
-    Bootstrap(BootstrapArgs),
+    Start(StartArgs),
     #[command(about = "Osmosis chain: start/stop the local devnet or point at a testnet")]
     Osmosis {
         #[command(subcommand)]
@@ -104,8 +104,8 @@ struct DownArgs {
 }
 
 #[derive(clap::Args)]
-struct BootstrapArgs {
-    #[arg(long, help = "Skip building the docker images")]
+struct StartArgs {
+    #[arg(long, help = "Skip pulling the docker images")]
     skip_images: bool,
     #[arg(long, help = "Skip the Soroban contract deploy")]
     skip_contracts: bool,
@@ -323,8 +323,8 @@ async fn main() -> Result<()> {
         Command::Status => ops::status::run(&ops::config::OpsConfig::from(&cfg), &http).await?,
         Command::Up(args) => ops::stack::up(root, args.cosmos, args.stellar)?,
         Command::Down(args) => ops::stack::down(root, args.volumes)?,
-        Command::Bootstrap(args) => {
-            ops::bootstrap::run(
+        Command::Start(args) => {
+            ops::start::run(
                 &cfg,
                 root,
                 &http,
@@ -361,9 +361,7 @@ async fn main() -> Result<()> {
         Command::Hermes { cmd } => match cmd {
             HermesCmd::Start { pull } => hermes::container::start(&cfg.hermes, root, pull)?,
             HermesCmd::Stop => hermes::container::stop(root)?,
-            HermesCmd::Restart { pull } => {
-                hermes::container::restart(&cfg.hermes, root, pull)?
-            }
+            HermesCmd::Restart { pull } => hermes::container::restart(&cfg.hermes, root, pull)?,
             HermesCmd::KeysImport => hermes::keys::import(&cfg, root)?,
         },
 
