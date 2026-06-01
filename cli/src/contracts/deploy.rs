@@ -2,10 +2,10 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::config::Config;
+use crate::contracts::config::ContractsConfig;
 use crate::logger;
 
-pub fn run(cfg: &Config, root: &Path, wasm: &str, ctor: &[String]) -> Result<()> {
+pub fn run(cfg: &ContractsConfig, root: &Path, wasm: &str, ctor: &[String]) -> Result<()> {
     logger::banner("contracts deploy");
 
     logger::step(&format!("stellar contract deploy --wasm {wasm}"));

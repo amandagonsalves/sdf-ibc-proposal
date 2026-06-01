@@ -1,4 +1,5 @@
 pub mod build;
+pub mod config;
 pub mod deploy;
 pub mod deploy_all;
 pub mod invoke;
@@ -9,17 +10,8 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use crate::config::Config;
+use crate::contracts::config::ContractsConfig;
 use crate::run;
-
-pub(crate) fn net_flags(cfg: &Config) -> Vec<String> {
-    vec![
-        "--rpc-url".to_string(),
-        cfg.stellar_rpc_url.clone(),
-        "--network-passphrase".to_string(),
-        cfg.network_passphrase.clone(),
-    ]
-}
 
 pub(crate) fn last_line(out: &str) -> String {
     out.lines()
@@ -30,19 +22,19 @@ pub(crate) fn last_line(out: &str) -> String {
         .to_string()
 }
 
-fn stellar_base(cfg: &Config, sub: &str) -> Vec<String> {
+fn stellar_base(cfg: &ContractsConfig, sub: &str) -> Vec<String> {
     let mut args = vec![
         "contract".to_string(),
         sub.to_string(),
         "--source".to_string(),
-        cfg.deployer_identity.clone(),
+        cfg.cli_identity.clone(),
     ];
-    args.extend(net_flags(cfg));
+    args.extend(cfg.net_flags());
 
     args
 }
 
-pub(crate) fn deploy(cfg: &Config, root: &Path, wasm: &str, ctor: &[&str]) -> Result<String> {
+pub(crate) fn deploy(cfg: &ContractsConfig, root: &Path, wasm: &str, ctor: &[&str]) -> Result<String> {
     let mut args = stellar_base(cfg, "deploy");
     args.push("--wasm".to_string());
     args.push(wasm.to_string());
@@ -57,7 +49,7 @@ pub(crate) fn deploy(cfg: &Config, root: &Path, wasm: &str, ctor: &[&str]) -> Re
     Ok(last_line(&run::capture(root, "stellar", &refs)?))
 }
 
-pub(crate) fn invoke(cfg: &Config, root: &Path, id: &str, call: &[&str]) -> Result<()> {
+pub(crate) fn invoke(cfg: &ContractsConfig, root: &Path, id: &str, call: &[&str]) -> Result<()> {
     let mut args = stellar_base(cfg, "invoke");
     args.push("--id".to_string());
     args.push(id.to_string());

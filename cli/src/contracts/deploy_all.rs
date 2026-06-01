@@ -2,20 +2,27 @@ use std::path::Path;
 
 use anyhow::{bail, Result};
 
-use crate::config::Config;
+use crate::config::ClientTypes;
+use crate::contracts::config::ContractsConfig;
 use crate::{logger, run, shared};
 
-pub fn run(cfg: &Config, root: &Path, force: bool, attestation: bool, tendermint: bool) -> Result<()> {
+pub fn run(
+    cfg: &ContractsConfig,
+    root: &Path,
+    force: bool,
+    attestation: bool,
+    tendermint: bool,
+) -> Result<()> {
     logger::banner("contracts deploy-all (build + deploy + wire router + write .env)");
 
-    if cfg.stellar_signing_key.is_empty() {
+    if cfg.signing_key.is_empty() {
         bail!("STELLAR_SIGNING_KEY is empty in .env — generate + fund a testnet key and set it");
     }
 
-    if !cfg.ibc_contract_id.is_empty() && !force {
+    if !cfg.ibc_router.is_empty() && !force {
         logger::warn(&format!(
             "IBC_CONTRACT_ID already set ({}). Use --force to redeploy.",
-            cfg.ibc_contract_id
+            cfg.ibc_router
         ));
 
         return Ok(());
@@ -54,14 +61,24 @@ pub fn run(cfg: &Config, root: &Path, force: bool, attestation: bool, tendermint
     let mut attestation_id = String::new();
     if attestation {
         logger::step("deploying attestation light client");
-        attestation_id = super::deploy(cfg, root, &wasm("stellar_attestation_light_client.wasm"), &[])?;
+        attestation_id = super::deploy(
+            cfg,
+            root,
+            &wasm("stellar_attestation_light_client.wasm"),
+            &[],
+        )?;
         logger::ok(&format!("attestation LC: {attestation_id}"));
     }
 
     let mut tendermint_id = String::new();
     if tendermint {
         logger::step("deploying tendermint light client");
-        tendermint_id = super::deploy(cfg, root, &wasm("stellar_tendermint_light_client.wasm"), &[])?;
+        tendermint_id = super::deploy(
+            cfg,
+            root,
+            &wasm("stellar_tendermint_light_client.wasm"),
+            &[],
+        )?;
         logger::ok(&format!("tendermint LC: {tendermint_id}"));
     }
 
@@ -70,7 +87,13 @@ pub fn run(cfg: &Config, root: &Path, force: bool, attestation: bool, tendermint
         cfg,
         root,
         &router,
-        &["register_client_type", "--client_type", &cfg.mock_client_type, "--lc_address", &mock],
+        &[
+            "register_client_type",
+            "--client_type",
+            cfg.client_type(ClientTypes::Mock),
+            "--lc_address",
+            &mock,
+        ],
     )?;
 
     if !attestation_id.is_empty() {
@@ -78,7 +101,13 @@ pub fn run(cfg: &Config, root: &Path, force: bool, attestation: bool, tendermint
             cfg,
             root,
             &router,
-            &["register_client_type", "--client_type", &cfg.attestation_client_type, "--lc_address", &attestation_id],
+            &[
+                "register_client_type",
+                "--client_type",
+                cfg.client_type(ClientTypes::Attestation),
+                "--lc_address",
+                &attestation_id,
+            ],
         )?;
     }
 
@@ -87,7 +116,13 @@ pub fn run(cfg: &Config, root: &Path, force: bool, attestation: bool, tendermint
             cfg,
             root,
             &router,
-            &["register_client_type", "--client_type", &cfg.tendermint_client_type, "--lc_address", &tendermint_id],
+            &[
+                "register_client_type",
+                "--client_type",
+                cfg.client_type(ClientTypes::Tendermint),
+                "--lc_address",
+                &tendermint_id,
+            ],
         )?;
     }
 
@@ -95,7 +130,13 @@ pub fn run(cfg: &Config, root: &Path, force: bool, attestation: bool, tendermint
         cfg,
         root,
         &router,
-        &["register_port", "--port_id", &cfg.transfer_port, "--app_address", &transfer],
+        &[
+            "register_port",
+            "--port_id",
+            &cfg.transfer_port,
+            "--app_address",
+            &transfer,
+        ],
     )?;
 
     logger::step("writing contract ids to .env");
@@ -112,21 +153,28 @@ pub fn run(cfg: &Config, root: &Path, force: bool, attestation: bool, tendermint
     )?;
 
     logger::ok("deploy-all complete");
-    logger::hint("recreate services to pick up IBC_CONTRACT_ID: stellaribc api restart --rebuild && stellaribc gateway restart --rebuild");
+    logger::hint("recreate services to pick up IBC_CONTRACT_ID: stellaribc api restart --pull && stellaribc gateway restart --pull");
 
     Ok(())
 }
 
-fn deployer_address(cfg: &Config, root: &Path) -> Result<String> {
+fn deployer_address(cfg: &ContractsConfig, root: &Path) -> Result<String> {
     if !cfg.deployer_address.is_empty() {
         return Ok(cfg.deployer_address.clone());
     }
 
-    let out = run::capture(root, "stellar", &["keys", "address", cfg.deployer_identity.as_str()])?;
+    let out = run::capture(
+        root,
+        "stellar",
+        &["keys", "public-key", cfg.cli_identity.as_str()],
+    )?;
     let addr = super::last_line(&out);
 
     if addr.is_empty() {
-        bail!("could not resolve deployer address for identity '{}'", cfg.deployer_identity);
+        bail!(
+            "could not resolve deployer address for identity '{}'",
+            cfg.cli_identity
+        );
     }
 
     Ok(addr)

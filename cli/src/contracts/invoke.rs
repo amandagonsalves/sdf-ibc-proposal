@@ -2,10 +2,10 @@ use std::path::Path;
 
 use anyhow::{bail, Result};
 
-use crate::config::Config;
+use crate::contracts::config::ContractsConfig;
 use crate::logger;
 
-pub fn run(cfg: &Config, root: &Path, id: &str, call: &[String]) -> Result<()> {
+pub fn run(cfg: &ContractsConfig, root: &Path, id: &str, call: &[String]) -> Result<()> {
     logger::banner("contracts invoke");
 
     if call.is_empty() {

@@ -5,7 +5,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use base64::Engine;
 use sha2::{Digest, Sha256};
 
-use crate::config::Config;
+use crate::contracts::config::ContractsConfig;
 use crate::{logger, probe, run};
 
 const CRATE: &str = "light-client-wasm";
@@ -23,7 +23,7 @@ const FUND_AMOUNT: u64 = 100_000_000;
 const FUND_GAS_LIMIT: u64 = 200_000;
 const FUND_FEE_AMOUNT: u64 = 10_000;
 
-pub async fn upload(cfg: &Config, root: &Path, http: &reqwest::Client) -> Result<()> {
+pub async fn upload(cfg: &ContractsConfig, root: &Path, http: &reqwest::Client) -> Result<()> {
     logger::banner("contracts upload-wasm (light-client-wasm -> Cosmos 08-wasm)");
 
     logger::step("cargo build --target wasm32-unknown-unknown -p light-client-wasm --release");
@@ -144,7 +144,7 @@ pub async fn upload(cfg: &Config, root: &Path, http: &reqwest::Client) -> Result
     Ok(())
 }
 
-async fn checksum_registered(http: &reqwest::Client, cfg: &Config, local_sha: &str) -> bool {
+async fn checksum_registered(http: &reqwest::Client, cfg: &ContractsConfig, local_sha: &str) -> bool {
     let url = format!("{}/cosmos/ibc-wasm/checksums", cfg.api_url);
 
     for attempt in 1..=VERIFY_RETRIES {
@@ -173,7 +173,7 @@ async fn checksum_registered(http: &reqwest::Client, cfg: &Config, local_sha: &s
     false
 }
 
-async fn proposer_address(http: &reqwest::Client, cfg: &Config) -> Result<String> {
+async fn proposer_address(http: &reqwest::Client, cfg: &ContractsConfig) -> Result<String> {
     let value = probe::get_json(http, &format!("{}/cosmos/proposer", cfg.api_url))
         .await
         .ok_or_else(|| anyhow!("api did not return a proposer (COSMOS_PROPOSER_PRIVATE_KEY missing?)"))?;

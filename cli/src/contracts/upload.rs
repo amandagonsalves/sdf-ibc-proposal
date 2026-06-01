@@ -2,20 +2,20 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use super::{last_line, net_flags};
-use crate::config::Config;
+use super::last_line;
+use crate::contracts::config::ContractsConfig;
 use crate::{logger, run};
 
-pub fn run(cfg: &Config, root: &Path, wasm: &str) -> Result<()> {
+pub fn run(cfg: &ContractsConfig, root: &Path, wasm: &str) -> Result<()> {
     logger::banner("contracts upload");
 
     let mut args: Vec<String> = vec![
         "contract".into(),
         "upload".into(),
         "--source".into(),
-        cfg.deployer_identity.clone(),
+        cfg.cli_identity.clone(),
     ];
-    args.extend(net_flags(cfg));
+    args.extend(cfg.net_flags());
     args.push("--wasm".into());
     args.push(wasm.to_string());
 
