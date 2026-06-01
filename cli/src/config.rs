@@ -26,6 +26,11 @@ pub struct Config {
     pub hermes_image: String,
     pub hermes_tag: String,
     pub hermes_registry: String,
+    pub hermes_config_in_container: String,
+    pub osmosis_config_json: String,
+    pub local_key_name: String,
+    pub stellar_chain_id: String,
+    pub stellar_key_name: String,
     pub docker_username: String,
     pub docker_token: String,
 }
@@ -79,6 +84,21 @@ impl Config {
             hermes_image: get("HERMES_IMAGE", "amandagonsalvesx/stellar-hermes-cardano"),
             hermes_tag: get("HERMES_TAG", "latest"),
             hermes_registry: get("HERMES_REGISTRY", ""),
+            hermes_config_in_container: get(
+                "HERMES_CONFIG_IN_CONTAINER",
+                "/home/hermes/.hermes/config.toml",
+            ),
+            osmosis_config_json: env::var("OSMOSIS_CONFIG_JSON")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    root.join("crates/osmosis/assets/default-config.json")
+                        .display()
+                        .to_string()
+                }),
+            local_key_name: get("LOCAL_KEY_NAME", "localosmosis"),
+            stellar_chain_id: get("STELLAR_CHAIN_ID", "stellar-testnet"),
+            stellar_key_name: get("STELLAR_KEY_NAME", "stellar-relayer"),
             docker_username: get("DOCKER_USERNAME", ""),
             docker_token: get("DOCKER_TOKEN", ""),
         }

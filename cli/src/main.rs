@@ -332,7 +332,7 @@ async fn main() -> Result<()> {
             HermesCmd::Start { rebuild } => hermes::container::start(&cfg, root, rebuild)?,
             HermesCmd::Stop => hermes::container::stop(root)?,
             HermesCmd::Restart { rebuild } => hermes::container::restart(&cfg, root, rebuild)?,
-            HermesCmd::KeysImport => hermes::keys::import(root)?,
+            HermesCmd::KeysImport => hermes::keys::import(&cfg, root)?,
         },
 
         Command::Gateway { cmd } => match cmd {
