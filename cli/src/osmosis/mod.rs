@@ -103,11 +103,21 @@ pub fn keygen(root: &Path, force: bool) -> Result<()> {
     let mut updates: Vec<(&str, String)> = Vec::new();
 
     for (name, mnemonic_var, key_var) in [
-        ("validator", "COSMOS_VALIDATOR_MNEMONIC", "COSMOS_FUNDER_PRIVATE_KEY"),
-        ("relayer", "COSMOS_RELAYER_MNEMONIC", "COSMOS_PROPOSER_PRIVATE_KEY"),
+        (
+            "validator",
+            "COSMOS_VALIDATOR_MNEMONIC",
+            "COSMOS_FUNDER_PRIVATE_KEY",
+        ),
+        (
+            "relayer",
+            "COSMOS_RELAYER_MNEMONIC",
+            "COSMOS_PROPOSER_PRIVATE_KEY",
+        ),
     ] {
         if !crate::config::get(mnemonic_var, "").is_empty() && !force {
-            logger::detail(&format!("{mnemonic_var} already set — skip (--force to regenerate)"));
+            logger::detail(&format!(
+                "{mnemonic_var} already set — skip (--force to regenerate)"
+            ));
 
             continue;
         }
@@ -126,7 +136,7 @@ pub fn keygen(root: &Path, force: bool) -> Result<()> {
     }
 
     let refs: Vec<(&str, &str)> = updates.iter().map(|(k, v)| (*k, v.as_str())).collect();
-    shared::env_upsert(&root.join(".env"), &refs)?;
+    shared::env_upsert(&root.join(".env").as_path(), &refs)?;
 
     logger::ok("wrote mnemonics + signer keys to .env");
     logger::hint("rebuild genesis to fund the new accounts: stellaribc osmosis start --fresh");
