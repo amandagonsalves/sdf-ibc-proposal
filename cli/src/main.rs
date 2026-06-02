@@ -365,7 +365,9 @@ async fn main() -> Result<()> {
                 ClientsCmd::Stellar { force } => {
                     clients::stellar::run(&cc, root, &http, force).await?
                 }
-                ClientsCmd::Counterparty { chain } => clients::counterparty::run(chain.as_str())?,
+                ClientsCmd::Counterparty { chain } => {
+                    clients::counterparty::run(&cc, root, chain.as_str())?
+                }
                 ClientsCmd::List => clients::list::run(&cc, &http).await?,
             }
         }
@@ -416,7 +418,8 @@ async fn main() -> Result<()> {
             },
             TxCmd::Msg { cmd } => match cmd {
                 TxMsgCmd::RegisterCounterparty { chain } => {
-                    tx::msg::register_counterparty(chain.as_str())?
+                    let cc = clients::config::ClientsConfig::from(&cfg);
+                    tx::msg::register_counterparty(&cc, root, chain.as_str())?
                 }
                 TxMsgCmd::Recv => tx::msg::recv()?,
                 TxMsgCmd::Ack => tx::msg::ack()?,
