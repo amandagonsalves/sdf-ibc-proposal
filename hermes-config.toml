@@ -79,7 +79,7 @@ clear_interval = 0
 query_packets_chunk_size = 50
 clock_drift = '5s'
 client_refresh_rate = '1/3'
-wasm_checksum_hex = '4cd5b28e3d532d50aee8b842d1003c37c6a1844931fd789a3607f93b8d594dfc'
+wasm_checksum_hex = '5310035b1be856f50a5efa9b56f644d5e153017b559dfecd594eb46b9c5d04c1'
 
 # [[chains]]
 # type = 'Cardano'

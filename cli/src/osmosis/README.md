@@ -15,8 +15,8 @@ so the `stellaribc contracts upload-wasm` proposal lands deterministically.
 
 | File | Role |
 |---|---|
-| `assets/default-config.json` | Declarative chain config: chain id, moniker, genesis time, the `val`/`relayer` key mnemonics + funded balances, the gentx, and the `genesis`/`app`/`config` override lists (each entry a `{path, type, value}` applied with `dasel`). Edit this, not the script. |
-| `assets/setup.sh` | Container entrypoint. On first boot it `apk add jq dasel`, runs `osmosisd init`, applies every override from `default-config.json`, recovers + funds each key, builds the gentx, then `osmosisd start`. Data-driven — holds no hardcoded chain values. |
+| `assets/default-config.json` | Declarative chain config: chain id, moniker, genesis time, the `val`/`relayer` funded balances, the gentx, and the `genesis`/`app`/`config` override lists (each entry a `{path, type, value}` applied with `dasel`). Holds **no secrets** — the account mnemonics come from env. Edit this, not the script. |
+| `assets/setup.sh` | Container entrypoint. On first boot it `apk add jq dasel`, runs `osmosisd init`, applies every override from `default-config.json`, recovers each account from its env mnemonic (`COSMOS_VALIDATOR_MNEMONIC` / `COSMOS_RELAYER_MNEMONIC`) and funds it, builds the gentx, then `osmosisd start`. |
 | `config.rs` | `OsmosisConfig::from_env()` — local/testnet presets overridable via `COSMOS_*`. |
 | `mod.rs` | `start`/`stop`/`status` — drive `docker compose --profile osmosis up/down`; `start --fresh` wipes `~/.osmosisd-local` first. |
 
@@ -42,5 +42,12 @@ docker compose --profile osmosis up -d osmosis
 
 Chain id `localosmosis`, account prefix `osmo`, gas denom `uosmo` — these match
 `COSMOS_*` in `.env` and the `localosmosis` chain block in `hermes-config.toml`.
-Two keys are recovered into genesis: `val` (validator) and `relayer` (a funded
-account for Hermes); both mnemonics live in `assets/default-config.json`.
+Two accounts are recovered into genesis from env mnemonics: `val` (validator,
+`COSMOS_VALIDATOR_MNEMONIC`) and `relayer` (a funded account for Hermes,
+`COSMOS_RELAYER_MNEMONIC`). Generate a fresh relayer key with:
+
+```sh
+docker run --rm --entrypoint osmosisd osmolabs/osmosis:31.0.3-alpine \
+  keys add relayer --keyring-backend test --dry-run --output json | jq -r '.mnemonic'
+```
+

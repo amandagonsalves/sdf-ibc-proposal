@@ -28,6 +28,8 @@ services:
       - ${HOME}/.osmosisd-local:/osmosis/.osmosisd
     environment:
       COSMOS_CHAIN_ID: "${COSMOS_CHAIN_ID:-localosmosis}"
+      COSMOS_VALIDATOR_MNEMONIC: "${COSMOS_VALIDATOR_MNEMONIC}"
+      COSMOS_RELAYER_MNEMONIC: "${COSMOS_RELAYER_MNEMONIC}"
     ports:
       - "26657:26657"
       - "1318:1317"

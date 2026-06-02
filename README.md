@@ -312,9 +312,13 @@ All configuration is via environment variables. Copy `.env.example` to `.env`.
 | `OSMOSIS_VERSION` | `31.0.3` | `osmolabs/osmosis` image tag (`-alpine` variant used) |
 | `OSMOSIS_LOCAL_GENESIS_TIME` | _(now)_ | Override genesis_time; defaults to current UTC at boot |
 | `COSMOS_CHAIN_ID` | `localosmosis` | Chain id |
+| `COSMOS_VALIDATOR_MNEMONIC` | _(empty)_ | Validator account mnemonic, recovered + funded at genesis |
+| `COSMOS_RELAYER_MNEMONIC` | _(empty)_ | Relayer account mnemonic, funded at genesis + imported into Hermes |
 
-Genesis denoms, accounts, mnemonics, gov voting period, and overrides live in
-[`cli/src/osmosis/assets/default-config.json`](cli/src/osmosis/assets/default-config.json).
+Genesis denoms, balances, gov voting period, and overrides live in
+[`cli/src/osmosis/assets/default-config.json`](cli/src/osmosis/assets/default-config.json);
+the account **mnemonics are sourced from env** (above), not the JSON, and are
+passed into the `osmosis` container by `docker-compose.yml`.
 
 ### Image build / CI
 

@@ -16,11 +16,23 @@ apply_overrides () {
     done
 }
 
+mnemonic_for () {
+    case "$1" in
+        val) printf '%s' "$COSMOS_VALIDATOR_MNEMONIC" ;;
+        relayer) printf '%s' "$COSMOS_RELAYER_MNEMONIC" ;;
+        *) printf '' ;;
+    esac
+}
+
 add_keys_and_accounts () {
     jq -r '.accounts | keys[]' "$CONFIG_JSON" |
     while read -r name; do
-        mnemonic="$(jq -r --arg n "$name" '.keys[$n]' "$CONFIG_JSON")"
+        mnemonic="$(mnemonic_for "$name")"
         coins="$(jq -r --arg n "$name" '.accounts[$n]' "$CONFIG_JSON")"
+        if [ -z "$mnemonic" ]; then
+            echo "error: no mnemonic in env for account '$name' — set COSMOS_VALIDATOR_MNEMONIC / COSMOS_RELAYER_MNEMONIC" >&2
+            exit 1
+        fi
         echo "$mnemonic" | osmosisd keys add "$name" --recover $KEYRING
         address="$(osmosisd keys show "$name" -a $KEYRING)"
         osmosisd add-genesis-account "$address" "$coins" --home "$OSMOSIS_HOME"
