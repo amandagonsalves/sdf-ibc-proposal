@@ -18,11 +18,12 @@ so the `stellaribc contracts upload-wasm` proposal lands deterministically.
 | `assets/default-config.json` | Declarative chain config: chain id, moniker, genesis time, the `val`/`relayer` funded balances, the gentx, and the `genesis`/`app`/`config` override lists (each entry a `{path, type, value}` applied with `dasel`). Holds **no secrets** — the account mnemonics come from env. Edit this, not the script. |
 | `assets/setup.sh` | Container entrypoint. On first boot it `apk add jq dasel`, runs `osmosisd init`, applies every override from `default-config.json`, recovers each account from its env mnemonic (`COSMOS_VALIDATOR_MNEMONIC` / `COSMOS_RELAYER_MNEMONIC`) and funds it, builds the gentx, then `osmosisd start`. |
 | `config.rs` | `OsmosisConfig::from_env()` — local/testnet presets overridable via `COSMOS_*`. |
-| `mod.rs` | `start`/`stop`/`status` — drive `docker compose --profile osmosis up/down`; `start --fresh` wipes `~/.osmosisd-local` first. |
+| `mod.rs` | `start`/`stop`/`status`/`keygen` — drive `docker compose --profile osmosis up/down`; `start --fresh` wipes `~/.osmosisd-local` first; `keygen` generates the validator + relayer mnemonics into `.env`. |
 
 ## Usage
 
 ```sh
+stellaribc osmosis keygen           # generate validator + relayer mnemonics → .env (skips ones already set; --force to regenerate)
 stellaribc osmosis start            # start the devnet, wait for first block
 stellaribc osmosis start --fresh    # wipe ~/.osmosisd-local, then start clean
 stellaribc osmosis status

@@ -50,6 +50,7 @@ stellaribc <group> <command> --help
 | Group | Commands |
 |---|---|
 | ops | `install` · `check` · `status` · `up` · `down` · `start` |
+| `osmosis` | `start [--fresh]` · `stop` · `status` · `keygen [--force]` |
 | `clients` | `cosmos` · `stellar` · `counterparty` · `list` |
 | `hermes` | `start` · `stop` · `restart` · `keys-import` |
 | `gateway` | `start` · `stop` · `restart` · `query` |
@@ -103,6 +104,25 @@ skippable; the chain/service steps are idempotent (probe first, start if down).
 | `--skip-wasm` | skip the light-client-wasm upload |
 | `--skip-keys` | skip importing the hermes relayer keys |
 | `--force-redeploy` | redeploy contracts even if `ROUTER_CONTRACT_ADDRESS` is set |
+
+---
+
+## `osmosis` — local Cosmos devnet
+
+Lifecycle for the `localosmosis` chain (the `osmosis` compose service). On
+`COSMOS_NETWORK=testnet` the start/stop become reachability checks / no-ops.
+
+| Command | Flags | What it does |
+|---|---|---|
+| `start` | `--fresh` | `docker compose up -d osmosis` + wait for the first block; `--fresh` wipes `~/.osmosisd-local` and rebuilds genesis |
+| `stop` | — | `docker compose stop osmosis` |
+| `status` | — | probe RPC + print network/endpoints |
+| `keygen` | `--force` | generate the validator + relayer mnemonics and write them to `.env` (skips ones already set; `--force` regenerates). Uses the `osmolabs/osmosis` image — no local `osmosisd` needed |
+
+The validator/relayer mnemonics live in `.env` (`COSMOS_VALIDATOR_MNEMONIC` /
+`COSMOS_RELAYER_MNEMONIC`); `docker-compose.yml` passes them into the container
+and `setup.sh` recovers + funds those accounts at genesis. `keygen` is the
+one-command way to populate them on a fresh checkout.
 
 ---
 

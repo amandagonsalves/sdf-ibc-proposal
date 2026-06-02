@@ -148,6 +148,11 @@ enum OsmosisCmd {
     Stop,
     #[command(about = "Show the osmosis chain network, endpoints, and health")]
     Status,
+    #[command(about = "Generate validator + relayer mnemonics and write them to .env")]
+    Keygen {
+        #[arg(long, help = "Regenerate even if the mnemonics are already set")]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -344,6 +349,7 @@ async fn main() -> Result<()> {
             OsmosisCmd::Start { fresh } => osmosis::start(&cfg.osmosis, root, &http, fresh).await?,
             OsmosisCmd::Stop => osmosis::stop(&cfg.osmosis, root)?,
             OsmosisCmd::Status => osmosis::status(&cfg.osmosis, &http).await?,
+            OsmosisCmd::Keygen { force } => osmosis::keygen(root, force)?,
         },
 
         Command::Clients { cmd } => {
