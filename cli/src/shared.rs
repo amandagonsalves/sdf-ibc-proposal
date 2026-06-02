@@ -12,20 +12,26 @@ pub fn env_upsert(path: &Path, updates: &[(&str, &str)]) -> Result<()> {
             continue;
         }
 
+        let rendered = if value.contains(char::is_whitespace) {
+            format!("\"{value}\"")
+        } else {
+            (*value).to_string()
+        };
+
         let prefix = format!("{key}=");
         let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
         let mut replaced = false;
 
         for line in lines.iter_mut() {
             if line.trim_start().starts_with(&prefix) {
-                *line = format!("{key}={value}");
+                *line = format!("{key}={rendered}");
                 replaced = true;
                 break;
             }
         }
 
         if !replaced {
-            lines.push(format!("{key}={value}"));
+            lines.push(format!("{key}={rendered}"));
         }
 
         text = lines.join("\n");

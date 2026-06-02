@@ -61,7 +61,7 @@ pub async fn run(
             root,
             force_redeploy,
             false,
-            false,
+            true,
         )?;
 
         logger::step("recreating api + gateway to pick up ROUTER_CONTRACT_ADDRESS");
