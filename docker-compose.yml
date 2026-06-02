@@ -17,29 +17,29 @@ services:
       retries: 20
       start_period: 10s
 
-  osmosis:
-    profiles: [osmosis, local]
-    image: osmolabs/osmosis:${OSMOSIS_VERSION:-31.0.3}-alpine
+  cosmos:
+    profiles: [local, cosmos]
+    image: ${COSMOS_CHAIN_IMAGE:-ghcr.io/cosmos/ibc-go-wasm-simd:v11.0.0}
     platform: linux/amd64
+    user: "0:0"
     entrypoint: ["sh", "/setup.sh"]
     volumes:
-      - ./cli/src/osmosis/assets/setup.sh:/setup.sh:ro
-      - ./cli/src/osmosis/assets/default-config.json:/config/default-config.json:ro
-      - ${HOME}/.osmosisd-local:/osmosis/.osmosisd
+      - ./cli/src/cosmos/assets/setup.sh:/setup.sh:ro
+      - ./cli/src/cosmos/assets/default-config.json:/config/default-config.json:ro
+      - cosmos-home:/root/.simapp
     environment:
-      COSMOS_CHAIN_ID: "${COSMOS_CHAIN_ID:-localosmosis}"
+      COSMOS_CHAIN_ID: "${COSMOS_CHAIN_ID:-simd-1}"
       COSMOS_VALIDATOR_MNEMONIC: "${COSMOS_VALIDATOR_MNEMONIC}"
       COSMOS_RELAYER_MNEMONIC: "${COSMOS_RELAYER_MNEMONIC}"
     ports:
       - "26657:26657"
-      - "1318:1317"
-      - "9094:9090"
-      - "9091:9091"
+      - "1317:1317"
+      - "9090:9090"
     healthcheck:
-      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:26657/status | grep -q '\"latest_block_height\":\"[1-9]'"]
-      interval: 5s
+      test: ["CMD-SHELL", "simd status >/dev/null 2>&1"]
+      interval: 10s
       timeout: 5s
-      retries: 40
+      retries: 30
       start_period: 20s
 
   gateway:
@@ -80,7 +80,7 @@ services:
       node:
         condition: service_started
         required: false
-      osmosis:
+      cosmos:
         condition: service_healthy
         required: false
     ports:
@@ -96,8 +96,8 @@ services:
       ROUTER_CONTRACT_ADDRESS: "${ROUTER_CONTRACT_ADDRESS}"
       TRANSFER_CONTRACT_ADDRESS: "${TRANSFER_CONTRACT_ADDRESS}"
       COSMOS_CHAIN_ID: "${COSMOS_CHAIN_ID}"
-      COSMOS_REST_URL: "http://osmosis:1317"
-      COSMOS_RPC_URL: "http://osmosis:26657"
+      COSMOS_REST_URL: "http://cosmos:1317"
+      COSMOS_RPC_URL: "http://cosmos:26657"
       COSMOS_ACCOUNT_PREFIX: "${COSMOS_ACCOUNT_PREFIX}"
       COSMOS_GAS_DENOM: "${COSMOS_GAS_DENOM}"
       COSMOS_PROPOSER_PRIVATE_KEY: "${COSMOS_PROPOSER_PRIVATE_KEY}"
@@ -135,3 +135,4 @@ services:
 
 volumes:
   hermes-keys:
+  cosmos-home:

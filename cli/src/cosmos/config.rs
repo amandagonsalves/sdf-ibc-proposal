@@ -2,7 +2,7 @@ use crate::config::{get, ChainId};
 
 pub const COMPOSE_SERVICE: &str = "cosmos";
 
-const DEFAULT_CHAIN_ID: &str = "cardano-entrypoint";
+const DEFAULT_CHAIN_ID: &str = "simd-1";
 const DEFAULT_RPC_URL: &str = "http://127.0.0.1:26657";
 const DEFAULT_REST_URL: &str = "http://127.0.0.1:1317";
 const DEFAULT_GRPC_URL: &str = "http://127.0.0.1:9090";
