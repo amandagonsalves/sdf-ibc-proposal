@@ -51,13 +51,12 @@ impl StellarGatewayQuery for QueryHandler {
         &self,
         _request: Request<LatestHeightRequest>,
     ) -> Result<Response<LatestHeightResponse>, Status> {
-        tracing::info!("gRPC LatestHeight");
         let latest_sequence: u32 = self.api.get_latest_ledger().await.map_err(|error| {
             tracing::error!(%error, "get_latest_ledger failed");
             Status::internal(format!("get_latest_ledger failed: {error}"))
         })?;
 
-        tracing::info!(revision_height = latest_sequence, "served latest height");
+        tracing::info!(revision_height = latest_sequence, "latest height");
         Ok(Response::new(LatestHeightResponse {
             revision_height: latest_sequence.into(),
             revision_number: 0,
@@ -382,13 +381,7 @@ impl StellarGatewayQuery for QueryHandler {
         };
 
         let req = request.into_inner();
-        tracing::info!(
-            %contract_id,
-            cursor = %req.cursor,
-            start_ledger = req.start_ledger,
-            limit = req.limit,
-            "gRPC Events"
-        );
+
         let cursor = if !req.cursor.is_empty() {
             EventCursor::Cursor(req.cursor.clone())
         } else if req.start_ledger > 0 {
@@ -417,20 +410,28 @@ impl StellarGatewayQuery for QueryHandler {
         tracing::info!(
             events = page.events.len(),
             latest_ledger = page.latest_ledger,
-            "served events"
+            %contract_id,
+            "events"
         );
 
         let events = page
             .events
             .into_iter()
-            .map(|ev| GatewayContractEvent {
-                id: ev.id,
-                ledger: ev.ledger.into(),
-                ledger_closed_at: ev.ledger_closed_at,
-                contract_id: ev.contract_id,
-                tx_hash: ev.tx_hash,
-                topics_xdr: ev.topics_xdr,
-                value_xdr: ev.value_xdr,
+            .map(|ev| {
+                let attributes =
+                    crate::event_decode::event_attributes(&ev.topics_xdr, &ev.value_xdr)
+                        .unwrap_or_default();
+
+                GatewayContractEvent {
+                    id: ev.id,
+                    ledger: ev.ledger.into(),
+                    ledger_closed_at: ev.ledger_closed_at,
+                    contract_id: ev.contract_id,
+                    tx_hash: ev.tx_hash,
+                    topics_xdr: ev.topics_xdr,
+                    value_xdr: ev.value_xdr,
+                    attributes,
+                }
             })
             .collect();
 

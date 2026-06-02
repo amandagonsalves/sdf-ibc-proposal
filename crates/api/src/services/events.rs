@@ -25,14 +25,6 @@ pub async fn get_events(
     State(state): State<Arc<AppState>>,
     Query(params): Query<EventsQuery>,
 ) -> impl IntoResponse {
-    tracing::info!(
-        contract_id = ?params.contract_id,
-        cursor = ?params.cursor,
-        start_ledger = ?params.start_ledger,
-        limit = ?params.limit,
-        "GET /events"
-    );
-
     let contract_id = match params.contract_id.as_deref().filter(|s| !s.is_empty()) {
         Some(id) => id.to_owned(),
         None => {
@@ -74,9 +66,10 @@ pub async fn get_events(
         }
     };
 
-    tracing::info!(
+    tracing::debug!(
         events = page.events.len(),
         latest_ledger = page.latest_ledger,
+        contract_id = ?params.contract_id,
         "get events"
     );
 
