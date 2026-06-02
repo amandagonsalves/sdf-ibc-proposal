@@ -43,6 +43,7 @@ tx_confirmation = true
 [[chains]]
 id = 'simd-1'
 type = 'CosmosSdk'
+compat_mode = '0.37'
 rpc_addr = 'http://cosmos:26657'
 grpc_addr = 'http://cosmos:9090'
 event_source = { mode = 'push', url = 'ws://cosmos:26657/websocket', batch_delay = '200ms' }
@@ -58,7 +59,7 @@ gas_multiplier = 2.0
 max_msg_num = 20
 max_tx_size = 209715
 clock_drift = '20s'
-max_block_time = '10s'
+max_block_time = '30s'
 trusting_period = '10days'
 memo_prefix = ''
 trust_threshold = { numerator = '1', denominator = '3' }

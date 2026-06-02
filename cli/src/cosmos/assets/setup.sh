@@ -67,4 +67,4 @@ exec simd start \
     --rpc.laddr tcp://0.0.0.0:26657 \
     --api.enable --api.address tcp://0.0.0.0:1317 --api.enabled-unsafe-cors \
     --grpc.enable --grpc.address 0.0.0.0:9090 \
-    --minimum-gas-prices 0stake
+    --minimum-gas-prices 0.025stake
