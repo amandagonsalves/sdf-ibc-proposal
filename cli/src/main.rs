@@ -94,20 +94,24 @@ enum Command {
 
 #[derive(clap::Args)]
 struct TransferArgs {
-    #[arg(value_enum, help = "Source chain to send from")]
+    #[arg(value_enum, default_value = "stellar", help = "Source chain to send from")]
     from: Chain,
-    #[arg(long, help = "Token denom to transfer")]
+    #[arg(long, default_value = "stake", help = "Token denom to transfer")]
     denom: String,
-    #[arg(long, help = "Amount to transfer")]
+    #[arg(long, default_value_t = 1000, help = "Amount to transfer")]
     amount: i128,
-    #[arg(long, help = "Receiver address on the destination chain")]
+    #[arg(
+        long,
+        default_value = "",
+        help = "Receiver address on the destination chain (default: the relayer key on the destination)"
+    )]
     receiver: String,
     #[arg(long, default_value = "", help = "Optional transfer memo")]
     memo: String,
     #[arg(long, default_value_t = 600, help = "Timeout in seconds from now")]
     timeout_secs: u64,
-    #[arg(long, help = "Mint the amount to the sender before transferring (devnet)")]
-    mint: bool,
+    #[arg(long, help = "Skip minting the amount to the sender first (devnet mints by default)")]
+    no_mint: bool,
 }
 
 #[derive(clap::Args)]
@@ -425,7 +429,7 @@ async fn main() -> Result<()> {
                 receiver: args.receiver,
                 memo: args.memo,
                 timeout_secs: args.timeout_secs,
-                mint: args.mint,
+                mint: !args.no_mint,
             };
 
             match args.from {

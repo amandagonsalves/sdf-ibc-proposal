@@ -5,7 +5,8 @@ use anyhow::{bail, Result};
 
 use crate::config::Config;
 use crate::contracts::{self, config::ContractsConfig};
-use crate::{logger, shared};
+use crate::cosmos::config::COMPOSE_SERVICE;
+use crate::{logger, run, shared};
 
 pub struct TransferArgs {
     pub denom: String,
@@ -35,9 +36,16 @@ pub fn stellar_to_cosmos(cfg: &Config, root: &Path, args: &TransferArgs) -> Resu
         bail!("DEPLOYER_ADDRESS is not set");
     }
 
+    let receiver = if args.receiver.is_empty() {
+        cosmos_relayer_address(cfg, root)?
+    } else {
+        args.receiver.clone()
+    };
+
     let cc = ContractsConfig::from(cfg);
     let amount = args.amount.to_string();
     let timeout = transfer_timeout(args.timeout_secs)?.to_string();
+    let memo_json = format!("\"{}\"", args.memo);
 
     if args.mint {
         logger::step(&format!(
@@ -62,8 +70,8 @@ pub fn stellar_to_cosmos(cfg: &Config, root: &Path, args: &TransferArgs) -> Resu
     }
 
     logger::step(&format!(
-        "initiate_transfer {} {} → {} (client {source_client}, timeout {timeout})",
-        args.amount, args.denom, args.receiver
+        "initiate_transfer {} {} → {receiver} (client {source_client}, timeout {timeout})",
+        args.amount, args.denom
     ));
 
     contracts::invoke(
@@ -81,11 +89,11 @@ pub fn stellar_to_cosmos(cfg: &Config, root: &Path, args: &TransferArgs) -> Resu
             "--amount",
             &amount,
             "--receiver",
-            &args.receiver,
+            &receiver,
             "--timeout_timestamp",
             &timeout,
             "--memo",
-            &args.memo,
+            &memo_json,
         ],
     )?;
 
@@ -108,4 +116,43 @@ fn transfer_timeout(secs: u64) -> Result<u64> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
     Ok(now + secs)
+}
+
+fn cosmos_relayer_address(cfg: &Config, root: &Path) -> Result<String> {
+    let key_name = cfg.cosmos.key_name.as_str();
+
+    logger::detail(&format!(
+        "no --receiver given, deriving the cosmos `{key_name}` address"
+    ));
+
+    let out = run::capture_all(
+        root,
+        "docker",
+        &[
+            "compose",
+            "exec",
+            "-T",
+            COMPOSE_SERVICE,
+            "simd",
+            "keys",
+            "show",
+            key_name,
+            "-a",
+            "--keyring-backend",
+            "test",
+            "--home",
+            "/root/.simapp",
+        ],
+    )?;
+
+    let address = out
+        .lines()
+        .map(str::trim)
+        .find(|line| line.starts_with("cosmos"))
+        .map(str::to_string);
+
+    match address {
+        Some(addr) => Ok(addr),
+        None => bail!("could not derive the cosmos `{key_name}` address — pass --receiver explicitly"),
+    }
 }
