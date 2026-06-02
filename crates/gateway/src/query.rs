@@ -6,8 +6,9 @@ use tonic::{Request, Response, Status};
 use crate::proto::{
     stellar_gateway_query_server::{StellarGatewayQuery, StellarGatewayQueryServer},
     EventsRequest, EventsResponse, GatewayContractEvent, LatestHeightRequest, LatestHeightResponse,
-    QueryAcknowledgementRequest, QueryAcknowledgementResponse, QueryClientStateRequest,
-    QueryClientStateResponse, QueryConsensusStateRequest, QueryConsensusStateResponse,
+    IdentifiedClientState, QueryAcknowledgementRequest, QueryAcknowledgementResponse,
+    QueryClientStateRequest, QueryClientStateResponse, QueryClientStatesRequest,
+    QueryClientStatesResponse, QueryConsensusStateRequest, QueryConsensusStateResponse,
     QueryIbcHeaderRequest, QueryIbcHeaderResponse, QueryNextSeqRecvRequest,
     QueryNextSeqRecvResponse, QueryPacketCommitmentRequest, QueryPacketCommitmentResponse,
     QueryPacketReceiptRequest, QueryPacketReceiptResponse,
@@ -63,15 +64,72 @@ impl StellarGatewayQuery for QueryHandler {
         }))
     }
 
-    #[tracing::instrument(skip(self, _request), name = "grpc.query_client_state")]
+    #[tracing::instrument(skip(self, request), name = "grpc.query_client_state")]
     async fn query_client_state(
         &self,
-        _request: Request<QueryClientStateRequest>,
+        request: Request<QueryClientStateRequest>,
     ) -> Result<Response<QueryClientStateResponse>, Status> {
-        tracing::debug!("gRPC QueryClientState (unimplemented in v2)");
-        Err(Status::unimplemented(
-            "ClientState path is non-provable in IBC v2",
-        ))
+        let req = request.into_inner();
+        tracing::info!(client_id = %req.client_id, "gRPC QueryClientState");
+
+        let xdr = self
+            .api
+            .get_client_state_xdr(&req.client_id)
+            .await
+            .map_err(|error| Status::internal(format!("get client state: {error}")))?;
+
+        let cs = stellar_ibc_core::ibc::client_state::AnyClientState::from_soroban_xdr(&xdr)
+            .map_err(|error| Status::internal(format!("decode soroban client state: {error}")))?;
+
+        let client_state =
+            ibc::primitives::proto::Protobuf::<ibc::primitives::proto::Any>::encode_vec(cs);
+
+        Ok(Response::new(QueryClientStateResponse {
+            client_state,
+            proof: Vec::new(),
+            proof_height: req.height,
+        }))
+    }
+
+    #[tracing::instrument(skip(self, _request), name = "grpc.query_client_states")]
+    async fn query_client_states(
+        &self,
+        _request: Request<QueryClientStatesRequest>,
+    ) -> Result<Response<QueryClientStatesResponse>, Status> {
+        tracing::info!("gRPC QueryClientStates");
+
+        let ids = self
+            .api
+            .list_client_ids()
+            .await
+            .map_err(|error| Status::internal(format!("list clients: {error}")))?;
+
+        let mut client_states = Vec::new();
+        for client_id in ids {
+            let xdr = match self.api.get_client_state_xdr(&client_id).await {
+                Ok(xdr) => xdr,
+                Err(error) => {
+                    tracing::warn!(%client_id, %error, "skipping client: state fetch failed");
+                    continue;
+                }
+            };
+            let cs =
+                match stellar_ibc_core::ibc::client_state::AnyClientState::from_soroban_xdr(&xdr) {
+                    Ok(cs) => cs,
+                    Err(error) => {
+                        tracing::warn!(%client_id, %error, "skipping client: decode failed");
+                        continue;
+                    }
+                };
+            let client_state =
+                ibc::primitives::proto::Protobuf::<ibc::primitives::proto::Any>::encode_vec(cs);
+            client_states.push(IdentifiedClientState {
+                client_id,
+                client_state,
+            });
+        }
+
+        Ok(Response::new(QueryClientStatesResponse { client_states }))
     }
 
     #[tracing::instrument(skip(self, _request), name = "grpc.query_consensus_state")]
