@@ -169,7 +169,9 @@ message MsgUpdateClientRequest {
   string signer    = 3;
 }
 
-message MsgUpdateClientResponse {}
+message MsgUpdateClientResponse {
+  bytes tx_xdr = 1;
+}
 
 message MsgRegisterCounterpartyRequest {
   string client_id                              = 1;
@@ -177,7 +179,9 @@ message MsgRegisterCounterpartyRequest {
   repeated bytes counterparty_commitment_prefix = 3;
 }
 
-message MsgRegisterCounterpartyResponse {}
+message MsgRegisterCounterpartyResponse {
+  bytes tx_xdr = 1;
+}
 
 message MsgRecvPacketRequest {
   bytes  packet       = 1;
@@ -186,7 +190,9 @@ message MsgRecvPacketRequest {
   string signer       = 4;
 }
 
-message MsgRecvPacketResponse {}
+message MsgRecvPacketResponse {
+  bytes tx_xdr = 1;
+}
 
 message MsgAckPacketRequest {
   bytes  packet          = 1;
@@ -196,7 +202,9 @@ message MsgAckPacketRequest {
   string signer          = 5;
 }
 
-message MsgAckPacketResponse {}
+message MsgAckPacketResponse {
+  bytes tx_xdr = 1;
+}
 
 message MsgTimeoutPacketRequest {
   bytes  packet       = 1;
@@ -205,7 +213,9 @@ message MsgTimeoutPacketRequest {
   string signer       = 4;
 }
 
-message MsgTimeoutPacketResponse {}
+message MsgTimeoutPacketResponse {
+  bytes tx_xdr = 1;
+}
 
 message MsgSubmitMisbehaviourRequest {
   string client_id       = 1;
@@ -213,4 +223,6 @@ message MsgSubmitMisbehaviourRequest {
   string signer          = 3;
 }
 
-message MsgSubmitMisbehaviourResponse {}
+message MsgSubmitMisbehaviourResponse {
+  bytes tx_xdr = 1;
+}

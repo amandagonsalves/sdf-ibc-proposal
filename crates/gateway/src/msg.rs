@@ -164,8 +164,8 @@ impl StellarGatewayMsg for MsgHandler {
             "gRPC UpdateClient"
         );
         let args = vec![scval_string(&req.client_id)?, scval_bytes(&req.header)?];
-        let _ = self.prepare_msg_tx("update_client", args).await?;
-        Ok(Response::new(MsgUpdateClientResponse {}))
+        let tx_xdr = self.prepare_msg_tx("update_client", args).await?;
+        Ok(Response::new(MsgUpdateClientResponse { tx_xdr }))
     }
 
     #[tracing::instrument(skip(self, request), name = "grpc.register_counterparty")]
@@ -190,8 +190,8 @@ impl StellarGatewayMsg for MsgHandler {
             scval_string(&req.counterparty_client_id)?,
             scval_vec_of_bytes(&req.counterparty_commitment_prefix)?,
         ];
-        let _ = self.prepare_msg_tx("register_counterparty", args).await?;
-        Ok(Response::new(MsgRegisterCounterpartyResponse {}))
+        let tx_xdr = self.prepare_msg_tx("register_counterparty", args).await?;
+        Ok(Response::new(MsgRegisterCounterpartyResponse { tx_xdr }))
     }
 
     #[tracing::instrument(skip(self, request), name = "grpc.recv_packet")]
@@ -211,8 +211,8 @@ impl StellarGatewayMsg for MsgHandler {
             scval_bytes(&req.proof)?,
             scval_u64(req.proof_height),
         ];
-        let _ = self.prepare_msg_tx("recv_packet", args).await?;
-        Ok(Response::new(MsgRecvPacketResponse {}))
+        let tx_xdr = self.prepare_msg_tx("recv_packet", args).await?;
+        Ok(Response::new(MsgRecvPacketResponse { tx_xdr }))
     }
 
     #[tracing::instrument(skip(self, request), name = "grpc.ack_packet")]
@@ -235,8 +235,8 @@ impl StellarGatewayMsg for MsgHandler {
             scval_bytes(&req.proof)?,
             scval_u64(req.proof_height),
         ];
-        let _ = self.prepare_msg_tx("acknowledge_packet", args).await?;
-        Ok(Response::new(MsgAckPacketResponse {}))
+        let tx_xdr = self.prepare_msg_tx("acknowledge_packet", args).await?;
+        Ok(Response::new(MsgAckPacketResponse { tx_xdr }))
     }
 
     #[tracing::instrument(skip(self, request), name = "grpc.timeout_packet")]
@@ -256,8 +256,8 @@ impl StellarGatewayMsg for MsgHandler {
             scval_bytes(&req.proof)?,
             scval_u64(req.proof_height),
         ];
-        let _ = self.prepare_msg_tx("timeout_packet", args).await?;
-        Ok(Response::new(MsgTimeoutPacketResponse {}))
+        let tx_xdr = self.prepare_msg_tx("timeout_packet", args).await?;
+        Ok(Response::new(MsgTimeoutPacketResponse { tx_xdr }))
     }
 
     #[tracing::instrument(skip(self, request), name = "grpc.submit_misbehaviour")]
@@ -280,8 +280,8 @@ impl StellarGatewayMsg for MsgHandler {
             scval_string(&req.client_id)?,
             scval_bytes(&req.client_message)?,
         ];
-        let _ = self.prepare_msg_tx("update_client", args).await?;
-        Ok(Response::new(MsgSubmitMisbehaviourResponse {}))
+        let tx_xdr = self.prepare_msg_tx("update_client", args).await?;
+        Ok(Response::new(MsgSubmitMisbehaviourResponse { tx_xdr }))
     }
 }
 
