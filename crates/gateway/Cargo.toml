@@ -38,5 +38,4 @@ sha2 = { workspace = true }
 hex = { workspace = true }
 
 [build-dependencies]
-tonic-build = { workspace = true }
-prost-build = "0.14"
+tonic-prost-build = "0.14"
