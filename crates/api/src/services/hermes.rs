@@ -61,7 +61,10 @@ pub async fn patch_wasm_checksum(
 
     let checksum = req.checksum.trim().to_ascii_lowercase();
     if checksum.len() != 64 || !checksum.chars().all(|c| c.is_ascii_hexdigit()) {
-        tracing::warn!(checksum_len = checksum.len(), "rejected: malformed checksum");
+        tracing::warn!(
+            checksum_len = checksum.len(),
+            "rejected: malformed checksum"
+        );
         return Err(err(
             StatusCode::BAD_REQUEST,
             "checksum must be 64 lowercase hex characters",
@@ -79,7 +82,10 @@ pub async fn patch_wasm_checksum(
 
     let text = fs::read_to_string(path).map_err(|e| {
         tracing::error!(error = %e, %path, "read hermes config failed");
-        err(StatusCode::INTERNAL_SERVER_ERROR, format!("read {path}: {e}"))
+        err(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("read {path}: {e}"),
+        )
     })?;
 
     let re = Regex::new(r"wasm_checksum_hex\s*=\s*'[^']*'").expect("static regex");
@@ -110,7 +116,10 @@ pub async fn patch_wasm_checksum(
 
     fs::write(path, new_text).map_err(|e| {
         tracing::error!(error = %e, %path, "write hermes config failed");
-        err(StatusCode::INTERNAL_SERVER_ERROR, format!("write {path}: {e}"))
+        err(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("write {path}: {e}"),
+        )
     })?;
 
     tracing::info!(%path, %checksum, previous = ?previous, "hermes wasm_checksum_hex patched");

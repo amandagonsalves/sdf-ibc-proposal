@@ -81,12 +81,5 @@ jobs:
           -A clippy::manual_is_multiple_of
           -A clippy::too_many_arguments
 
-      - name: Check install build warnings
-        run: >
-          cargo rustc --locked --release
-          -p stellar-hermes-gateway
-          --bin stellar-gateway --
-          -D warnings
-
       - name: Test
         run: cargo test --locked

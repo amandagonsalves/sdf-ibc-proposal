@@ -30,12 +30,22 @@ pub async fn upload(cfg: &ContractsConfig, root: &Path, http: &reqwest::Client) 
     run::command(
         root,
         "cargo",
-        &["build", "--target", "wasm32-unknown-unknown", "-p", CRATE, "--release"],
+        &[
+            "build",
+            "--target",
+            "wasm32-unknown-unknown",
+            "-p",
+            CRATE,
+            "--release",
+        ],
     )?;
 
     let wasm_file = root.join("target/wasm32-unknown-unknown/release/light_client_wasm.wasm");
     if !wasm_file.exists() {
-        bail!("expected wasm artifact not found at {}", wasm_file.display());
+        bail!(
+            "expected wasm artifact not found at {}",
+            wasm_file.display()
+        );
     }
 
     if run::has("wasm-opt") {
@@ -55,10 +65,13 @@ pub async fn upload(cfg: &ContractsConfig, root: &Path, http: &reqwest::Client) 
             ],
         )?;
     } else {
-        logger::warn("wasm-opt not installed — install binaryen if the upload is rejected for bulk-memory");
+        logger::warn(
+            "wasm-opt not installed — install binaryen if the upload is rejected for bulk-memory",
+        );
     }
 
-    let bytes = std::fs::read(&wasm_file).with_context(|| format!("reading {}", wasm_file.display()))?;
+    let bytes =
+        std::fs::read(&wasm_file).with_context(|| format!("reading {}", wasm_file.display()))?;
     let local_sha = hex::encode(Sha256::digest(&bytes));
     logger::detail(&format!("{} bytes, sha256={local_sha}", bytes.len()));
 
@@ -123,7 +136,9 @@ pub async fn upload(cfg: &ContractsConfig, root: &Path, http: &reqwest::Client) 
     )
     .await?;
 
-    logger::detail(&format!("waiting {VOTING_PERIOD_SECS}s for the voting period"));
+    logger::detail(&format!(
+        "waiting {VOTING_PERIOD_SECS}s for the voting period"
+    ));
     tokio::time::sleep(Duration::from_secs(VOTING_PERIOD_SECS)).await;
 
     logger::step("verifying checksum on-chain");
@@ -144,7 +159,11 @@ pub async fn upload(cfg: &ContractsConfig, root: &Path, http: &reqwest::Client) 
     Ok(())
 }
 
-async fn checksum_registered(http: &reqwest::Client, cfg: &ContractsConfig, local_sha: &str) -> bool {
+async fn checksum_registered(
+    http: &reqwest::Client,
+    cfg: &ContractsConfig,
+    local_sha: &str,
+) -> bool {
     let url = format!("{}/cosmos/ibc-wasm/checksums", cfg.api_url);
 
     for attempt in 1..=VERIFY_RETRIES {
@@ -176,7 +195,9 @@ async fn checksum_registered(http: &reqwest::Client, cfg: &ContractsConfig, loca
 async fn proposer_address(http: &reqwest::Client, cfg: &ContractsConfig) -> Result<String> {
     let value = probe::get_json(http, &format!("{}/cosmos/proposer", cfg.api_url))
         .await
-        .ok_or_else(|| anyhow!("api did not return a proposer (COSMOS_PROPOSER_PRIVATE_KEY missing?)"))?;
+        .ok_or_else(|| {
+            anyhow!("api did not return a proposer (COSMOS_PROPOSER_PRIVATE_KEY missing?)")
+        })?;
 
     value
         .get("address")
@@ -186,7 +207,11 @@ async fn proposer_address(http: &reqwest::Client, cfg: &ContractsConfig) -> Resu
         .ok_or_else(|| anyhow!("api proposer response missing address"))
 }
 
-async fn post(http: &reqwest::Client, url: &str, body: serde_json::Value) -> Result<serde_json::Value> {
+async fn post(
+    http: &reqwest::Client,
+    url: &str,
+    body: serde_json::Value,
+) -> Result<serde_json::Value> {
     let resp = http
         .post(url)
         .json(&body)

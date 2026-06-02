@@ -49,7 +49,10 @@ pub(crate) async fn create(
         );
     }
 
-    logger::step(&format!("probing Cosmos RPC at {}", cfg.osmosis_status_url()));
+    logger::step(&format!(
+        "probing Cosmos RPC at {}",
+        cfg.osmosis_status_url()
+    ));
     if !probe::http_ok(http, &cfg.osmosis_status_url()).await {
         bail!(
             "Cosmos RPC not reachable at {} — start it with: stellaribc up --cosmos",
@@ -85,7 +88,10 @@ pub(crate) async fn create(
         .ok_or_else(|| anyhow!("no {}-N client id found in hermes output", spec.id_prefix))?;
     logger::ok(&format!("created: {client_id}"));
 
-    shared::env_upsert(&root.join(".env"), &[(spec.result_env_var, client_id.as_str())])?;
+    shared::env_upsert(
+        &root.join(".env"),
+        &[(spec.result_env_var, client_id.as_str())],
+    )?;
     logger::detail(&format!("{}={client_id}", spec.result_env_var));
 
     Ok(())

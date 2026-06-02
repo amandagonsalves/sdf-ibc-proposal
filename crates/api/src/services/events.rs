@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::rpc::{EventCursor, EventsPage};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -8,7 +9,6 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
-use crate::rpc::{EventCursor, EventsPage};
 
 use crate::state::AppState;
 

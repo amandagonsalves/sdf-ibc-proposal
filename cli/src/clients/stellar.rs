@@ -6,7 +6,12 @@ use crate::clients::config::ClientsConfig;
 use crate::clients::CreateSpec;
 use crate::logger;
 
-pub async fn run(cfg: &ClientsConfig, root: &Path, http: &reqwest::Client, force: bool) -> Result<()> {
+pub async fn run(
+    cfg: &ClientsConfig,
+    root: &Path,
+    http: &reqwest::Client,
+    force: bool,
+) -> Result<()> {
     logger::banner("clients stellar (Stellar client on Cosmos, 08-wasm)");
 
     if !force {
@@ -49,7 +54,9 @@ fn wasm_checksum_present(hermes_config: &str) -> bool {
     for line in text.lines() {
         if line.trim_start().starts_with("wasm_checksum_hex") {
             if let Some((_, value)) = line.split_once('=') {
-                let value = value.trim().trim_matches(|c| c == '\'' || c == '"' || c == ' ');
+                let value = value
+                    .trim()
+                    .trim_matches(|c| c == '\'' || c == '"' || c == ' ');
 
                 return !value.is_empty();
             }

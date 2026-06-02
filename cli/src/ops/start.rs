@@ -44,7 +44,9 @@ pub async fn run(
         run::compose(root, &["up", "-d", "api", "gateway"])?;
 
         if !probe::wait_http(http, &ops.api_health_url(), WAIT_TIMEOUT_SECS).await {
-            bail!("api not reachable within {WAIT_TIMEOUT_SECS}s (docker compose logs api gateway)");
+            bail!(
+                "api not reachable within {WAIT_TIMEOUT_SECS}s (docker compose logs api gateway)"
+            );
         }
 
         logger::ok("api + gateway reachable");
@@ -54,7 +56,13 @@ pub async fn run(
         logger::detail("skip contract deploy");
     } else {
         logger::step("Step 3: deploying Soroban contracts");
-        crate::contracts::deploy_all::run(&ContractsConfig::from(cfg), root, force_redeploy, false, false)?;
+        crate::contracts::deploy_all::run(
+            &ContractsConfig::from(cfg),
+            root,
+            force_redeploy,
+            false,
+            false,
+        )?;
 
         logger::step("recreating api + gateway to pick up ROUTER_CONTRACT_ADDRESS");
         run::compose(root, &["up", "-d", "--force-recreate", "api", "gateway"])?;

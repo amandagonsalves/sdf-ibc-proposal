@@ -36,3 +36,6 @@ test:
 
 cargo-build:
 	cargo build
+
+lint:
+	cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_is_multiple_of -A clippy::too_many_arguments

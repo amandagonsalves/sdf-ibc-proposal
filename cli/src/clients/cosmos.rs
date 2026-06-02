@@ -6,7 +6,12 @@ use crate::clients::config::ClientsConfig;
 use crate::clients::CreateSpec;
 use crate::logger;
 
-pub async fn run(cfg: &ClientsConfig, root: &Path, http: &reqwest::Client, force: bool) -> Result<()> {
+pub async fn run(
+    cfg: &ClientsConfig,
+    root: &Path,
+    http: &reqwest::Client,
+    force: bool,
+) -> Result<()> {
     logger::banner("clients cosmos (Cosmos client on Stellar)");
 
     let spec = CreateSpec {

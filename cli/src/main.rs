@@ -141,7 +141,10 @@ enum OsmosisCmd {
         about = "Start the osmosis chain (local docker; no-op + reachability check for testnet)"
     )]
     Start {
-        #[arg(long, help = "Wipe local chain state (~/.osmosisd-local) before starting")]
+        #[arg(
+            long,
+            help = "Wipe local chain state (~/.osmosisd-local) before starting"
+        )]
         fresh: bool,
     },
     #[command(about = "Stop the local osmosis chain (no-op for testnet)")]
