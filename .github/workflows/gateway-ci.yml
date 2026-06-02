@@ -1,0 +1,87 @@
+name: Gateway CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "crates/gateway/**"
+      - "crates/core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/gateway-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "crates/gateway/**"
+      - "crates/core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/gateway-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gateway-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & smoke-test gateway image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: crates/gateway/Dockerfile
+          tags: stellar-gateway:ci
+          load: true
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
+
+      - name: Install grpcurl
+        run: |
+          curl -sSL https://github.com/fullstorydev/grpcurl/releases/download/v1.9.1/grpcurl_1.9.1_linux_x86_64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin grpcurl
+          grpcurl --version
+
+      - name: Run gateway
+        run: |
+          docker run -d --name gateway -p 50052:50052 \
+            -e STELLAR_GATEWAY_HOST=0.0.0.0 \
+            -e STELLAR_GATEWAY_GRPC_PORT=50052 \
+            -e STELLAR_API_URL=http://127.0.0.1:8101 \
+            stellar-gateway:ci
+
+      - name: Make a gRPC request (reflection)
+        run: |
+          for i in $(seq 1 30); do
+            if grpcurl -plaintext localhost:50052 list >/dev/null 2>&1; then
+              echo "gateway is serving gRPC:"
+              grpcurl -plaintext localhost:50052 list
+              grpcurl -plaintext localhost:50052 list stellar.gateway.v1.StellarGatewayQuery
+              exit 0
+            fi
+            echo "waiting for gateway to come up ($i/30)..."
+            sleep 2
+          done
+          echo "gateway did not start serving gRPC in time" >&2
+          exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs gateway || true
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f gateway || true
