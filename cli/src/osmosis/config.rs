@@ -3,7 +3,7 @@ use std::env;
 use crate::config::{get, ChainId};
 
 const LOCAL_CHAIN_ID: &str = "localosmosis";
-const LOCAL_RPC_URL: &str = "http://127.0.0.1:26658";
+const LOCAL_RPC_URL: &str = "http://127.0.0.1:26657";
 const LOCAL_REST_URL: &str = "http://127.0.0.1:1318";
 const LOCAL_GRPC_URL: &str = "http://127.0.0.1:9094";
 const LOCAL_KEY_NAME: &str = "localosmosis";
@@ -34,7 +34,7 @@ pub struct OsmosisConfig {
 
 impl OsmosisConfig {
     pub fn from_env() -> Self {
-        let network = match env::var("OSMOSIS_NETWORK").as_deref() {
+        let network = match env::var("COSMOS_NETWORK").as_deref() {
             Ok("testnet") => OsmosisNetwork::Testnet,
             _ => OsmosisNetwork::Local,
         };
@@ -56,15 +56,15 @@ impl OsmosisConfig {
             ),
         };
 
-        let relayer_mnemonic = get("OSMOSIS_RELAYER_MNEMONIC", "");
+        let relayer_mnemonic = get("COSMOS_RELAYER_MNEMONIC", "");
 
         Self {
             network,
             chain_id: ChainId::Cosmos(get("COSMOS_CHAIN_ID", chain_id)),
             rpc_url: get("COSMOS_RPC_URL", rpc),
             rest_url: get("COSMOS_REST_URL", rest),
-            grpc_url: get("OSMOSIS_GRPC_URL", grpc),
-            key_name: get("OSMOSIS_KEY_NAME", key),
+            grpc_url: get("COSMOS_GRPC_URL", grpc),
+            key_name: get("COSMOS_KEY_NAME", key),
             relayer_mnemonic,
         }
     }

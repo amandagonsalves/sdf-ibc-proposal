@@ -19,7 +19,7 @@ DEX-testing extras (denom metadata, balancer/stable/CL pools, incentive epochs).
 | `assets/default-config.json` | Declarative chain config: chain id, moniker, genesis time, the `val`/`relayer` key mnemonics + their funded balances, the gentx, and the `genesis`/`app`/`config` override lists (each entry a `{path, type, value}` applied with `dasel`). Edit this, not the script. |
 | `assets/setup.sh` | Container entrypoint. On first boot it `apk add jq dasel`, runs `osmosisd init`, applies every override from `default-config.json` (via `jq` + `dasel`), recovers each key and funds a genesis account at its derived address, builds the gentx, then `osmosisd start`. Data-driven — holds no hardcoded chain values. |
 | `src/lifecycle.rs` | Locates the repo `docker-compose.yml` and drives `docker compose --profile osmosis up/down`. Resets `~/.osmosisd-local` for a fresh start unless `--stateful`. |
-| `src/health.rs` | Polls `http://127.0.0.1:26658/status` until `latest_block_height > 0`. |
+| `src/health.rs` | Polls `http://127.0.0.1:26657/status` until `latest_block_height > 0`. |
 | `src/main.rs` | CLI: `start [--stateful]`, `stop`, `health`. |
 
 The `osmosis` service definition lives in the repo-root `docker-compose.yml`
@@ -46,12 +46,12 @@ docker compose --profile osmosis up -d osmosis
 
 | Endpoint | Host | Container |
 |---|---|---|
-| Tendermint RPC / websocket | `http://127.0.0.1:26658` | `26657` |
+| Tendermint RPC / websocket | `http://127.0.0.1:26657` | `26657` |
 | REST (LCD) | `http://127.0.0.1:1318` | `1317` |
 | gRPC | `127.0.0.1:9094` | `9090` |
 
 Chain id `localosmosis`, account prefix `osmo`, gas denom `uosmo`. These match
-`COSMOS_*` in `.env` and the `localosmosis` chain block in `ci/hermes-config.toml`.
+`COSMOS_*` in `.env` and the `localosmosis` chain block in `hermes-config.toml`.
 
 Two keys are recovered into the genesis: `val` (the validator) and `relayer`
 (a separately funded account for Hermes). Both mnemonics live in

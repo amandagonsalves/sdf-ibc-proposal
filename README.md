@@ -9,30 +9,16 @@ cross-chain communication between Stellar and Cosmos-compatible chains.
 
 This repository is part of the **Cardano–Stellar IBC bridge** project. It ships:
 
-- **`stellar-hermes-gateway`** — gRPC gateway the Hermes relayer talks to. Speaks no
-  Soroban RPC directly; every chain read/write goes through `stellar-api`.
-- **`stellar-api`** — standalone HTTP/REST service that owns the Soroban RPC
-  connection and Stellar signing key. Exposes `/ledger/*`, `/account/*`,
-  `/balance/*`, `/tx/*` for the gateway to call.
-- **`stellar-ibc-core`** — shared library: SMT, ICS-23 proof serializer, IBC
-  protocol context, plus the `RpcClient` (Soroban JSON-RPC) and `ApiClient`
-  (HTTP client the gateway uses to reach `stellar-api`).
-- **`stellar-osmosis`** — local Osmosis (`localosmosis`) lifecycle crate.
-  Boots a prebuilt `osmolabs/osmosis:<ver>-alpine` image from a declarative
-  `default-config.json`. Acts as the Cosmos counterparty for local devnets.
-- **`light-client-wasm`** — Stellar light client compiled to
-  `wasm32-unknown-unknown`, uploaded to the Cosmos chain via `08-wasm`.
-- **Soroban contracts** — `router`, `transfer-app`, and light clients (`mock`,
-  `attestation`, `tendermint`) under `contracts/`.
-- **`stellar-ibc-cli`** (`stellaribc`) — the orchestrator CLI under `cli/`. One
-  binary for the whole bridge: bring the stack up, build/push images, deploy
-  contracts, upload the light client, create clients, register counterparties,
-  and check status. Drives docker, the `stellar` CLI, and `stellar-api` directly
-  — there are no shell scripts.
-- **Hermes fork integration** — `relayer-types::clients::ics10_stellar` and
-  `chain::stellar::StellarChainEndpoint` live in the
-  [cardano-foundation/hermes-relayer](https://github.com/cardano-foundation/hermes-relayer)
-  fork.
+| Component | Role |
+|---|---|
+| **`stellar-hermes-gateway`** | gRPC gateway the Hermes relayer talks to. Speaks no Soroban RPC directly; every chain read/write goes through `stellar-api`. |
+| **`stellar-api`** | Standalone HTTP/REST service that owns the Soroban RPC connection and Stellar signing key. Exposes `/ledger/*`, `/account/*`, `/balance/*`, `/tx/*` for the gateway to call. |
+| **`stellar-ibc-core`** | Shared library: SMT, ICS-23 proof serializer, IBC protocol context, plus the `RpcClient` (Soroban JSON-RPC) and `ApiClient` (HTTP client the gateway uses to reach `stellar-api`). |
+| **`stellar-osmosis`** | Local Osmosis (`localosmosis`) lifecycle crate. Boots a prebuilt `osmolabs/osmosis:<ver>-alpine` image from a declarative `default-config.json`. Acts as the Cosmos counterparty for local devnets. |
+| **`light-client-wasm`** | Stellar light client compiled to `wasm32-unknown-unknown`, uploaded to the Cosmos chain via `08-wasm` (`contracts/cosmwasm/light-client`). |
+| **Soroban contracts** | `ibc-router`, `ibc-transfer`, and light clients (`mock`, `attestation`, `tendermint`) under `contracts/soroban/`. |
+| **`stellar-ibc-cli`** (`stellaribc`) | The orchestrator CLI under `cli/`. One binary for the whole bridge: bring the stack up, pull + run images, deploy contracts, upload the light client, create clients, register counterparties, and check status. Drives docker, the `stellar` CLI, and `stellar-api` directly — no shell scripts. |
+| **Hermes fork integration** | `relayer-types::clients::ics10_stellar` and `chain::stellar::StellarChainEndpoint` live in the [cardano-foundation/hermes-relayer](https://github.com/cardano-foundation/hermes-relayer) fork. |
 
 Related repositories:
 
@@ -167,7 +153,8 @@ The Cosmos counterparty tracks Stellar via the standard ibc-go `08-wasm` mechani
   validators) and walks the gateway-produced `MerkleProof` against
   `ConsensusState.root` (the SMT root).
 
-The wasm crate is at [`crates/light-client-wasm`](crates/light-client-wasm); the
+The wasm crate is at
+[`contracts/cosmwasm/light-client`](contracts/cosmwasm/light-client); the
 SMT + ICS-23 helpers it consumes live in
 [`crates/core/src/ibc/`](crates/core/src/ibc/).
 
@@ -201,33 +188,35 @@ stellar-ibc/
       assets/
         default-config.json   Declarative chain config (denoms, gov, keys)
         setup.sh              Container entrypoint (jq + dasel data-driven)
-      src/                main.rs, runner.rs, config.rs
-
-    integration-tests/    cargo bin: gRPC + RPC smoke tests
-    light-client-wasm/    Stellar LC compiled for 08-wasm
+      src/                main.rs, lifecycle.rs, config.rs
 
   cli/                    stellar-ibc-cli — the `stellaribc` orchestrator
     src/
       main.rs             clap command tree + dispatch
-      config.rs repo.rs run.rs probe.rs logger.rs shared.rs   support
-      ops/                install · doctor · status · stack(up/down) · bootstrap
-      clients/            cosmos (F1.1) · stellar (F1.2) · counterparty · list
-      hermes/  gateway/  api/   build-image · push-image · start · stop · restart
-      contracts/          build · upload · deploy · invoke · deploy-all · wasm
+      config.rs repo.rs run.rs probe.rs logger.rs shared.rs   base config + support
+      ops/                install · check · status · stack(up/down) · start
+      osmosis/            osmosis chain lifecycle + config (start/stop/status)
+      stellar/            stellar chain config + lifecycle
+      clients/            cosmos · stellar · counterparty · list (+ config)
+      hermes/  gateway/  api/   start · stop · restart (pull-and-run; each owns its config)
+      contracts/          build · upload · deploy · invoke · deploy-all · wasm (+ config)
       tx/                 clients · msg · query  (low-level surface)
 
-  contracts/              Soroban contracts (workspace members)
-    router/               IBC v2 router (create_client, register_counterparty, …)
-    transfer-app/         ICS-20 transfer module
-    light-clients/
-      mock/               Always-accept LC for development
-      attestation/        Federated attestation LC (pending)
-      tendermint/         Tendermint LC (pending)
+  contracts/
+    soroban/              Soroban contracts (own nested workspace, `--profile contract`)
+      ibc-router/         stellar-ibc-router — IBC v2 router (create_client, register_counterparty, …)
+      ibc-transfer/       stellar-ibc-transfer — ICS-20 transfer module
+      light-clients/
+        mock/             stellar-mock-light-client — always-accept LC for development
+        attestation/      stellar-attestation-light-client — federated attestation LC (pending)
+        tendermint/       stellar-tendermint-light-client — Tendermint LC (pending)
+    cosmwasm/
+      light-client/       light-client-wasm — Stellar LC compiled for Cosmos 08-wasm
 
   hermes-config.toml      Hermes relayer config (mounted into the hermes + api containers)
-  Dockerfile              Builds both stellar-gateway + stellar-api binaries
-  docker-compose.yml      Profiles: local, hermes, local-stellar, staging
-  Makefile                Dev targets (fmt/lint/test) + thin `stellaribc` wrappers
+  Dockerfile              Builds the stellar-gateway + stellar-api binaries
+  docker-compose.yml      Profiles: local, osmosis, hermes, local-stellar, staging
+  Makefile                Image build/push (SERVICE=gateway|hermes|api) + fmt/test/cargo-build
   .env / .env.example
 ```
 
@@ -307,7 +296,7 @@ All configuration is via environment variables. Copy `.env.example` to `.env`.
 | `STELLAR_GATEWAY_HOST` | `0.0.0.0` | gRPC bind address |
 | `STELLAR_GATEWAY_GRPC_PORT` | `50052` | gRPC listen port |
 | `STELLAR_API_URL` | `http://127.0.0.1:8101` | Where the gateway reaches the api service. In docker: `http://api:8101` |
-| `IBC_CONTRACT_ID` | _(empty)_ | Soroban contract address of the IBC router |
+| `ROUTER_CONTRACT_ADDRESS` | _(empty)_ | Soroban contract address of the IBC router |
 
 ### Stellar API (`api` service / `stellar-api` binary)
 
@@ -318,8 +307,8 @@ All configuration is via environment variables. Copy `.env.example` to `.env`.
 | `STELLAR_RPC_URL` | `https://soroban-testnet.stellar.org` | Soroban JSON-RPC endpoint |
 | `NETWORK_PASSPHRASE` | `Test SDF Network ; September 2015` | Stellar network identifier |
 | `STELLAR_SIGNING_KEY` | _(required for tx submission)_ | Ed25519 secret (strkey `S…`) |
-| `IBC_CONTRACT_ID` | _(empty)_ | Router contract — re-encoded + invoked via `/tx/prepare` |
-| `TRANSFER_CONTRACT_ID` | _(empty)_ | Transfer app contract |
+| `ROUTER_CONTRACT_ADDRESS` | _(empty)_ | Router contract — re-encoded + invoked via `/tx/prepare` |
+| `TRANSFER_CONTRACT_ADDRESS` | _(empty)_ | Transfer app contract |
 
 ### Local Osmosis (`osmosis` service / `stellar-osmosis` binary)
 
@@ -340,7 +329,7 @@ Genesis denoms, accounts, mnemonics, gov voting period, and overrides live in
 | `API_IMAGE` / `API_TAG` | `amandagonsalvesx/stellar-ibc-api:latest` | api image ref |
 | `HERMES_IMAGE` / `HERMES_TAG` | `amandagonsalvesx/stellar-hermes-cardano:latest` | hermes-relayer fork image |
 | `HERMES_REPO` | `../hermes-relayer` | Path to the hermes-relayer fork checkout |
-| `DOCKER_USERNAME` / `DOCKER_TOKEN` | _(unset)_ | DockerHub creds for `make push-*` |
+| `DOCKER_USERNAME` / `DOCKER_TOKEN` | _(unset)_ | DockerHub creds for `make push SERVICE=…` |
 
 ### Network passphrases
 
@@ -363,7 +352,6 @@ Install (any of):
 
 ```sh
 cargo run -p stellar-ibc-cli -- install   # self-install to the cargo bin dir
-make install                              # cargo install --path cli
 cargo install --path cli
 ```
 
@@ -371,16 +359,17 @@ Command groups:
 
 | Group | Commands |
 |---|---|
-| ops | `install` · `doctor` · `status` · `up [--cosmos\|--stellar]` · `down [--volumes]` · `bootstrap` |
-| `clients` | `cosmos` (F1.1) · `stellar` (F1.2) · `counterparty <stellar\|cosmos>` · `list` |
-| `hermes` | `build-image` · `push-image` · `start` · `stop` · `restart` · `keys-import` |
-| `gateway` | `build-image` · `push-image` · `start` · `stop` · `restart` · `query` |
-| `api` | `build-image` · `push-image` · `start` · `stop` · `restart` |
+| ops | `install` · `doctor` · `status` · `up [--cosmos\|--stellar]` · `down [--volumes]` · `start` |
+| `clients` | `cosmos` · `stellar` · `counterparty <stellar\|cosmos>` · `list` |
+| `hermes` | `start` · `stop` · `restart` · `keys-import` |
+| `gateway` | `start` · `stop` · `restart` · `query` |
+| `api` | `start` · `stop` · `restart` |
 | `contracts` | `build` · `upload` · `deploy` · `invoke` · `deploy-all` · `upload-wasm` |
 | `tx` | `clients` · `msg` · `query` (low-level; some pending) |
 
-Full reference: [`cli/README.md`](cli/README.md). Several `make` targets are thin
-wrappers over the CLI (e.g. `make f0` → `stellaribc bootstrap`).
+Full reference: [`cli/README.md`](cli/README.md). The `Makefile` is only for
+image build/push (`make build`/`push SERVICE=<gateway|hermes|api>`) plus `make
+fmt`/`test`/`cargo-build`; everything else runs through `stellaribc` directly.
 
 ---
 
@@ -401,10 +390,10 @@ ordering. Detached so you can inspect status; logs are followed separately.
 
 ```sh
 cp .env.example .env
-# edit .env: STELLAR_SIGNING_KEY (and IBC_CONTRACT_ID if already deployed)
+# edit .env: STELLAR_SIGNING_KEY (and ROUTER_CONTRACT_ADDRESS if already deployed)
 
-make start-stellar-ibc          # docker compose --profile local --profile hermes up -d --build
-make logs-stellar-ibc           # tails api + gateway + hermes (skips osmosis log spam)
+stellaribc up                   # osmosis + api + gateway via docker compose
+docker compose --profile local --profile hermes logs -f api gateway hermes
 ```
 
 On first run the gateway/api image compiles the Rust workspace (~5–10 min);
@@ -420,34 +409,33 @@ docker compose --profile local --profile local-stellar --profile hermes up -d --
 ### Per-service helpers
 
 ```sh
-make restart-api     # docker compose rm -sf + up -d (recreates, picks up compose changes)
-make restart-gateway
-make restart-hermes
-make logs-api
-make logs-gateway
-make logs-hermes
-make shell-hermes    # interactive shell inside the hermes container
-make ps-stellar-ibc
-make stop-stellar-ibc
+stellaribc api restart       # or: gateway restart / hermes restart (--pull to refresh the image)
+stellaribc down              # stop the stack
+
+# logs / ps / shell run through docker compose directly:
+COMPOSE="docker compose --profile local --profile hermes"
+$COMPOSE logs -f api gateway hermes
+$COMPOSE exec hermes sh      # interactive shell inside the hermes container
+$COMPOSE ps
 ```
 
 ### Local Osmosis on its own
 
 ```sh
-make start-osmosis           # fresh state (wipes ~/.osmosisd-local)
-make start-osmosis-stateful  # keep existing state
-make health-osmosis
-make stop-osmosis
+stellaribc osmosis start     # start the local osmosis devnet
+stellaribc osmosis status
+stellaribc osmosis stop
+# (the stellar-osmosis crate also runs standalone: cargo run -p stellar-osmosis -- start [--stateful])
 ```
 
-### Bootstrap the bridge (via `stellaribc`)
+### Start the bridge (via `stellaribc`)
 
-One command does everything — build images, bring up the chains/services, deploy
+One command does everything — pull images, bring up the chains/services, deploy
 the Soroban contracts, gov-upload the light-client wasm, and import the relayer
 keys:
 
 ```sh
-stellaribc bootstrap            # F0 (flags: --skip-images/-contracts/-wasm/-keys, --force-redeploy)
+stellaribc start            # flags: --skip-images/-contracts/-wasm/-keys, --force-redeploy
 ```
 
 Or step by step:
@@ -455,32 +443,34 @@ Or step by step:
 ```sh
 stellaribc up                   # docker compose up osmosis + api + gateway
 stellaribc contracts deploy-all # deploy router/transfer/mock-LC, wire router, write .env
-stellaribc gateway restart --rebuild   # pick up the new IBC_CONTRACT_ID
+stellaribc gateway restart --pull      # pull latest + pick up the new ROUTER_CONTRACT_ADDRESS
 stellaribc contracts upload-wasm       # gov-upload Stellar LC wasm, patch hermes config
 stellaribc hermes keys-import          # import relayer keys into the hermes-keys volume
 stellaribc status               # everything green?
 ```
 
-Then create the clients (F1):
+Then create the clients:
 
 ```sh
-stellaribc clients cosmos       # F1.1 — Cosmos (Tendermint) client on Stellar
-stellaribc clients stellar      # F1.2 — Stellar (08-wasm) client on Cosmos
+stellaribc clients cosmos       # Cosmos (Tendermint) client on Stellar
+stellaribc clients stellar      # Stellar (08-wasm) client on Cosmos
 stellaribc clients list
 ```
 
-### Images (build / push)
+### Images (build / push / pull)
+
+Building and pushing images is done **only via the Makefile** — the CLI just
+pulls and runs them:
 
 ```sh
-stellaribc gateway build-image          # docker build amandagonsalvesx/stellar-gateway:latest
-stellaribc api build-image              # … amandagonsalvesx/stellar-ibc-api:latest
-stellaribc hermes build-image           # … from the hermes-relayer fork (HERMES_REPO)
-
-stellaribc gateway push-image --rebuild # build then push (login from DOCKER_USERNAME/DOCKER_TOKEN)
+make build SERVICE=api       # docker build amandagonsalvesx/stellar-ibc-api:latest
+make push  SERVICE=gateway   # build + push amandagonsalvesx/stellar-gateway:latest
+make push  SERVICE=hermes    # … from the hermes-relayer fork ($HERMES_REPO/ci/release/hermes.Dockerfile)
 ```
 
-`make push-gateway` / `push-api` / `push-hermes` are thin wrappers over
-`stellaribc <component> push-image --rebuild`.
+These read the image refs + `DOCKER_USERNAME`/`DOCKER_TOKEN` from `.env`. To
+pull-and-run a published image: `stellaribc <service> start --pull` (or
+`restart --pull`).
 
 ### Probe
 
@@ -488,22 +478,22 @@ stellaribc gateway push-image --rebuild # build then push (login from DOCKER_USE
 curl -s http://127.0.0.1:8101/health
 curl -s http://127.0.0.1:8101/ledger/latest | jq .
 grpcurl -plaintext 127.0.0.1:50052 stellar.gateway.v1.StellarGatewayQuery/LatestHeight
-curl -s http://127.0.0.1:26658/status | jq .result.sync_info     # Osmosis
-make logs-hermes
+curl -s http://127.0.0.1:26657/status | jq .result.sync_info     # Osmosis
+docker compose --profile local --profile hermes logs -f hermes
 ```
 
 ---
 
 ## Manual testing
 
-The integration-test binary runs gRPC + RPC smoke tests against a running
-gateway:
+Bring the gateway up and smoke-test it directly — `stellaribc status` / `check`
+run the same health probes, or hit the services with `curl` / `grpcurl`:
 
 ```sh
 # In one terminal:
-cargo run -p stellar-hermes-gateway
+cargo run -p stellar-hermes-gateway      # or: stellaribc gateway start
 # In another:
-cargo run -p stellar-integration-tests
+stellaribc status
 ```
 
 `STELLAR_GATEWAY_GRPC_ADDR` (default `http://0.0.0.0:50052`) controls where it
@@ -524,13 +514,11 @@ Notable build pieces:
 
 - **`crates/gateway/build.rs`** compiles `proto/stellar_gateway.proto` with
   `tonic-build` (manual mode) at compile time.
-- **`crates/integration-tests/build.rs`** does the same, additionally exporting
-  `PROTOS_OUT_DIR` so `src/pb.rs` can `include!` the generated client stubs.
 
 ### Build Soroban contracts
 
 ```sh
-make build-contracts          # stellar contract build --profile contract
+stellaribc contracts build    # stellar contract build --profile contract
 ```
 
 Output `.wasm` files land under `target/wasm32v1-none/release/`.
@@ -538,16 +526,12 @@ Output `.wasm` files land under `target/wasm32v1-none/release/`.
 ### Lint and test
 
 ```sh
-make check                    # fmt-check + clippy + cargo test
-make fmt                      # auto-format
-make lint                     # clippy only
+make fmt                      # cargo fmt --all
 make test                     # cargo test --locked
-make audit                    # cargo audit
+make cargo-build              # cargo build
 
-make check-api                # per-crate
-make check-gateway
-make check-ibc-core
-make check-contracts
+cargo clippy --locked --all-targets -- -D warnings   # lint
+cargo audit --file Cargo.lock                         # audit
 ```
 
 Run specific tests:

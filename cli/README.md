@@ -269,7 +269,7 @@ Read from `stellar-ibc/.env` (shell env overrides). Defaults shown.
 | `STELLAR_IBC_ROOT` | _(auto-discovered)_ | repo-root override |
 | `COSMOS_CHAIN_ID` | `localosmosis` | status, clients, keys |
 | `COSMOS_REST_URL` | `http://127.0.0.1:1318` | check/status/start probes |
-| `OSMOSIS_RPC_URL` | `http://127.0.0.1:26658` | clients (RPC probe) |
+| `COSMOS_RPC_URL` | `http://127.0.0.1:26657` | clients (RPC probe) |
 | `STELLAR_API_URL` | `http://127.0.0.1:8101` | status, clients list, upload-wasm |
 | `STELLAR_GATEWAY_GRPC_PORT` | `50052` | gateway gRPC probe |
 | `HERMES_CONFIG` | `<root>/hermes-config.toml` | clients stellar (checksum check) |
@@ -294,24 +294,22 @@ Read from `stellar-ibc/.env` (shell env overrides). Defaults shown.
 ```
 cli/src/
   main.rs            clap command tree + dispatch
-  config.rs          .env-backed Config
+  config.rs          base Config: osmosis · stellar · hermes · api · gateway · deployment
   repo.rs            repo-root discovery
   run.rs             process helpers (command / capture / compose / piped)
   probe.rs           http / tcp health probes
   logger.rs          TTY-aware status logger
   shared.rs          print_clients / env_upsert / pending / check helpers
-  config.rs          base Config: cosmos · stellar · hermes · api · gateway · deployment
   ops/               install · check · status · stack (up/down) · start · config
+  osmosis/           osmosis chain config + lifecycle (start/stop/status)
+  stellar/           stellar chain config + lifecycle
   clients/           cosmos · stellar · counterparty · list · config
-  hermes/            container (start/stop/restart) · keys
-  gateway/           container · query
+  hermes/            container (start/stop/restart) · keys · config
+  gateway/           container · query · config
   api/               container
   contracts/         build · upload · deploy · invoke · deploy_all · wasm · config
   tx/                clients · msg · query
 ```
-
-Flow tests that drive this binary live in
-[`crates/integration-tests`](../crates/integration-tests).
 
 ## Makefile
 

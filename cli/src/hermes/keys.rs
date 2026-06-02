@@ -9,7 +9,7 @@ pub fn import(cfg: &Config, root: &Path) -> Result<()> {
     logger::banner("hermes keys-import (relayer key = router admin key)");
 
     if cfg.osmosis.relayer_mnemonic.is_empty() {
-        bail!("OSMOSIS_RELAYER_MNEMONIC is empty in .env — set the cosmos relayer mnemonic (a faucet-funded account)");
+        bail!("COSMOS_RELAYER_MNEMONIC is empty in .env — set the cosmos relayer mnemonic (a faucet-funded account)");
     }
 
     if cfg.stellar.signing_key.is_empty() {

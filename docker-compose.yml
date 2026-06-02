@@ -29,7 +29,7 @@ services:
     environment:
       COSMOS_CHAIN_ID: "${COSMOS_CHAIN_ID:-localosmosis}"
     ports:
-      - "26658:26657"
+      - "26657:26657"
       - "1318:1317"
       - "9094:9090"
       - "9091:9091"

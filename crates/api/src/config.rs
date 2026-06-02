@@ -34,7 +34,7 @@ pub struct CosmosConfig {
     /// Default `http://127.0.0.1:1318`.
     pub rest_url: String,
     /// Tendermint RPC URL. Env: `COSMOS_RPC_URL`.
-    /// Default `http://127.0.0.1:26658`.
+    /// Default `http://127.0.0.1:26657`.
     pub rpc_url: String,
     /// Bech32 prefix. Env: `COSMOS_ACCOUNT_PREFIX`. Default `osmo`.
     pub account_prefix: String,
@@ -84,7 +84,7 @@ impl CosmosConfig {
             rest_url: std::env::var("COSMOS_REST_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:1318".to_string()),
             rpc_url: std::env::var("COSMOS_RPC_URL")
-                .unwrap_or_else(|_| "http://127.0.0.1:26658".to_string()),
+                .unwrap_or_else(|_| "http://127.0.0.1:26657".to_string()),
             account_prefix: std::env::var("COSMOS_ACCOUNT_PREFIX")
                 .unwrap_or_else(|_| "osmo".to_string()),
             gas_denom: std::env::var("COSMOS_GAS_DENOM").unwrap_or_else(|_| "uosmo".to_string()),
