@@ -107,7 +107,12 @@ pub async fn client_state(
         .get_ledger_entry(&lc_key)
         .await
         .map_err(|e| err(StatusCode::BAD_GATEWAY, format!("get lc address: {e}")))?
-        .ok_or_else(|| err(StatusCode::NOT_FOUND, format!("client {client_id} not found")))?;
+        .ok_or_else(|| {
+            err(
+                StatusCode::NOT_FOUND,
+                format!("client {client_id} not found"),
+            )
+        })?;
 
     let lc_contract = match decode_contract_val(&lc_entry) {
         Some(ScVal::Address(ScAddress::Contract(ContractId(Hash(id))))) => id,

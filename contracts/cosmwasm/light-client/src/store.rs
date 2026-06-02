@@ -55,14 +55,11 @@ pub fn set_consensus_state(
         type_url: WASM_CONSENSUS_STATE_TYPE_URL.into(),
         value: wasm.encode_to_vec(),
     };
-    storage.set(
-        &consensus_state_key(height).as_slice(),
-        &any.encode_to_vec(),
-    );
+    storage.set(consensus_state_key(height).as_slice(), &any.encode_to_vec());
 }
 
 pub fn consensus_state(storage: &dyn Storage, height: u64) -> Option<ConsensusState> {
-    let raw = storage.get(&consensus_state_key(height).as_slice())?;
+    let raw = storage.get(consensus_state_key(height).as_slice())?;
     let any = Any::decode(raw.as_slice()).ok()?;
     let wasm = WasmConsensusState::decode(any.value.as_slice()).ok()?;
     ConsensusState::decode(wasm.data.as_slice()).ok()

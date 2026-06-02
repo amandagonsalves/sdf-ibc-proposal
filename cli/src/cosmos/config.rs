@@ -32,8 +32,4 @@ impl CosmosConfig {
     pub fn status_url(&self) -> String {
         format!("{}/status", self.rpc_url)
     }
-
-    pub fn node_info_url(&self) -> String {
-        format!("{}/cosmos/base/tendermint/v1beta1/node_info", self.rest_url)
-    }
 }

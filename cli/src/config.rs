@@ -1,13 +1,14 @@
 use std::env;
 use std::path::Path;
 
+use crate::cosmos::config::CosmosConfig;
 use crate::gateway::config::GatewayConfig;
 use crate::hermes::config::HermesConfig;
-use crate::cosmos::config::CosmosConfig;
 use crate::stellar::config::StellarConfig;
 
 pub enum ChainId {
     Cosmos(String),
+    #[allow(dead_code)]
     Cardano(String),
     Stellar(String),
 }
@@ -22,6 +23,7 @@ impl ChainId {
 
 pub enum ClientId {
     Cosmos(String),
+    #[allow(dead_code)]
     Cardano(String),
     Stellar(String),
 }

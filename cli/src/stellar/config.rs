@@ -1,14 +1,4 @@
-use std::env;
-
 use crate::config::{get, ChainId};
-
-pub const COMPOSE_SERVICE: &str = "localstellar";
-
-#[derive(Clone, PartialEq, Eq)]
-pub enum StellarNetwork {
-    Local(String),
-    Testnet(String),
-}
 
 pub struct StellarConfig {
     pub chain_id: ChainId,
@@ -19,7 +9,6 @@ pub struct StellarConfig {
     pub key_name: String,
     pub gateway_url: String,
     pub api_url: String,
-    pub network: StellarNetwork,
 }
 
 impl StellarConfig {
@@ -28,11 +17,6 @@ impl StellarConfig {
         let grpc_port = get("STELLAR_GATEWAY_GRPC_PORT", "50052");
 
         let chain_id = get("STELLAR_CHAIN_ID", "stellar-testnet");
-
-        let network = match env::var("STELLAR_NETWORK").as_deref() {
-            Ok("testnet") => StellarNetwork::Testnet(chain_id.clone()),
-            _ => StellarNetwork::Local(chain_id.clone()),
-        };
 
         Self {
             chain_id: ChainId::Stellar(chain_id),
@@ -43,11 +27,6 @@ impl StellarConfig {
             key_name: get("STELLAR_KEY_NAME", "stellar-relayer"),
             gateway_url: get("STELLAR_GATEWAY_URL", &format!("127.0.0.1:{grpc_port}")),
             api_url: get("STELLAR_API_URL", &format!("http://127.0.0.1:{api_port}")),
-            network,
         }
-    }
-
-    pub fn status_url(&self) -> String {
-        format!("{}/status", self.rpc_url)
     }
 }

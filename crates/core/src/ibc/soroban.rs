@@ -156,6 +156,7 @@ impl AnyClientState {
             .map_err(|e| anyhow!("client_state to_xdr: {e}"))
     }
 
+    #[allow(deprecated)]
     pub fn from_soroban_xdr(bytes: &[u8]) -> Result<Self> {
         let val = ScVal::from_xdr(bytes, Limits::none())
             .map_err(|e| anyhow!("client_state from_xdr: {e}"))?;

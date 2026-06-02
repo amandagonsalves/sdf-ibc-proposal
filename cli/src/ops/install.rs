@@ -27,7 +27,7 @@ pub fn run(root: &Path) -> Result<()> {
         bin_dir.join("stellaribc").display()
     ));
 
-    if on_path(&bin_dir.as_path()) {
+    if on_path(bin_dir.as_path()) {
         logger::ok(&format!(
             "{} is on PATH — run: stellaribc status",
             bin_dir.display()

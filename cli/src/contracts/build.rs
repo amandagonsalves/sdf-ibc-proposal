@@ -11,7 +11,7 @@ pub fn run(root: &Path) -> Result<()> {
 
     logger::step("stellar contract build --profile contract");
     run::command(
-        &contracts_dir.as_path(),
+        contracts_dir.as_path(),
         "stellar",
         &["contract", "build", "--profile", "contract"],
     )?;

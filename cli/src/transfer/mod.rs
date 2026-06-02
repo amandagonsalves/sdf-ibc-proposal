@@ -48,10 +48,7 @@ pub fn stellar_to_cosmos(cfg: &Config, root: &Path, args: &TransferArgs) -> Resu
     let memo_json = format!("\"{}\"", args.memo);
 
     if args.mint {
-        logger::step(&format!(
-            "mint {} {} to {sender}",
-            args.amount, args.denom
-        ));
+        logger::step(&format!("mint {} {} to {sender}", args.amount, args.denom));
 
         contracts::invoke(
             &cc,
@@ -153,6 +150,8 @@ fn cosmos_relayer_address(cfg: &Config, root: &Path) -> Result<String> {
 
     match address {
         Some(addr) => Ok(addr),
-        None => bail!("could not derive the cosmos `{key_name}` address — pass --receiver explicitly"),
+        None => {
+            bail!("could not derive the cosmos `{key_name}` address — pass --receiver explicitly")
+        }
     }
 }

@@ -19,7 +19,7 @@ impl TryFrom<Any> for AnyConsensusState {
     fn try_from(raw: Any) -> Result<Self> {
         match raw.type_url.as_str() {
             TENDERMINT_CONSENSUS_STATE_TYPE_URL => Ok(AnyConsensusState::Tendermint(
-                Protobuf::<RawTmConsensusState>::decode_vec(&raw.value.as_slice())
+                Protobuf::<RawTmConsensusState>::decode_vec(raw.value.as_slice())
                     .map_err(|e| anyhow!("decode tendermint consensus state: {e}"))?,
             )),
             other => Err(anyhow!("unknown consensus state type_url: {other}")),

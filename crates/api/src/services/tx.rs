@@ -107,7 +107,7 @@ pub async fn submit_signed_tx(
     tracing::info!(hash = %submitted.hash, "tx submitted");
 
     Ok(Json(SubmitSignedTxResponse {
-        hash: String::from(submitted.hash),
+        hash: submitted.hash,
         return_value_xdr,
     }))
 }

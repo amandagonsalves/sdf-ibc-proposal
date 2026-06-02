@@ -5,13 +5,13 @@ use tonic::{Request, Response, Status};
 
 use crate::proto::{
     stellar_gateway_query_server::{StellarGatewayQuery, StellarGatewayQueryServer},
-    EventsRequest, EventsResponse, GatewayContractEvent, LatestHeightRequest, LatestHeightResponse,
-    IdentifiedClientState, QueryAcknowledgementRequest, QueryAcknowledgementResponse,
-    QueryClientStateRequest, QueryClientStateResponse, QueryClientStatesRequest,
-    QueryClientStatesResponse, QueryConsensusStateRequest, QueryConsensusStateResponse,
-    QueryIbcHeaderRequest, QueryIbcHeaderResponse, QueryNextSeqRecvRequest,
-    QueryNextSeqRecvResponse, QueryPacketCommitmentRequest, QueryPacketCommitmentResponse,
-    QueryPacketReceiptRequest, QueryPacketReceiptResponse,
+    EventsRequest, EventsResponse, GatewayContractEvent, IdentifiedClientState,
+    LatestHeightRequest, LatestHeightResponse, QueryAcknowledgementRequest,
+    QueryAcknowledgementResponse, QueryClientStateRequest, QueryClientStateResponse,
+    QueryClientStatesRequest, QueryClientStatesResponse, QueryConsensusStateRequest,
+    QueryConsensusStateResponse, QueryIbcHeaderRequest, QueryIbcHeaderResponse,
+    QueryNextSeqRecvRequest, QueryNextSeqRecvResponse, QueryPacketCommitmentRequest,
+    QueryPacketCommitmentResponse, QueryPacketReceiptRequest, QueryPacketReceiptResponse,
 };
 use crate::state_tracker::{PathLookup, StateTracker};
 use stellar_ibc_core::api_client::{ApiClient, EventCursor};

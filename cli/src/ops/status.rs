@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::ops::config::OpsConfig;
 use crate::{logger, probe, shared};
 
-pub async fn run(cfg: &OpsConfig, http: &reqwest::Client) -> Result<()> {
+pub async fn run(cfg: &OpsConfig) -> Result<()> {
     logger::banner("status");
 
     logger::step("Chains & services");

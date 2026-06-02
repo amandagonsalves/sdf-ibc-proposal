@@ -5,7 +5,7 @@ use anyhow::{bail, Result};
 use crate::config::Config;
 use crate::contracts::config::ContractsConfig;
 use crate::ops::config::OpsConfig;
-use crate::{hermes, logger, cosmos, probe, run};
+use crate::{cosmos, hermes, logger, probe, run};
 
 const WAIT_TIMEOUT_SECS: u64 = 300;
 

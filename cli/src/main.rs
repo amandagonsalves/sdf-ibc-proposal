@@ -2,11 +2,11 @@ mod api;
 mod clients;
 mod config;
 mod contracts;
+mod cosmos;
 mod gateway;
 mod hermes;
 mod logger;
 mod ops;
-mod cosmos;
 mod probe;
 mod repo;
 mod run;
@@ -94,7 +94,11 @@ enum Command {
 
 #[derive(clap::Args)]
 struct TransferArgs {
-    #[arg(value_enum, default_value = "stellar", help = "Source chain to send from")]
+    #[arg(
+        value_enum,
+        default_value = "stellar",
+        help = "Source chain to send from"
+    )]
     from: Chain,
     #[arg(long, default_value = "stake", help = "Token denom to transfer")]
     denom: String,
@@ -110,7 +114,10 @@ struct TransferArgs {
     memo: String,
     #[arg(long, default_value_t = 600, help = "Timeout in seconds from now")]
     timeout_secs: u64,
-    #[arg(long, help = "Skip minting the amount to the sender first (devnet mints by default)")]
+    #[arg(
+        long,
+        help = "Skip minting the amount to the sender first (devnet mints by default)"
+    )]
     no_mint: bool,
 }
 
@@ -343,7 +350,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Command::Install => ops::install::run(root)?,
         Command::Check => ops::check::run(root, &ops::config::OpsConfig::from(&cfg), &http).await?,
-        Command::Status => ops::status::run(&ops::config::OpsConfig::from(&cfg), &http).await?,
+        Command::Status => ops::status::run(&ops::config::OpsConfig::from(&cfg)).await?,
         Command::Up(args) => ops::stack::up(root, args.cosmos, args.stellar)?,
         Command::Down(args) => ops::stack::down(root, args.volumes)?,
         Command::Start(args) => {

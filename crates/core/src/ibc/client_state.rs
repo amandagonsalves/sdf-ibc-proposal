@@ -18,7 +18,7 @@ impl TryFrom<Any> for AnyClientState {
     fn try_from(raw: Any) -> Result<Self> {
         match raw.type_url.as_str() {
             TENDERMINT_CLIENT_STATE_TYPE_URL => Ok(AnyClientState::Tendermint(
-                Protobuf::<RawTmClientState>::decode_vec(&raw.value.as_slice())
+                Protobuf::<RawTmClientState>::decode_vec(raw.value.as_slice())
                     .map_err(|e| anyhow!("decode tendermint client state: {e}"))?,
             )),
             other => Err(anyhow!("unknown client state type_url: {other}")),
