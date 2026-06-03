@@ -118,68 +118,67 @@ impl StateTracker {
                 .map_err(|e| anyhow::anyhow!("LedgerCloseMeta XDR decode: {e}"))?;
 
             for change in ledger_changes(&meta) {
-                self.apply(change);
-                changes_applied += 1;
+                if self.apply(change) {
+                    changes_applied += 1;
+                }
             }
         }
 
         if changes_applied > 0 {
             tracing::info!(
                 sequence = seq,
-                changes_applied,
+                ibc_writes = changes_applied,
                 root = %hex::encode(self.smt.root()),
                 "ledger applied ibc state changes into smt"
             );
         } else {
-            tracing::debug!(
-                sequence = seq,
-                changes_applied,
-                "ledger processed into smt (no ibc changes)"
-            );
+            tracing::debug!(sequence = seq, "ledger processed into smt (no ibc changes)");
         }
 
         Ok(())
     }
 
-    fn apply(&mut self, change: LedgerEntryChange) {
+    fn apply(&mut self, change: LedgerEntryChange) -> bool {
         match change {
             LedgerEntryChange::Created(e) => {
-                self.apply_contract_data_write(e.data, /* is_update */ false);
+                self.apply_contract_data_write(e.data, /* is_update */ false)
             }
             LedgerEntryChange::Updated(e) => {
-                self.apply_contract_data_write(e.data, /* is_update */ true);
+                self.apply_contract_data_write(e.data, /* is_update */ true)
             }
             LedgerEntryChange::Removed(LedgerKey::ContractData(key)) => {
                 if !self.matches(&key.contract) {
-                    return;
+                    return false;
                 }
                 let Some(path) = scval_to_v2_path(&key.key) else {
-                    return;
+                    return false;
                 };
                 self.smt.remove(&path);
+                true
             }
-            _ => {}
+            _ => false,
         }
     }
 
-    fn apply_contract_data_write(&mut self, data: LedgerEntryData, is_update: bool) {
+    fn apply_contract_data_write(&mut self, data: LedgerEntryData, is_update: bool) -> bool {
         let LedgerEntryData::ContractData(d) = data else {
-            return;
+            return false;
         };
         if !self.matches(&d.contract) {
-            return;
+            return false;
         }
         let Some(path) = scval_to_v2_path(&d.key) else {
-            return;
+            return false;
         };
         let Some(value) = scval_to_provable_value(&d.val) else {
-            return;
+            return false;
         };
         if is_update {
             self.smt.update(&path, &value);
         } else {
             self.smt.insert(&path, &value);
         }
+        true
     }
 
     fn matches(&self, addr: &ScAddress) -> bool {
