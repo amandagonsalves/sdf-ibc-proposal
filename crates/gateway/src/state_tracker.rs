@@ -242,6 +242,13 @@ fn collect_tx_changes(meta: &TransactionMeta, out: &mut Vec<LedgerEntryChange>) 
             }
             out.extend(v.tx_changes_after.iter().cloned());
         }
+        TransactionMeta::V4(v) => {
+            out.extend(v.tx_changes_before.iter().cloned());
+            for op in v.operations.iter() {
+                out.extend(op.changes.iter().cloned());
+            }
+            out.extend(v.tx_changes_after.iter().cloned());
+        }
         #[allow(unreachable_patterns)]
         _ => {}
     }
