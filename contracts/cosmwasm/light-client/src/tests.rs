@@ -8,9 +8,9 @@ use crate::entrypoint::{instantiate, query, sudo};
 use crate::error::ContractError;
 use crate::msg::{
     CheckForMisbehaviourMsg, CheckForMisbehaviourResult, ClientStatus, Height as MsgHeight,
-    InstantiateMsg, LatestHeightResult, QueryMsg, StatusResult, SudoMsg, TimestampAtHeightResult,
-    UpdateStateMsg, UpdateStateOnMisbehaviourMsg, UpdateStateResult, VerifyMembershipMsg,
-    VerifyNonMembershipMsg,
+    InstantiateMsg, LatestHeightResult, MerklePath, QueryMsg, StatusResult, SudoMsg,
+    TimestampAtHeightResult, UpdateStateMsg, UpdateStateOnMisbehaviourMsg, UpdateStateResult,
+    VerifyMembershipMsg, VerifyNonMembershipMsg,
 };
 use crate::types::{ClientState, ConsensusState, Height as WireHeight, ScpEnvelope, StellarHeader};
 
@@ -358,7 +358,7 @@ fn verify_membership_rejects_when_consensus_state_missing() {
             delay_time_period: 0,
             delay_block_period: 0,
             proof: Binary::default(),
-            path: vec![],
+            merkle_path: MerklePath { key_path: vec![] },
             value: Binary::default(),
         }),
     )
@@ -385,7 +385,7 @@ fn verify_membership_rejects_when_proof_bytes_are_empty() {
             delay_time_period: 0,
             delay_block_period: 0,
             proof: Binary::default(),
-            path: vec![],
+            merkle_path: MerklePath { key_path: vec![] },
             value: Binary::default(),
         }),
     )
@@ -474,7 +474,7 @@ fn verify_membership_accepts_valid_proof_against_matching_root() {
             delay_time_period: 0,
             delay_block_period: 0,
             proof: Binary::new(proof_bytes),
-            path: vec![Binary::new(key.to_vec())],
+            merkle_path: MerklePath { key_path: vec![Binary::new(key.to_vec())] },
             value: Binary::new(value.to_vec()),
         }),
     )
@@ -506,7 +506,7 @@ fn verify_non_membership_rejects_when_frozen() {
             delay_time_period: 0,
             delay_block_period: 0,
             proof: Binary::default(),
-            path: vec![],
+            merkle_path: MerklePath { key_path: vec![] },
         }),
     )
     .unwrap_err();

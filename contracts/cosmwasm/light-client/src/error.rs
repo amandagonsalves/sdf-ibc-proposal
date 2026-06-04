@@ -31,14 +31,16 @@ pub enum ContractError {
     ConsensusStateConflict { height: u64 },
 
     #[error(
-        "scp quorum not met (envelopes={envelopes}, matched_trusted={matched}, verified={verified}, signer={signer}, trusted=[{trusted}])"
+        "scp quorum not met (envelopes={envelopes}, matched_trusted={matched}, raw_ok={raw_ok}, hash_ok={hash_ok}, signer={signer}, network_id={network_id}, statement_len={statement_len})"
     )]
     QuorumNotMet {
         envelopes: usize,
         matched: usize,
-        verified: usize,
+        raw_ok: bool,
+        hash_ok: bool,
         signer: String,
-        trusted: String,
+        network_id: String,
+        statement_len: usize,
     },
 
     #[error("scp network_id is not configured on the client state")]
@@ -49,6 +51,22 @@ pub enum ContractError {
 
     #[error("merkle proof verification failed")]
     MerkleVerificationFailed,
+
+    #[error(
+        "merkle membership mismatch (key_match={key_match}, value_match={value_match}, siblings={siblings}, height={height}, req_key={req_key}, proof_key={proof_key}, value_len={value_len}/{proof_value_len}, stored_root={stored_root}, computed_root={computed_root})"
+    )]
+    MembershipMismatch {
+        key_match: bool,
+        value_match: bool,
+        siblings: usize,
+        height: u64,
+        req_key: String,
+        proof_key: String,
+        value_len: usize,
+        proof_value_len: usize,
+        stored_root: String,
+        computed_root: String,
+    },
 
     #[error("unknown sudo message variant")]
     UnknownSudo,

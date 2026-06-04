@@ -294,7 +294,7 @@ impl StellarGatewayQuery for QueryHandler {
     ) -> Result<Response<QueryIbcHeaderResponse>, Status> {
         use prost::Message as _;
         use soroban_client::xdr::{
-            LedgerHeader, Limits, PublicKey, ReadXdr, StellarValueExt, WriteXdr,
+            LedgerHeader, Limits, PublicKey, ReadXdr, StellarValueExt,
         };
 
         let seq = request.into_inner().height as u32;
@@ -317,11 +317,9 @@ impl StellarGatewayQuery for QueryHandler {
             StellarValueExt::Basic => (vec![], vec![]),
         };
 
-        let mut basic_scp_value = scp_value.clone();
-        basic_scp_value.ext = StellarValueExt::Basic;
-        let signed_value_xdr = basic_scp_value
-            .to_xdr(Limits::none())
-            .map_err(|e| Status::internal(format!("basic StellarValue XDR encode: {e}")))?;
+        let mut signed_value_xdr = Vec::with_capacity(40);
+        signed_value_xdr.extend_from_slice(&scp_value.tx_set_hash.0);
+        signed_value_xdr.extend_from_slice(&scp_value.close_time.0.to_be_bytes());
 
         let ibc_state_root = self
             .tracker

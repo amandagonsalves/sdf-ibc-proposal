@@ -12,7 +12,9 @@ use crate::msg::{
     UpdateStateMsg, UpdateStateOnMisbehaviourMsg, UpdateStateResult, VerifyMembershipMsg,
     VerifyNonMembershipMsg,
 };
-use crate::smt::{verify_membership_raw, verify_non_membership_raw, HASH_SIZE};
+use crate::smt::{
+    fold_siblings, key_index, leaf_hash, sha256, verify_non_membership_raw, HASH_SIZE, TREE_DEPTH,
+};
 use crate::store;
 use crate::types::{ClientState, ConsensusState, Height as WireHeight, ScpEnvelope, StellarHeader};
 
@@ -250,15 +252,35 @@ fn verify_membership(
         .try_into()
         .map_err(|_| ContractError::MerkleVerificationFailed)?;
 
-    let key = concat_path(&msg.path);
+    let key = concat_path(&msg.merkle_path.key_path);
     let (proof_key, proof_value, siblings) = decode_membership_proof(msg.proof.as_slice())?;
-    if proof_key != key || proof_value.as_slice() != msg.value.as_slice() {
-        return Err(ContractError::MerkleVerificationFailed);
+
+    let key_match = proof_key == key;
+    let value_match = proof_value.as_slice() == msg.value.as_slice();
+    let computed_root = if siblings.len() == TREE_DEPTH && !msg.value.is_empty() {
+        let leaf = leaf_hash(sha256(&key), sha256(msg.value.as_slice()));
+        Some(fold_siblings(key_index(&key), leaf, &siblings))
+    } else {
+        None
+    };
+    let root_match = computed_root.map(|r| r == root).unwrap_or(false);
+
+    if key_match && value_match && root_match {
+        return Ok(());
     }
-    if !verify_membership_raw(&root, &key, msg.value.as_slice(), &siblings) {
-        return Err(ContractError::MerkleVerificationFailed);
-    }
-    Ok(())
+
+    Err(ContractError::MembershipMismatch {
+        key_match,
+        value_match,
+        siblings: siblings.len(),
+        height: msg.height.revision_height,
+        req_key: hex_encode(&key),
+        proof_key: hex_encode(&proof_key),
+        value_len: msg.value.len(),
+        proof_value_len: proof_value.len(),
+        stored_root: hex_encode(&root),
+        computed_root: computed_root.map(|r| hex_encode(&r)).unwrap_or_default(),
+    })
 }
 
 fn verify_non_membership(
@@ -280,7 +302,7 @@ fn verify_non_membership(
         .try_into()
         .map_err(|_| ContractError::MerkleVerificationFailed)?;
 
-    let key = concat_path(&msg.path);
+    let key = concat_path(&msg.merkle_path.key_path);
     let (proof_key, siblings) = decode_non_membership_proof(msg.proof.as_slice())?;
     if proof_key != key {
         return Err(ContractError::MerkleVerificationFailed);
@@ -337,7 +359,9 @@ fn verify_scp_quorum(
     }
 
     let mut matched = 0usize;
-    let mut verified = 0usize;
+    let mut last_raw_ok = false;
+    let mut last_hash_ok = false;
+    let mut last_statement_len = 0usize;
     for env in envelopes {
         if env.node_id.len() != 32 || env.signature.len() != 64 {
             continue;
@@ -361,30 +385,35 @@ fn verify_scp_quorum(
         preimage.extend_from_slice(&env.statement_xdr);
         let digest: [u8; 32] = Sha256::digest(&preimage).into();
 
-        match api.ed25519_verify(&digest, env.signature.as_slice(), env.node_id.as_slice()) {
-            Ok(true) => {
-                verified += 1;
-                return Ok(());
-            }
-            Ok(false) => continue,
-            Err(e) => return Err(ContractError::ScpSignatureError(e.to_string())),
+        let raw_ok = api
+            .ed25519_verify(&preimage, env.signature.as_slice(), env.node_id.as_slice())
+            .unwrap_or(false);
+        if raw_ok {
+            return Ok(());
         }
+        let hash_ok = api
+            .ed25519_verify(&digest, env.signature.as_slice(), env.node_id.as_slice())
+            .unwrap_or(false);
+        if hash_ok {
+            return Ok(());
+        }
+
+        last_raw_ok = raw_ok;
+        last_hash_ok = hash_ok;
+        last_statement_len = env.statement_xdr.len();
     }
 
     Err(ContractError::QuorumNotMet {
         envelopes: envelopes.len(),
         matched,
-        verified,
+        raw_ok: last_raw_ok,
+        hash_ok: last_hash_ok,
         signer: envelopes
             .first()
             .map(|e| hex_encode(&e.node_id))
             .unwrap_or_default(),
-        trusted: client_state
-            .trusted_validators
-            .iter()
-            .map(|v| hex_encode(v))
-            .collect::<Vec<_>>()
-            .join(","),
+        network_id: hex_encode(&client_state.network_id),
+        statement_len: last_statement_len,
     })
 }
 

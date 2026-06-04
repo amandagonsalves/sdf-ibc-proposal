@@ -40,12 +40,17 @@ pub struct CheckForMisbehaviourMsg {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MerklePath {
+    pub key_path: Vec<Binary>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct VerifyMembershipMsg {
     pub height: Height,
     pub delay_time_period: u64,
     pub delay_block_period: u64,
     pub proof: Binary,
-    pub path: Vec<Binary>,
+    pub merkle_path: MerklePath,
     pub value: Binary,
 }
 
@@ -55,7 +60,7 @@ pub struct VerifyNonMembershipMsg {
     pub delay_time_period: u64,
     pub delay_block_period: u64,
     pub proof: Binary,
-    pub path: Vec<Binary>,
+    pub merkle_path: MerklePath,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
