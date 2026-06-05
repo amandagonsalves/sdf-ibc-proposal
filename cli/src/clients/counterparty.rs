@@ -23,18 +23,20 @@ pub fn register(
     cosmos_client: &str,
     stellar_client: &str,
 ) -> Result<()> {
-    let (label, chain, client, counterparty) = match side {
+    let (label, chain, client, counterparty, commitment_prefix) = match side {
         "stellar" => (
             "clients counterparty stellar (register the Cosmos client as counterparty on Stellar)",
             cfg.stellar_chain_id.as_str(),
             cosmos_client,
             stellar_client,
+            "ibc",
         ),
         _ => (
             "clients counterparty cosmos (register the Stellar client as counterparty on Cosmos)",
             cfg.cosmos_chain_id.as_str(),
             stellar_client,
             cosmos_client,
+            "",
         ),
     };
 
@@ -49,7 +51,7 @@ pub fn register(
     }
 
     logger::step(&format!(
-        "hermes create counterparty --chain {chain} --client {client} --counterparty-client {counterparty}"
+        "hermes create counterparty --chain {chain} --client {client} --counterparty-client {counterparty} --commitment-prefix '{commitment_prefix}'"
     ));
 
     let output = crate::hermes::container::exec(
@@ -64,6 +66,8 @@ pub fn register(
             client,
             "--counterparty-client",
             counterparty,
+            "--commitment-prefix",
+            commitment_prefix,
         ],
     )?;
     println!("{output}");
