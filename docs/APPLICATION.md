@@ -35,7 +35,7 @@ The Stellar IBC v2 stack is implemented and demonstrably working end-to-end on a
 - **IBC v2 relayer built on the shared Hermes fork** — a `StellarChainEndpoint` and `ics10_stellar` client types, plus a v2/Eureka packet-relay worker (Hermes's stock relay is channel-based and v2 has no channels, so this supplies the v2 equivalents): event decoding, a cumulative SMT state tracker, client/packet queries with proofs, and `update_client` + `recv` submission.
 - **Built on the only production non-Cosmos IBC stack.** This project reuses the Cardano Foundation's Hermes fork, light-client patterns, and reference Cosmos entrypoint — cutting years off the work and validating that the architecture generalizes across consensus families (Ouroboros, SCP, Tendermint).
 
-The remaining step to a verified ICS-20 transfer is the on-chain `08-wasm` proof verification on Cosmos (consensus-root/commitment-prefix consistency) and the acknowledgement leg back to Stellar — the MVP deliverable below.
+The on-chain `08-wasm` verification on Cosmos is now demonstrated: a relayed `MsgRecvPacket` drives the wasm light client through SCP signature-quorum verification (`MsgUpdateClient`), consensus-root storage (`UpdateState`), and ICS-23/SMT membership verification (`VerifyMembership`) — all passing against a live ibc-go v11 + `08-wasm` chain. The remaining MVP work is the acknowledgement leg back to Stellar and the reverse (Cosmos→Stellar) direction — the deliverables below. See **Appendix C** for the current implementation status.
 
 ## SCF Build Tranche Deliverables
 

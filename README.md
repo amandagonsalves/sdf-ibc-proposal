@@ -7,6 +7,16 @@
 Rust implementation of **IBC v2 (Eureka)** for the Stellar network, enabling trustless
 cross-chain communication between Stellar and Cosmos-compatible chains.
 
+> **Status — early, under active development. This is a test implementation, not
+> production-ready.** On a local devnet (live Soroban testnet + ibc-go v11 `simd`), a single
+> ICS-20 transfer Stellar→Cosmos has been relayed and **verified on-chain** by the `08-wasm`
+> light client (SCP header + ICS-23/SMT commitment proof), after which Cosmos minted the IBC
+> voucher (`ibc/…`) with a success acknowledgement — demonstrating the approach works. It is
+> still being built out and hardened: the acknowledgement back-leg and the reverse direction
+> (Cosmos→Stellar) are in progress, validator-set seeding is not yet robust (transfers can
+> need a retry), and the error/timeout paths, broader test coverage, and security review are
+> still ahead.
+
 This repository is part of the **Cardano–Stellar IBC bridge** project. It ships:
 
 | Component | Role |
@@ -81,69 +91,41 @@ The SMT (fixed-depth-64 binary Merkle tree, Cardano-compatible) lives in
 
 ---
 
-## Architecture
+### IBC v2 packet flow (Stellar → Cosmos)
+
+Steps 1–3 are demonstrated on the test devnet; step 4 is in progress.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                Hermes relayer fork (cardano-foundation)                 │
-│  crates/relayer/src/chain/stellar/StellarChainEndpoint                  │
-│  crates/relayer-types/src/clients/ics10_stellar/                        │
-└───────────────────┬──────────────────────────────┬──────────────────────┘
-                    │ gRPC :50052                  │ Tendermint RPC :26657
-                    ▼                              │
-┌─────────────────────────────────────────────┐    │
-│  stellar-hermes-gateway                     │    │
-│   tonic StellarGatewayQuery + Msg services  │    │
-│   StateTracker (SMT root + ICS-23 proofs)   │    │
-│   ApiClient (HTTP) ──────────┐              │    │
-└─────────────────────────────│──────────────┘    │
-                              │ HTTP :8101         │
-                              ▼                    │
-┌─────────────────────────────────────────────┐    │
-│  stellar-api                                │    │
-│   axum routes:                              │    │
-│     /health                                 │    │
-│     /ledger/latest · /ledger/{seq}          │    │
-│     /account/{addr} · /balance/{addr}       │    │
-│     /tx/prepare · /tx/submit                │    │
-│     /stellar/clients · /events              │    │
-│   owns Soroban RpcClient + signing key      │    │
-└──────────────────┬──────────────────────────┘    │
-                   │ JSON-RPC                       │
-                   ▼                                ▼
-┌─────────────────────────────────┐  ┌──────────────────────────────────┐
-│  Stellar Soroban RPC            │  │  cosmos (simd-1)                 │
-│  soroban-testnet.stellar.org    │  │  ibc-go-wasm-simd:v11.0.0        │
-│  or in-compose stellar-node     │  │  ibc-go v11 + 08-wasm            │
-└──────────────────┬──────────────┘  └─────────────────────────────────┬┘
-                   │ contract invokes                                   │
-                   ▼                                                    │
-┌─────────────────────────────────────────────────────────────────────┐ │
-│  Soroban contracts (contracts/)                                     │ │
-│   router                Routes IBC v2 packets to apps               │ │
-│   transfer-app          ICS-20 transfer module                      │ │
-│   light-clients/mock    Always-accept LC for development            │ │
-│   light-clients/        attestation, tendermint (pending)           │ │
-│   light-client-wasm     Stellar LC, packaged as wasm for 08-wasm ───┘
-└─────────────────────────────────────────────────────────────────────┘
+1. registerCounterparty                                    [working] one-time per chain pair
+     Stellar router : counterparty(07-tendermint → 08-wasm, prefix "ibc")   ← Cosmos store prefix
+     Cosmos 08-wasm : counterparty(08-wasm → 07-tendermint, prefix "")      ← Stellar flat SMT, no prefix
+        │
+        ▼
+2. transfer.initiate → router.sendPacket                   [working]
+     transfer app escrows the asset and builds a standard ICS-20 payload:
+       version  = "ics20-1"
+       encoding = "application/json"
+       value    = FungibleTokenPacketData{ denom, amount, sender, receiver, memo }
+     router commits the packet into its SMT:
+       commit = sha256( 0x02 ‖ sha256(destClient) ‖ sha256(be64(timeout)) ‖ sha256(Σ payloadHashes) )
+        │
+        ▼
+3. relay recv  →  [MsgUpdateClient, MsgRecvPacket] to Cosmos   [working, verified on-chain]
+     worker observes the Soroban send_packet event (via the gateway), fetches the
+     commitment proof, and updates the 08-wasm client to the proof height. Then ibc-go runs:
+       VerifyClientMessage → Ed25519 SCP quorum on the Stellar header
+       UpdateState         → stores the Stellar SMT root as ConsensusState.root
+       VerifyMembership    → ICS-23/SMT commitment proof against that root
+     the transfer module mints the ibc/<hash> voucher to the receiver and writes a success ack
+        │
+        ▼
+4. relay ack back  →  MsgAcknowledgement to the Stellar router  [in progress]
+     worker captures the WriteAcknowledgement from the recv tx, fetches the ack proof from
+     Cosmos, updates the 07-tendermint client on Stellar, and submits the ack so the router
+     clears the packet commitment and calls transfer.on_acknowledgement.
 ```
 
-### IBC v2 packet flow
-
-```
-1. registerCounterparty(clientId, merklePrefix)        ← one-time per chain pair
-        │  router stores (clientId → counterparty)
-        ▼
-2. sendPacket(Packet{sequence, sourceClient, destClient, payloads[]})
-        │  gateway decodes the Soroban event; the Stellar packet-relay worker
-        │  observes it, fetches the commitment proof from the gateway, and
-        │  updateClient(destClient) → proof height before submitting
-        ▼
-3. recvPacket(packet, proof, proofHeight)              ← dest LC verify_membership
-        │  worker observes WriteAcknowledgement, fetches the ack proof
-        ▼
-4. ackPacket(packet, ack, proof, proofHeight)          ← clears source commitment
-```
+The reverse direction (Cosmos → Stellar) is not yet implemented.
 
 Hermes's stock packet relay is channel-based; IBC v2/Eureka has no channels, so a
 **client-paired packet worker** in the fork (`worker::stellar_packet`) drives the
@@ -157,9 +139,11 @@ The Cosmos counterparty tracks Stellar via the standard ibc-go `08-wasm` mechani
 
 - `light-client-wasm` compiles to `wasm32-unknown-unknown`.
 - Uploaded once to the Cosmos chain via `MsgStoreCode` (`stellaribc contracts upload-wasm`).
-- Verifies SCP `EXTERNALIZE` envelopes (Ed25519 signatures from a quorum of trusted
-  validators) and walks the gateway-produced `MerkleProof` against
-  `ConsensusState.root` (the SMT root).
+- On `update_client`, verifies the Stellar header's SCP value signature — Ed25519 over the
+  raw preimage `networkID ‖ ENVELOPE_TYPE_SCPVALUE ‖ txSetHash ‖ closeTime`, by a validator
+  in the client's trusted set — then stores the header's SMT root as `ConsensusState.root`.
+- On `recv`/`ack`, walks the gateway-produced ICS-23 `MerkleProof` against that root
+  (membership leaf hashes the value, so the proof carries the value-hash).
 
 The wasm crate is at
 [`contracts/cosmwasm/light-client`](contracts/cosmwasm/light-client); the
@@ -212,7 +196,7 @@ stellar-ibc/
       light-clients/
         mock/             stellar-mock-light-client — always-accept LC for development
         attestation/      stellar-attestation-light-client — federated attestation LC (pending)
-        tendermint/       stellar-tendermint-light-client — Tendermint LC (pending)
+        tendermint/       stellar-tendermint-light-client — Tendermint LC (tracks Cosmos on the Stellar router)
     cosmwasm/
       light-client/       light-client-wasm — Stellar LC compiled for Cosmos 08-wasm
 
@@ -222,9 +206,6 @@ stellar-ibc/
   Makefile                Image build/push (SERVICE=gateway|hermes|api) + fmt/test/cargo-build
   .env / .env.example
 ```
-
-> The bootstrap/flow shell scripts (previously under `ci/`) have been fully
-> migrated into the `stellaribc` CLI; the `ci/` directory no longer exists.
 
 ---
 
