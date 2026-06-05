@@ -11,7 +11,6 @@ pub fn run(
     root: &Path,
     force: bool,
     attestation: bool,
-    tendermint: bool,
 ) -> Result<()> {
     logger::banner("contracts deploy-all (build + deploy + wire router + write .env)");
 
@@ -70,17 +69,14 @@ pub fn run(
         logger::ok(&format!("attestation LC: {attestation_id}"));
     }
 
-    let mut tendermint_id = String::new();
-    if tendermint {
-        logger::step("deploying tendermint light client");
-        tendermint_id = super::deploy(
-            cfg,
-            root,
-            &wasm("stellar_tendermint_light_client.wasm"),
-            &[],
-        )?;
-        logger::ok(&format!("tendermint LC: {tendermint_id}"));
-    }
+    logger::step("deploying tendermint light client");
+    let tendermint_id = super::deploy(
+        cfg,
+        root,
+        &wasm("stellar_tendermint_light_client.wasm"),
+        &[],
+    )?;
+    logger::ok(&format!("tendermint LC: {tendermint_id}"));
 
     logger::step("wiring router (register_client_type + register_port)");
     super::invoke(
@@ -111,20 +107,18 @@ pub fn run(
         )?;
     }
 
-    if !tendermint_id.is_empty() {
-        super::invoke(
-            cfg,
-            root,
-            &router,
-            &[
-                "register_client_type",
-                "--client_type",
-                cfg.client_type(ClientTypes::Tendermint),
-                "--lc_address",
-                &tendermint_id,
-            ],
-        )?;
-    }
+    super::invoke(
+        cfg,
+        root,
+        &router,
+        &[
+            "register_client_type",
+            "--client_type",
+            cfg.client_type(ClientTypes::Tendermint),
+            "--lc_address",
+            &tendermint_id,
+        ],
+    )?;
 
     super::invoke(
         cfg,

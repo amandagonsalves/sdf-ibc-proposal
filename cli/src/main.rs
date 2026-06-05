@@ -292,8 +292,6 @@ enum ContractsCmd {
         force: bool,
         #[arg(long, help = "Also deploy + register the attestation light client")]
         attestation: bool,
-        #[arg(long, help = "Also deploy + register the tendermint light client")]
-        tendermint: bool,
     },
     #[command(about = "Build + gov-upload the light-client-wasm to Cosmos, patch hermes config")]
     UploadWasm,
@@ -430,11 +428,9 @@ async fn main() -> Result<()> {
                     contracts::deploy::run(&cc, root, &wasm, &ctor)?
                 }
                 ContractsCmd::Invoke { id, call } => contracts::invoke::run(&cc, root, &id, &call)?,
-                ContractsCmd::DeployAll {
-                    force,
-                    attestation,
-                    tendermint,
-                } => contracts::deploy_all::run(&cc, root, force, attestation, tendermint)?,
+                ContractsCmd::DeployAll { force, attestation } => {
+                    contracts::deploy_all::run(&cc, root, force, attestation)?
+                }
                 ContractsCmd::UploadWasm => contracts::wasm::upload(&cc, root, &http).await?,
             }
         }
