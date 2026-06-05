@@ -45,8 +45,8 @@ pub struct OnTimeoutPacketCallback {
 }
 
 const PORT: &str = "transfer";
-const VERSION: &str = "ics20-2";
-const ENCODING: &str = "xdr";
+const VERSION: &str = "ics20-1";
+const ENCODING: &str = "application/json";
 
 const SUCCESS_ACK_BYTE: u8 = 0x01;
 
@@ -176,7 +176,7 @@ impl IbcTransfer {
             receiver,
             memo,
         };
-        let value = packet.to_xdr(&env);
+        let value = encode_ics20_json(&env, &packet);
 
         let port = String::from_str(&env, PORT);
         let payload = Payload {
@@ -277,6 +277,46 @@ fn refund(env: &Env, packet: &FungibleTokenPacketData) {
 fn decode_packet(env: &Env, value: &Bytes) -> FungibleTokenPacketData {
     FungibleTokenPacketData::from_xdr(env, value)
         .unwrap_or_else(|_| panic_with_error!(env, Error::InvalidPacketData))
+}
+
+fn encode_ics20_json(env: &Env, packet: &FungibleTokenPacketData) -> Bytes {
+    let mut buf = Bytes::from_slice(env, b"{\"denom\":\"");
+    append_string(env, &mut buf, &packet.token.denom);
+    buf.append(&Bytes::from_slice(env, b"\",\"amount\":\""));
+    append_decimal(env, &mut buf, packet.token.amount);
+    buf.append(&Bytes::from_slice(env, b"\",\"sender\":\""));
+    append_string(env, &mut buf, &packet.sender);
+    buf.append(&Bytes::from_slice(env, b"\",\"receiver\":\""));
+    append_string(env, &mut buf, &packet.receiver);
+    buf.append(&Bytes::from_slice(env, b"\",\"memo\":\""));
+    append_string(env, &mut buf, &packet.memo);
+    buf.append(&Bytes::from_slice(env, b"\"}"));
+    buf
+}
+
+fn append_string(env: &Env, buf: &mut Bytes, s: &String) {
+    let len = s.len() as usize;
+    let mut tmp = [0u8; 512];
+    s.copy_into_slice(&mut tmp[..len]);
+    buf.append(&Bytes::from_slice(env, &tmp[..len]));
+}
+
+fn append_decimal(env: &Env, buf: &mut Bytes, mut n: i128) {
+    if n <= 0 {
+        buf.append(&Bytes::from_slice(env, b"0"));
+
+        return;
+    }
+
+    let mut digits = [0u8; 40];
+    let mut i = 40usize;
+    while n > 0 {
+        i -= 1;
+        digits[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+    }
+
+    buf.append(&Bytes::from_slice(env, &digits[i..]));
 }
 
 fn require_router(env: &Env) {

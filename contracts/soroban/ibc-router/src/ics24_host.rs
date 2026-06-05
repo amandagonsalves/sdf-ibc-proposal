@@ -69,8 +69,8 @@ pub(crate) fn commit_v2_packet(env: &Env, packet: &Packet) -> BytesN<32> {
         payloads_concat.append(&payload_hash);
     }
 
-    let timeout_le = packet.timeout_timestamp.to_le_bytes();
-    let timeout_bytes = Bytes::from_slice(env, &timeout_le);
+    let timeout_be = packet.timeout_timestamp.to_be_bytes();
+    let timeout_bytes = Bytes::from_slice(env, &timeout_be);
 
     let mut preimage = Bytes::new(env);
     preimage.append(&Bytes::from_slice(env, &[COMMITMENT_VERSION_PREFIX]));
