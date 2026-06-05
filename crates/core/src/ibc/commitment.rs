@@ -59,11 +59,11 @@ pub fn commit_v2_packet(
     for hash in payload_hashes {
         app_bytes.extend_from_slice(hash);
     }
-    let timeout_le = timeout_timestamp.to_le_bytes();
+    let timeout_be = timeout_timestamp.to_be_bytes();
     let mut buf = Vec::with_capacity(1 + 32 * 3);
     buf.push(COMMITMENT_VERSION_PREFIX);
     buf.extend_from_slice(&sha256(dest_client_id));
-    buf.extend_from_slice(&sha256(&timeout_le));
+    buf.extend_from_slice(&sha256(&timeout_be));
     buf.extend_from_slice(&sha256(&app_bytes));
     sha256(&buf)
 }
