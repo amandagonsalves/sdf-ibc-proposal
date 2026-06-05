@@ -147,7 +147,7 @@ impl Config {
         let _ = dotenvy::from_path(root.join(".env"));
 
         Self {
-            cosmos: CosmosConfig::from_env(),
+            cosmos: CosmosConfig::devnet(),
             stellar: StellarConfig::from_env(),
             hermes: HermesConfig::from_env(root),
             api: ImageRef {

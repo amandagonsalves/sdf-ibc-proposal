@@ -55,6 +55,21 @@ pub fn capture(root: &Path, program: &str, args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+pub fn capture_quiet(root: &Path, program: &str, args: &[&str]) -> Result<String> {
+    let output = Command::new(program)
+        .args(args)
+        .current_dir(root)
+        .stderr(Stdio::null())
+        .output()
+        .with_context(|| format!("failed to spawn {program}"))?;
+
+    if !output.status.success() {
+        bail!("{program} exited with {}", output.status);
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 pub fn capture_all(root: &Path, program: &str, args: &[&str]) -> Result<String> {
     let output = Command::new(program)
         .args(args)

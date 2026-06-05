@@ -72,7 +72,7 @@ pub async fn run(
         logger::detail("skip lc-wasm upload");
     } else {
         logger::step("Step 4: uploading light-client-wasm to Cosmos");
-        crate::contracts::wasm::upload(&ContractsConfig::from(cfg), root, http).await?;
+        crate::contracts::wasm::upload(&ContractsConfig::from(cfg), root, http, false, None).await?;
     }
 
     if skip_keys {

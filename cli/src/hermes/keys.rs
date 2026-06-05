@@ -32,6 +32,35 @@ pub fn import(cfg: &Config, root: &Path) -> Result<()> {
         &cfg.cosmos.relayer_mnemonic,
     )?;
 
+    let testnet = crate::cosmos::config::CosmosConfig::testnet();
+    let testnet_mnemonic = {
+        let specific = crate::config::get("COSMOS_TESTNET_MNEMONIC", "");
+        if specific.trim().is_empty() {
+            cfg.cosmos.relayer_mnemonic.clone()
+        } else {
+            specific
+        }
+    };
+    if !testnet_mnemonic.trim().is_empty() {
+        logger::step(&format!(
+            "importing {} for {} (cosmos-testnet mnemonic)",
+            testnet.key_name,
+            testnet.chain_id.as_str()
+        ));
+        if let Err(e) = import_mnemonic(
+            cfg,
+            root,
+            testnet.chain_id.as_str(),
+            &testnet.key_name,
+            testnet_mnemonic.trim(),
+        ) {
+            logger::warn(&format!(
+                "skipped {} key import ({e}) — add the chain to hermes-config.toml to relay on it",
+                testnet.chain_id.as_str()
+            ));
+        }
+    }
+
     logger::step(&format!(
         "importing {} for {} (from STELLAR_SIGNING_KEY)",
         cfg.stellar.key_name,

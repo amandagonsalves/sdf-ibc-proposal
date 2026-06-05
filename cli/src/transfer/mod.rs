@@ -36,10 +36,14 @@ pub fn stellar_to_cosmos(cfg: &Config, root: &Path, args: &TransferArgs) -> Resu
         bail!("DEPLOYER_ADDRESS is not set");
     }
 
-    let receiver = if args.receiver.is_empty() {
-        cosmos_relayer_address(cfg, root)?
-    } else {
+    let receiver = if !args.receiver.is_empty() {
         args.receiver.clone()
+    } else if !cfg.cosmos.receiver_address.trim().is_empty() {
+        let addr = cfg.cosmos.receiver_address.trim().to_string();
+        logger::detail(&format!("using COSMOS_RECEIVER_ADDRESS → {addr}"));
+        addr
+    } else {
+        cosmos_relayer_address(cfg, root)?
     };
 
     let cc = ContractsConfig::from(cfg);

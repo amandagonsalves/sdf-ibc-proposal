@@ -175,6 +175,15 @@ enum CosmosCmd {
     Stop,
     #[command(about = "Show the Cosmos chain endpoints and health")]
     Status,
+    #[command(about = "Check the public cosmos-testnet (Cosmos Hub `provider`) — health + node/app version")]
+    Testnet {
+        #[arg(
+            long,
+            value_name = "ADDRESS",
+            help = "Query this cosmos address's balances on cosmos-testnet (and show the faucet) instead of the health check"
+        )]
+        balance: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -294,7 +303,19 @@ enum ContractsCmd {
         attestation: bool,
     },
     #[command(about = "Build + gov-upload the light-client-wasm to Cosmos, patch hermes config")]
-    UploadWasm,
+    UploadWasm {
+        #[arg(
+            long,
+            help = "Prepare the 08-wasm store-code gov proposal for cosmos-testnet (provider) instead of auto-uploading to the local devnet"
+        )]
+        testnet: bool,
+        #[arg(
+            long,
+            value_name = "KEY",
+            help = "With --testnet: gaiad keyring key to submit the proposal from (else the command is printed)"
+        )]
+        from: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -375,7 +396,14 @@ async fn main() -> Result<()> {
         Command::Cosmos { cmd } => match cmd {
             CosmosCmd::Start => cosmos::start(&cfg.cosmos, root, &http).await?,
             CosmosCmd::Stop => cosmos::stop(&cfg.cosmos, root)?,
-            CosmosCmd::Status => cosmos::status(&cfg.cosmos, &http).await?,
+            CosmosCmd::Status => cosmos::check(&cfg.cosmos, &http).await?,
+            CosmosCmd::Testnet { balance } => {
+                let tcfg = cosmos::config::CosmosConfig::testnet();
+                match balance {
+                    Some(address) => cosmos::balance(&tcfg, &http, &address).await?,
+                    None => cosmos::check(&tcfg, &http).await?,
+                }
+            }
         },
 
         Command::Clients { cmd } => {
@@ -431,7 +459,9 @@ async fn main() -> Result<()> {
                 ContractsCmd::DeployAll { force, attestation } => {
                     contracts::deploy_all::run(&cc, root, force, attestation)?
                 }
-                ContractsCmd::UploadWasm => contracts::wasm::upload(&cc, root, &http).await?,
+                ContractsCmd::UploadWasm { testnet, from } => {
+                    contracts::wasm::upload(&cc, root, &http, testnet, from.as_deref()).await?
+                }
             }
         }
 
