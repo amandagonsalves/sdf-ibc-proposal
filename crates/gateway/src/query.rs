@@ -131,15 +131,38 @@ impl StellarGatewayQuery for QueryHandler {
         Ok(Response::new(QueryClientStatesResponse { client_states }))
     }
 
-    #[tracing::instrument(skip(self, _request), name = "grpc.query_consensus_state")]
+    #[tracing::instrument(skip(self, request), name = "grpc.query_consensus_state")]
     async fn query_consensus_state(
         &self,
-        _request: Request<QueryConsensusStateRequest>,
+        request: Request<QueryConsensusStateRequest>,
     ) -> Result<Response<QueryConsensusStateResponse>, Status> {
-        tracing::debug!("gRPC QueryConsensusState (unimplemented in v2)");
-        Err(Status::unimplemented(
-            "ConsensusState path is non-provable in IBC v2",
-        ))
+        let req = request.into_inner();
+        tracing::info!(
+            client_id = %req.client_id,
+            revision_height = req.revision_height,
+            "gRPC QueryConsensusState"
+        );
+
+        let xdr = self
+            .api
+            .get_consensus_state_xdr(&req.client_id, req.revision_height)
+            .await
+            .map_err(|error| {
+                Status::not_found(format!("consensus state fetch failed: {error}"))
+            })?;
+
+        let cs = stellar_ibc_core::ibc::consensus_state::AnyConsensusState::from_soroban_xdr(&xdr)
+            .map_err(|error| {
+                Status::internal(format!("consensus state decode failed: {error}"))
+            })?;
+        let consensus_state =
+            ibc::primitives::proto::Protobuf::<ibc::primitives::proto::Any>::encode_vec(cs);
+
+        Ok(Response::new(QueryConsensusStateResponse {
+            consensus_state,
+            proof: Vec::new(),
+            proof_height: req.revision_height,
+        }))
     }
 
     #[tracing::instrument(skip(self, request), name = "grpc.query_packet_commitment")]

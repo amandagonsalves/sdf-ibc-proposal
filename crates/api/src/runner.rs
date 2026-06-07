@@ -63,6 +63,10 @@ pub fn router(state: Arc<AppState>) -> Router {
             "/stellar/clients/{client_id}/state",
             get(services::clients::client_state),
         )
+        .route(
+            "/stellar/clients/{client_id}/consensus/{height}",
+            get(services::clients::consensus_state),
+        )
         .route("/tx/submit", post(services::tx::submit_signed_tx))
         .route("/tx/prepare", post(services::tx::prepare_tx))
         .route("/cosmos/node-info", get(services::cosmos::node_info))

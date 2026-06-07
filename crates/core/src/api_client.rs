@@ -120,6 +120,21 @@ impl ApiClient {
         hex::decode(hex).map_err(|e| anyhow::anyhow!("client_state_xdr hex decode: {e}"))
     }
 
+    pub async fn get_consensus_state_xdr(
+        &self,
+        client_id: &str,
+        height: u64,
+    ) -> anyhow::Result<Vec<u8>> {
+        let body = self
+            .get_json(&format!("/stellar/clients/{client_id}/consensus/{height}"))
+            .await?;
+        let hex = body
+            .get("consensus_state_xdr")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("missing 'consensus_state_xdr' in response"))?;
+        hex::decode(hex).map_err(|e| anyhow::anyhow!("consensus_state_xdr hex decode: {e}"))
+    }
+
     pub async fn get_ledger(&self, sequence: u32) -> anyhow::Result<LedgerData> {
         let body = self.get_json(&format!("/ledger/{sequence}")).await?;
 

@@ -1,9 +1,13 @@
 use anyhow::{anyhow, Result};
 use ibc::clients::tendermint::client_state::ClientState as TmClientState;
+use ibc::clients::tendermint::consensus_state::ConsensusState as TmConsensusState;
 use ibc::core::commitment_types::specs::ProofSpecs;
-use ibc_proto::google::protobuf::Duration;
+use ibc_proto::google::protobuf::{Duration, Timestamp};
 use ibc_proto::ibc::core::client::v1::Height as RawHeight;
-use ibc_proto::ibc::lightclients::tendermint::v1::{ClientState as RawTmClientState, Fraction};
+use ibc_proto::ibc::core::commitment::v1::MerkleRoot;
+use ibc_proto::ibc::lightclients::tendermint::v1::{
+    ClientState as RawTmClientState, ConsensusState as RawTmConsensusState, Fraction,
+};
 use stellar_xdr::curr::{
     Limits, ReadXdr, ScBytes, ScMap, ScMapEntry, ScString, ScSymbol, ScVal, StringM, VecM, WriteXdr,
 };
@@ -37,6 +41,13 @@ fn sc_u32(map: &ScMap, name: &str) -> Result<u32> {
     match sc_field(map, name)? {
         ScVal::U32(n) => Ok(*n),
         _ => Err(anyhow!("field {name} is not u32")),
+    }
+}
+
+fn sc_bytes_vec(map: &ScMap, name: &str) -> Result<Vec<u8>> {
+    match sc_field(map, name)? {
+        ScVal::Bytes(b) => Ok(b.to_vec()),
+        _ => Err(anyhow!("field {name} is not bytes")),
     }
 }
 
@@ -209,5 +220,29 @@ impl AnyConsensusState {
         state
             .to_xdr(Limits::none())
             .map_err(|e| anyhow!("consensus_state to_xdr: {e}"))
+    }
+
+    pub fn from_soroban_xdr(bytes: &[u8]) -> Result<Self> {
+        let val = ScVal::from_xdr(bytes, Limits::none())
+            .map_err(|e| anyhow!("consensus_state from_xdr: {e}"))?;
+        let map = sc_as_map(&val, "consensus_state")?;
+
+        let timestamp_secs = sc_u64(map, "timestamp_secs")?;
+        let next_validators_hash = sc_bytes_vec(map, "next_validators_hash")?;
+        let root = sc_bytes_vec(map, "root")?;
+
+        let raw = RawTmConsensusState {
+            timestamp: Some(Timestamp {
+                seconds: timestamp_secs as i64,
+                nanos: 0,
+            }),
+            root: Some(MerkleRoot { hash: root }),
+            next_validators_hash,
+        };
+
+        let cons = TmConsensusState::try_from(raw)
+            .map_err(|e| anyhow!("tendermint consensus state from raw: {e}"))?;
+
+        Ok(AnyConsensusState::Tendermint(cons))
     }
 }

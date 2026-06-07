@@ -63,6 +63,22 @@ fn contract_data_key(contract: [u8; 32], variant: &str, arg: &str) -> anyhow::Re
     Ok(key.to_xdr(Limits::none())?)
 }
 
+fn consensus_data_key(contract: [u8; 32], client_id: &str, height: u64) -> anyhow::Result<Vec<u8>> {
+    let variant_sym: StringM<32> = "Consensus".try_into()?;
+    let client_str: StringM = client_id.try_into()?;
+    let key_val = ScVal::Vec(Some(ScVec(VecM::try_from(vec![
+        ScVal::Symbol(ScSymbol(variant_sym)),
+        ScVal::String(ScString(client_str)),
+        ScVal::U64(height),
+    ])?)));
+    let key = LedgerKey::ContractData(LedgerKeyContractData {
+        contract: ScAddress::Contract(ContractId(Hash(contract))),
+        key: key_val,
+        durability: ContractDataDurability::Persistent,
+    });
+    Ok(key.to_xdr(Limits::none())?)
+}
+
 fn decode_contract_val(entry_xdr: &[u8]) -> Option<ScVal> {
     match LedgerEntryData::from_xdr(entry_xdr, Limits::none()).ok()? {
         LedgerEntryData::ContractData(d) => Some(d.val),
@@ -154,6 +170,87 @@ pub async fn client_state(
         "client_id": client_id,
         "client_type": client_type_of(&client_id),
         "client_state_xdr": hex,
+    })))
+}
+
+#[tracing::instrument(skip(state))]
+pub async fn consensus_state(
+    State(state): State<Arc<AppState>>,
+    Path((client_id, height)): Path<(String, u64)>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    tracing::info!("GET /stellar/clients/{client_id}/consensus/{height}");
+
+    if state.ibc_contract_id.is_empty() {
+        return Err(err(
+            StatusCode::BAD_GATEWAY,
+            "ROUTER_CONTRACT_ADDRESS not configured",
+        ));
+    }
+
+    let router = stellar_strkey::Contract::from_string(&state.ibc_contract_id)
+        .map_err(|e| {
+            err(
+                StatusCode::BAD_GATEWAY,
+                format!("invalid ROUTER_CONTRACT_ADDRESS: {e}"),
+            )
+        })?
+        .0;
+
+    let lc_key = contract_data_key(router, "ClientLcAddr", &client_id)
+        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    let lc_entry = state
+        .rpc
+        .get_ledger_entry(&lc_key)
+        .await
+        .map_err(|e| err(StatusCode::BAD_GATEWAY, format!("get lc address: {e}")))?
+        .ok_or_else(|| {
+            err(
+                StatusCode::NOT_FOUND,
+                format!("client {client_id} not found"),
+            )
+        })?;
+
+    let lc_contract = match decode_contract_val(&lc_entry) {
+        Some(ScVal::Address(ScAddress::Contract(ContractId(Hash(id))))) => id,
+        _ => {
+            return Err(err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "ClientLcAddr entry is not a contract address",
+            ))
+        }
+    };
+
+    let cons_key = consensus_data_key(lc_contract, &client_id, height)
+        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    let cons_entry = state
+        .rpc
+        .get_ledger_entry(&cons_key)
+        .await
+        .map_err(|e| err(StatusCode::BAD_GATEWAY, format!("get consensus state: {e}")))?
+        .ok_or_else(|| {
+            err(
+                StatusCode::NOT_FOUND,
+                format!("consensus state for {client_id} at height {height} not found"),
+            )
+        })?;
+
+    let cons_val = decode_contract_val(&cons_entry).ok_or_else(|| {
+        err(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "consensus state entry is not contract data",
+        )
+    })?;
+    let cons_xdr = cons_val
+        .to_xdr(Limits::none())
+        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, format!("re-encode: {e}")))?;
+
+    let hex: String = cons_xdr.iter().map(|b| format!("{b:02x}")).collect();
+
+    Ok(Json(json!({
+        "client_id": client_id,
+        "client_type": client_type_of(&client_id),
+        "height": height,
+        "consensus_state_xdr": hex,
     })))
 }
 
