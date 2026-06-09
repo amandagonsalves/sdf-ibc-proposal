@@ -154,77 +154,103 @@ A bridge needs each chain to verify the other, so there are two light clients:
 
 ## 3. Data flows
 
-### Flow 1 — Counterparty registration (once per chain pair)
+Each flow is named with the Interchain Standards it exercises. The ICS operation
+names are used directly: `send` / `recv` / `acknowledge` / `timeout` are ICS-04
+(packet semantics); `OnSendPacket` / `OnRecvPacket` / `OnAcknowledgementPacket` /
+`OnTimeoutPacket` are the ICS-26 routing callbacks into the ICS-20 application;
+`VerifyClientMessage` / `UpdateState` are ICS-02 (client); `VerifyMembership` /
+`VerifyNonMembership` are ICS-23 (commitments) over the ICS-24 host paths.
+
+### Flow 1 — Counterparty registration · ICS-26 + ICS-24
 
 IBC v2 replaces the v1 connection + channel handshake (8 messages) with a single
-call per side: `register_counterparty(client_id, counterparty_client_id,
-merkle_prefix)`. On Stellar this is an `ibc-router` call; on Cosmos it is
-`MsgRegisterCounterparty`. After both sides register, packets flow immediately —
-no version negotiation, no port binding, no handshake.
+`RegisterCounterparty` per side, binding a local client to its counterparty
+client id and **commitment (merkle) prefix** — the ICS-24 prefix under which that
+counterparty stores its provable paths. On Stellar this is an `ibc-router` call;
+on Cosmos it is `MsgRegisterCounterparty` (`ibc.core.client.v2`). The prefix is
+`ibc` on the Stellar side and **empty** on the Cosmos side (Stellar SMT keys are
+unprefixed). After both sides register, packets flow immediately — no version
+negotiation, no port binding, no handshake.
 
 ### Flow 2 — Transaction model (prepare → sign → submit)
 
-Stellar transactions are built where the chain connection lives (`stellar-api`)
-and signed where the key lives (the relayer), but **driven** by the relayer, so
-the gateway never holds a key. The relayer sends an IBC message to the gateway;
-the gateway asks the api to prepare an unsigned `tx_xdr` and returns it; the
-relayer signs it and hands it back; the gateway submits it through the api to
-Soroban. Tx preparation is method-agnostic — it re-encodes any router method's
-arguments to Soroban XDR — so `create_client`, `register_counterparty`,
-`recv_packet`, `acknowledge_packet`, `timeout_packet`, `update_client`, and
-`submit_misbehaviour` all use the same path.
+The transport mechanism beneath every ICS-26 message dispatch on the Stellar
+side. Transactions are built where the chain connection lives (`stellar-api`) and
+signed where the key lives (the relayer), but **driven** by the relayer, so the
+gateway never holds a key. The relayer sends an IBC message to the gateway; the
+gateway asks the api to prepare an unsigned `tx_xdr`; the relayer signs it and
+hands it back; the gateway submits it through the api to Soroban. Preparation is
+method-agnostic, so every ICS message — `create_client` (ICS-02),
+`register_counterparty` (ICS-26), `recv_packet` / `acknowledge_packet` /
+`timeout_packet` (ICS-04), `update_client` (ICS-02) — flows through one path.
 
-### Flow 3 — Stellar → Cosmos transfer (forward / recv path)
+### Flow 3 — Stellar → Cosmos transfer · ICS-20 send + ICS-04 recv
 
-1. `ibc-transfer.initiate_transfer(sender, source_client, denom, amount,
-   receiver, timeout, memo)` escrows the asset and builds the
-   `FungibleTokenPacketData`.
-2. `ibc-router.send_packet(source_client, timeout, payloads[])` assigns the
-   sequence and writes the Packet Commitment to the SMT.
-3. The relayer observes `SendPacket` (the gateway decodes the Soroban event into
-   IBC attributes; the `stellar-packet` worker decodes the v2 packet) and fetches
-   the commitment proof from the gateway.
-4. Because ibc-go rejects a proof newer than the client, the worker first builds
-   `MsgUpdateClient` for the destination `08-wasm` client to the proof height,
-   then `MsgRecvPacket` (`ibc.core.channel.v2`), and submits `[update, recv]`
-   together to Cosmos.
-5. ibc-go runs the `08-wasm` Stellar LC, which verifies the SCP header and the
-   commitment proof on-chain. The app mints the voucher to the receiver and
-   writes an acknowledgement.
+1. **ICS-20 send.** `ibc-transfer.initiate_transfer(...)` runs `OnSendPacket`:
+   escrows the asset and builds the `FungibleTokenPacketData` (`version =
+   "ics20-1"`, `encoding = "application/json"`).
+2. **ICS-04 send.** `ibc-router.send_packet(source_client, timeout, payloads[])`
+   assigns the sequence and writes the **Packet Commitment** to the ICS-24
+   commitment path in the SMT (`sha256` over the canonical packet fields, with the
+   timeout hashed **big-endian** to match ibc-go).
+3. The relayer observes the `send_packet` event (the gateway decodes the Soroban
+   event; the `stellar-packet` worker decodes the v2 packet) and queries the
+   **ICS-23 membership proof** of the commitment from the gateway.
+4. **ICS-02 client update.** ibc-go rejects a proof newer than the client, so the
+   worker first builds `MsgUpdateClient` advancing the destination `08-wasm`
+   client to the proof height, then `MsgRecvPacket` (`ibc.core.channel.v2`), and
+   submits `[update, recv]` together to Cosmos.
+5. **On-chain verification.** ibc-go runs the `08-wasm` Stellar LC:
+   `VerifyClientMessage` (SCP `EXTERNALIZE` quorum signature) → `UpdateState`,
+   then `VerifyMembership` (ICS-23 commitment proof vs `ConsensusState.root`). On
+   success, ICS-04 writes the **receipt** + **acknowledgement commitment**, and
+   the ICS-26 router invokes ICS-20 `OnRecvPacket`, which **mints the voucher** to
+   the receiver and returns the success acknowledgement.
 
-### Flow 4 — Ack-back leg (closing the round trip)
+### Flow 4 — Ack-back leg · ICS-04 acknowledge + ICS-20 settle
 
-When the recv submission succeeds the same worker chains straight into the ack
-direction so the source commitment is cleared and the application is settled:
+The same worker chains straight into the acknowledgement direction so the source
+commitment is cleared and the ICS-20 application settles:
 
-1. Read the application ack bytes out of the Cosmos recv-tx events.
-2. Query the acknowledgement proof from Cosmos (against its consensus root).
-3. Build `MsgUpdateClient` for the source `07-tendermint` client on Stellar to
-   the ack proof height.
-4. Build `MsgAcknowledgement` (`ibc.core.channel.v2`) and route it through the
-   Stellar endpoint → gateway `AckPacket` RPC → `ibc-router.acknowledge_packet`.
-5. `ibc-router` verifies the proof via the `tendermint` LC, clears the
-   commitment, and calls `ibc-transfer.on_acknowledgement` to settle the escrow.
+1. **Extract the ack.** Read the application acknowledgement from the Cosmos
+   recv-tx `write_acknowledgement` event — ibc-go v2 carries it as a proto
+   `Acknowledgement { app_acknowledgements }` under `encoded_acknowledgement_hex`;
+   for a successful ICS-20 recv the app ack is `{"result":"AQ=="}`.
+2. Query the **ICS-23 membership proof** of the acknowledgement commitment from
+   Cosmos (against its consensus root).
+3. **ICS-02 client update.** Build `MsgUpdateClient` advancing the source
+   `07-tendermint` client on Stellar to the ack proof height.
+4. **ICS-04 acknowledge.** Build `MsgAcknowledgement` (`ibc.core.channel.v2`),
+   routed through the Stellar endpoint → gateway `AckPacket` RPC →
+   `ibc-router.acknowledge_packet`. The router recomputes the acknowledgement
+   commitment over the app acks (`sha256` per ack, matching ibc-go), runs
+   `VerifyMembership` via the `tendermint` LC, and **clears the packet
+   commitment**.
+5. **ICS-20 settle.** The ICS-26 router invokes ICS-20 `OnAcknowledgementPacket`:
+   a success ack finalizes the escrow; a failure ack refunds it.
 
-### Flow 5 — Timeout / refund
+### Flow 5 — Timeout / refund · ICS-04 timeout + ICS-23 non-membership
 
-If the destination never receives the packet before its timeout, the relayer
-proves **non-membership** of the receipt (an absence proof against the
-counterparty SMT) and submits a timeout to the source `ibc-router`, which calls
-`ibc-transfer` to refund the escrowed asset to the original sender.
+If the destination never writes the receipt before the timeout, the relayer
+proves **ICS-23 non-membership** of the receipt path (an absence proof against
+the counterparty SMT root) and submits `timeout_packet` to the source
+`ibc-router`. The router verifies the absence proof, clears the commitment, and
+the ICS-26 router invokes ICS-20 `OnTimeoutPacket`, refunding the escrow to the
+original sender.
 
-> The reverse direction (Cosmos → Stellar) is symmetric: a `MsgTransfer` on
-> Cosmos, `recv_packet` on the Stellar router (proof verified by the `tendermint`
-> LC), and the ack relayed back.
+> The reverse direction (Cosmos → Stellar) is symmetric: an ICS-20 `MsgTransfer`
+> on Cosmos, ICS-04 `recv_packet` on the Stellar router (ICS-23 proof verified by
+> the `tendermint` LC), ICS-20 mint/credit on Stellar, and the acknowledgement
+> relayed back.
 
-#### The gateway state tracker (why Flow 3/4 proofs exist)
+#### The gateway state tracker (why the ICS-23 proofs exist)
 
-Commitment and acknowledgement proofs depend on the gateway reconstructing the
-SMT at a given height. The state tracker replays ledger close-meta
-**cumulatively** (every ledger from the last processed up to the queried height,
-so the send ledger's commitment write is ingested) and parses Soroban
-`TransactionMeta` **V4** (the format the testnet emits). The proof is generated
-against the same SMT root the consensus state carries, so the on-chain verify is
+Every ICS-23 proof in Flows 3–5 depends on the gateway reconstructing the SMT at
+a given height. The state tracker replays ledger close-meta **cumulatively**
+(every ledger from the last processed up to the queried height, so the send
+ledger's commitment write is ingested) and parses Soroban `TransactionMeta`
+**V4** (the format the testnet emits). The proof is generated against the same
+SMT root the `ConsensusState` carries, so the on-chain ICS-23 verify is
 consistent.
 
 ---
@@ -296,7 +322,7 @@ flowchart TB
     SOR --> Contracts
 ```
 
-### Flow 1 — Counterparty registration
+### Flow 1 — Counterparty registration · ICS-26 + ICS-24
 
 ```mermaid
 sequenceDiagram
@@ -305,6 +331,7 @@ sequenceDiagram
     participant RT as ibc-router (Stellar)
     participant CO as Cosmos (ibc-go)
 
+    Note over Op,CO: ICS-26 RegisterCounterparty · binds client id + ICS-24 commitment prefix
     Op->>RT: register_counterparty(client_id, counterparty_client_id, prefix="ibc")
     RT-->>Op: registered
     Op->>CO: MsgRegisterCounterparty(client_id, counterparty_client_id, prefix=empty)
@@ -333,7 +360,7 @@ sequenceDiagram
     SOR-->>API: result
 ```
 
-### Flow 3 — Stellar → Cosmos transfer (forward / recv)
+### Flow 3 — Stellar → Cosmos transfer · ICS-20 send + ICS-04 recv
 
 ```mermaid
 sequenceDiagram
@@ -345,20 +372,22 @@ sequenceDiagram
     participant CO as Cosmos (ibc-go)
     participant WASM as 08-wasm Stellar LC
 
-    TR->>TR: initiate_transfer — escrow + build FungibleTokenPacketData
-    TR->>RT: send_packet(source_client, timeout, payloads)
-    RT->>RT: assign sequence, write Commitment → SMT
-    GW-->>WK: observe SendPacket (decoded event)
-    WK->>GW: query commitment proof (ICS-23 vs SMT root)
+    TR->>TR: ICS-20 OnSendPacket — escrow + build FungibleTokenPacketData
+    TR->>RT: ICS-04 send_packet(source_client, timeout, payloads)
+    RT->>RT: assign sequence, write ICS-24 Commitment → SMT
+    GW-->>WK: observe send_packet (decoded event)
+    WK->>GW: query ICS-23 membership proof (vs SMT root)
     GW-->>WK: proof + proof height
-    WK->>CO: MsgUpdateClient(dest 08-wasm → proof height)
-    WK->>CO: MsgRecvPacket (ibc.core.channel.v2)
-    CO->>WASM: verify SCP header + commitment proof
+    WK->>CO: ICS-02 MsgUpdateClient(dest 08-wasm → proof height)
+    WK->>CO: ICS-04 MsgRecvPacket (ibc.core.channel.v2)
+    CO->>WASM: ICS-02 VerifyClientMessage (SCP quorum) → UpdateState
+    CO->>WASM: ICS-23 VerifyMembership (commitment vs ConsensusState.root)
     WASM-->>CO: valid
-    CO->>CO: mint voucher to receiver, write acknowledgement
+    CO->>CO: write receipt + ack commitment
+    CO->>CO: ICS-20 OnRecvPacket — mint voucher, return success ack
 ```
 
-### Flow 4 — Ack-back leg
+### Flow 4 — Ack-back leg · ICS-04 acknowledge + ICS-20 settle
 
 ```mermaid
 sequenceDiagram
@@ -372,21 +401,23 @@ sequenceDiagram
     participant TR as ibc-transfer (Stellar)
 
     Note over CO: continues from Flow 3 — recv succeeded
-    WK->>CO: read application ack bytes from recv-tx events
-    WK->>CO: query acknowledgement proof (vs consensus root)
+    WK->>CO: extract app ack from write_acknowledgement (encoded_acknowledgement_hex)
+    Note over WK: ICS-20 success ack = {"result":"AQ=="}
+    WK->>CO: query ICS-23 membership proof of the ack commitment
     CO-->>WK: ack proof + proof height
-    WK->>EP: MsgUpdateClient(source 07-tendermint → ack proof height)
-    WK->>EP: MsgAcknowledgement (ibc.core.channel.v2)
+    WK->>EP: ICS-02 MsgUpdateClient(source 07-tendermint → ack proof height)
+    WK->>EP: ICS-04 MsgAcknowledgement (ibc.core.channel.v2)
     EP->>GW: AckPacket RPC
-    GW->>RT: acknowledge_packet
-    RT->>LC: verify proof
+    GW->>RT: ICS-04 acknowledge_packet
+    RT->>RT: recompute ack commitment over app acks
+    RT->>LC: ICS-23 VerifyMembership (vs ConsensusState.root)
     LC-->>RT: valid
-    RT->>RT: clear commitment
-    RT->>TR: on_acknowledgement — settle escrow
+    RT->>RT: clear packet commitment
+    RT->>TR: ICS-20 OnAcknowledgementPacket — success finalizes escrow
     Note over WK,TR: round trip closed
 ```
 
-### Flow 5 — Timeout / refund
+### Flow 5 — Timeout / refund · ICS-04 timeout + ICS-23 non-membership
 
 ```mermaid
 sequenceDiagram
@@ -394,12 +425,15 @@ sequenceDiagram
     participant WK as stellar-packet worker
     participant CO as Cosmos (ibc-go)
     participant RT as ibc-router (Stellar)
+    participant LC as tendermint LC (Stellar)
     participant TR as ibc-transfer (Stellar)
 
-    Note over CO: destination did not receive before timeout
-    WK->>CO: query receipt non-membership (absence proof vs counterparty SMT)
+    Note over CO: destination did not write the receipt before timeout
+    WK->>CO: query ICS-23 non-membership of the receipt path
     CO-->>WK: absence proof + proof height
-    WK->>RT: MsgTimeout → timeout_packet
-    RT->>RT: verify non-membership proof
-    RT->>TR: refund escrowed asset to original sender
+    WK->>RT: ICS-04 MsgTimeout → timeout_packet
+    RT->>LC: ICS-23 VerifyNonMembership (receipt absent vs ConsensusState.root)
+    LC-->>RT: valid
+    RT->>RT: clear packet commitment
+    RT->>TR: ICS-20 OnTimeoutPacket — refund escrow to original sender
 ```
