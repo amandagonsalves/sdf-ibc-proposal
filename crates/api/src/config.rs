@@ -23,6 +23,7 @@ pub struct ApiConfig {
     /// `HERMES_CONFIG_PATH`. Default `/etc/hermes/config.toml`.
     pub hermes_config_path: String,
     pub ibc_contract_id: String,
+    pub transfer_contract_id: String,
     pub network_passphrase: String,
 }
 
@@ -64,6 +65,7 @@ impl ApiConfig {
             hermes_config_path: std::env::var("HERMES_CONFIG_PATH")
                 .unwrap_or_else(|_| "/etc/hermes/config.toml".to_string()),
             ibc_contract_id: std::env::var("ROUTER_CONTRACT_ADDRESS").unwrap_or_default(),
+            transfer_contract_id: std::env::var("TRANSFER_CONTRACT_ADDRESS").unwrap_or_default(),
             network_passphrase: std::env::var("NETWORK_PASSPHRASE")
                 .unwrap_or_else(|_| "Test SDF Network ; September 2015".to_string()),
         }

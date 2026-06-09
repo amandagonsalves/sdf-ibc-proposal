@@ -96,6 +96,16 @@ impl ApiClient {
             .ok_or_else(|| anyhow::anyhow!("missing 'sequence' in /ledger/latest response"))
     }
 
+    pub async fn get_transfer_balance(&self, denom: &str, address_hex: &str) -> anyhow::Result<i128> {
+        let body = self
+            .get_json(&format!("/stellar/transfer/balance/{denom}/{address_hex}"))
+            .await?;
+        body.get("balance")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<i128>().ok())
+            .ok_or_else(|| anyhow::anyhow!("missing/invalid 'balance' in transfer balance response"))
+    }
+
     pub async fn list_client_ids(&self) -> anyhow::Result<Vec<String>> {
         let body = self.get_json("/stellar/clients").await?;
         let mut ids = Vec::new();

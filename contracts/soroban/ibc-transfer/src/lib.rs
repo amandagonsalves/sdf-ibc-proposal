@@ -329,7 +329,21 @@ fn require_router(env: &Env) {
 }
 
 fn is_success_ack(ack: &Bytes) -> bool {
-    ack.len() == 1 && ack.get(0).unwrap_or(0) == SUCCESS_ACK_BYTE
+    if ack.len() == 1 && ack.get(0).unwrap_or(0) == SUCCESS_ACK_BYTE {
+        return true;
+    }
+
+    let prefix: &[u8] = b"{\"result\"";
+    if ack.len() < prefix.len() as u32 {
+        return false;
+    }
+    for (i, b) in prefix.iter().enumerate() {
+        if ack.get(i as u32).unwrap_or(0) != *b {
+            return false;
+        }
+    }
+
+    true
 }
 
 fn address_to_string(env: &Env, addr: &Address) -> String {

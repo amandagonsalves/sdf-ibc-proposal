@@ -6,12 +6,7 @@ use crate::config::ClientTypes;
 use crate::contracts::config::ContractsConfig;
 use crate::{logger, run, shared};
 
-pub fn run(
-    cfg: &ContractsConfig,
-    root: &Path,
-    force: bool,
-    attestation: bool,
-) -> Result<()> {
+pub fn run(cfg: &ContractsConfig, root: &Path, force: bool, attestation: bool) -> Result<()> {
     logger::banner("contracts deploy-all (build + deploy + wire router + write .env)");
 
     if cfg.signing_key.is_empty() {

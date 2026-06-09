@@ -28,8 +28,44 @@ impl MsgHandler {
         StellarGatewayMsgServer::new(self)
     }
 
+    async fn log_wallet_change(&self, packet: &ScVal) {
+        let Some(value_bytes) = first_payload_value(packet) else {
+            return;
+        };
+        let parsed: serde_json::Value = match serde_json::from_slice(&value_bytes) {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        let denom = parsed.get("denom").and_then(|v| v.as_str());
+        let sender = parsed.get("sender").and_then(|v| v.as_str());
+        let amount = parsed
+            .get("amount")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<i128>().ok());
+        let (Some(denom), Some(sender), Some(amount)) = (denom, sender, amount) else {
+            return;
+        };
+
+        match self.api.get_transfer_balance(denom, sender).await {
+            Ok(new_balance) => {
+                let current_balance = new_balance.saturating_add(amount);
+                tracing::info!(
+                    denom,
+                    sender,
+                    current_balance = %current_balance,
+                    new_balance = %new_balance,
+                    moved = %amount,
+                    "[cosmos→stellar] wallet settled — sender escrow reflects the transfer"
+                );
+            }
+            Err(error) => {
+                tracing::debug!(%error, "wallet balance read failed (demo log)");
+            }
+        }
+    }
+
     async fn prepare_msg_tx(&self, method: &str, args: Vec<ScVal>) -> Result<Vec<u8>, Status> {
-        tracing::info!(method, args = args.len(), "prepare_router via api");
+        tracing::debug!(method, args = args.len(), "prepare_router via api");
         self.api
             .build_unsigned_tx(method, args)
             .await
@@ -70,6 +106,28 @@ fn decode_packet_scval(bytes: &[u8]) -> Result<ScVal, Status> {
         .map_err(|e| Status::invalid_argument(format!("packet ScVal XDR decode: {e}")))
 }
 
+fn scval_map_get<'a>(val: &'a ScVal, key: &str) -> Option<&'a ScVal> {
+    if let ScVal::Map(Some(m)) = val {
+        return m.0.iter().find_map(|e| match &e.key {
+            ScVal::Symbol(s) if s.0.as_slice() == key.as_bytes() => Some(&e.val),
+            _ => None,
+        });
+    }
+    None
+}
+
+fn first_payload_value(packet: &ScVal) -> Option<Vec<u8>> {
+    let payloads = scval_map_get(packet, "payloads")?;
+    let ScVal::Vec(Some(items)) = payloads else {
+        return None;
+    };
+    let first = items.0.first()?;
+    match scval_map_get(first, "value")? {
+        ScVal::Bytes(b) => Some(b.0.to_vec()),
+        _ => None,
+    }
+}
+
 #[tonic::async_trait]
 impl StellarGatewayMsg for MsgHandler {
     #[tracing::instrument(skip(self, request), name = "grpc.submit_signed_tx")]
@@ -78,7 +136,7 @@ impl StellarGatewayMsg for MsgHandler {
         request: Request<SubmitSignedTxRequest>,
     ) -> Result<Response<SubmitSignedTxResponse>, Status> {
         let tx_xdr = request.into_inner().tx_xdr;
-        tracing::info!(tx_bytes = tx_xdr.len(), "gRPC SubmitSignedTx");
+        tracing::debug!(tx_bytes = tx_xdr.len(), "gRPC SubmitSignedTx");
         let submitted = self.api.submit_and_wait(&tx_xdr).await.map_err(|error| {
             tracing::error!(%error, "submit_and_wait_for_result failed");
             Status::internal(format!("submit_and_wait: {error}"))
@@ -87,7 +145,7 @@ impl StellarGatewayMsg for MsgHandler {
             .return_value
             .and_then(|v| v.to_xdr(Limits::none()).ok())
             .unwrap_or_default();
-        tracing::info!(tx_hash = %submitted.hash, "submit_signed_tx ok");
+        tracing::info!(tx_hash = %submitted.hash, "[gateway] tx submitted");
         Ok(Response::new(SubmitSignedTxResponse {
             tx_hash: submitted.hash,
             events: Vec::new(),
@@ -108,16 +166,14 @@ impl StellarGatewayMsg for MsgHandler {
         }
         tracing::info!(
             client_type = %req.client_type,
-            client_state_bytes = req.client_state.len(),
-            consensus_state_bytes = req.consensus_state.len(),
             height = req.height,
-            "gRPC CreateClient"
+            "[gateway] CreateClient"
         );
         let client_state = AnyClientState::decode_value(&req.client_state)
             .map_err(|e| Status::invalid_argument(format!("decode client state: {e}")))?;
 
         let height = client_state.latest_height();
-        tracing::info!(
+        tracing::debug!(
             chain_id = %client_state.chain_id(),
             revision_number = client_state.revision_number(),
             latest_height = height,
@@ -140,7 +196,7 @@ impl StellarGatewayMsg for MsgHandler {
             scval_u64(height),
         ];
         let tx_xdr = self.prepare_msg_tx("create_client", args).await?;
-        tracing::info!(tx_bytes = tx_xdr.len(), "create_client prepared (unsigned)");
+        tracing::debug!(tx_bytes = tx_xdr.len(), "create_client prepared (unsigned)");
         Ok(Response::new(MsgCreateClientResponse {
             client_id: String::new(),
             tx_xdr,
@@ -160,8 +216,7 @@ impl StellarGatewayMsg for MsgHandler {
         }
         tracing::info!(
             client_id = %req.client_id,
-            header_bytes = req.header.len(),
-            "gRPC UpdateClient"
+            "[gateway] UpdateClient"
         );
 
         let header_xdr = if req.client_id.starts_with("07-tendermint") {
@@ -191,8 +246,7 @@ impl StellarGatewayMsg for MsgHandler {
         tracing::info!(
             client_id = %req.client_id,
             counterparty_client_id = %req.counterparty_client_id,
-            prefix_segments = req.counterparty_commitment_prefix.len(),
-            "gRPC RegisterCounterparty"
+            "[gateway] RegisterCounterparty"
         );
         let args = vec![
             scval_string(&req.client_id)?,
@@ -210,10 +264,8 @@ impl StellarGatewayMsg for MsgHandler {
     ) -> Result<Response<MsgRecvPacketResponse>, Status> {
         let req = request.into_inner();
         tracing::info!(
-            packet_bytes = req.packet.len(),
-            proof_bytes = req.proof.len(),
             proof_height = req.proof_height,
-            "gRPC RecvPacket"
+            "[gateway] RecvPacket"
         );
         let args = vec![
             decode_packet_scval(&req.packet)?,
@@ -231,15 +283,15 @@ impl StellarGatewayMsg for MsgHandler {
     ) -> Result<Response<MsgAckPacketResponse>, Status> {
         let req = request.into_inner();
         tracing::info!(
-            packet_bytes = req.packet.len(),
             ack_bytes = req.acknowledgement.len(),
-            proof_bytes = req.proof.len(),
             proof_height = req.proof_height,
-            "gRPC AckPacket"
+            "[cosmos→stellar] AckPacket → router.acknowledge_packet"
         );
+        let packet_scval = decode_packet_scval(&req.packet)?;
+        self.log_wallet_change(&packet_scval).await;
         let acks = scval_vec_of_bytes(&[req.acknowledgement])?;
         let args = vec![
-            decode_packet_scval(&req.packet)?,
+            packet_scval,
             acks,
             scval_bytes(&req.proof)?,
             scval_u64(req.proof_height),
@@ -255,10 +307,8 @@ impl StellarGatewayMsg for MsgHandler {
     ) -> Result<Response<MsgTimeoutPacketResponse>, Status> {
         let req = request.into_inner();
         tracing::info!(
-            packet_bytes = req.packet.len(),
-            proof_bytes = req.proof.len(),
             proof_height = req.proof_height,
-            "gRPC TimeoutPacket"
+            "[gateway] TimeoutPacket"
         );
         let args = vec![
             decode_packet_scval(&req.packet)?,
@@ -282,8 +332,7 @@ impl StellarGatewayMsg for MsgHandler {
         }
         tracing::info!(
             client_id = %req.client_id,
-            client_message_bytes = req.client_message.len(),
-            "gRPC SubmitMisbehaviour"
+            "[gateway] SubmitMisbehaviour"
         );
         let args = vec![
             scval_string(&req.client_id)?,

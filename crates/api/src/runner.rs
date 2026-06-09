@@ -58,6 +58,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/events", get(services::events::get_events))
         .route("/account/{address}", get(services::account::account))
         .route("/balance/{address}", get(services::balance::balance))
+        .route(
+            "/stellar/transfer/balance/{denom}/{address}",
+            get(services::balance::transfer_balance),
+        )
         .route("/stellar/clients", get(services::clients::list_clients))
         .route(
             "/stellar/clients/{client_id}/state",
@@ -120,7 +124,7 @@ async fn health(State(state): State<Arc<AppState>>) -> String {
 pub async fn serve(addr: SocketAddr, state: Arc<AppState>) -> anyhow::Result<()> {
     let listener = TcpListener::bind(addr).await?;
 
-    tracing::info!(%addr, "stellar-api HTTP server listening");
+    tracing::info!(%addr, "[api] listening");
 
     axum::serve(listener, router(state)).await?;
 
@@ -129,14 +133,10 @@ pub async fn serve(addr: SocketAddr, state: Arc<AppState>) -> anyhow::Result<()>
 
 pub async fn run(cfg: ApiConfig) -> anyhow::Result<()> {
     tracing::info!(
-        host = %cfg.host,
         port = cfg.port,
         rpc_url = %cfg.rpc_url,
         signing_key_configured = !cfg.signing_key.is_empty(),
-        cosmos_chain_id = %cfg.cosmos.chain_id,
-        cosmos_rest_url = %cfg.cosmos.rest_url,
-        cosmos_signer_configured = !cfg.cosmos.proposer_private_key_hex.is_empty(),
-        "starting stellar-api"
+        "[api] starting"
     );
 
     let addr = cfg.addr();
@@ -146,9 +146,9 @@ pub async fn run(cfg: ApiConfig) -> anyhow::Result<()> {
         .expect("could not create a new rpc client");
     let cosmos = CosmosClient::new(cfg.cosmos)?;
     if let Some(p) = cosmos.proposer_address() {
-        tracing::info!(cosmos_proposer = %p, "cosmos signer derived");
+        tracing::debug!(cosmos_proposer = %p, "cosmos signer derived");
     }
-    tracing::info!(hermes_config_path = %cfg.hermes_config_path, "hermes config target");
+    tracing::debug!(hermes_config_path = %cfg.hermes_config_path, "hermes config target");
 
     let state = Arc::new(AppState::new(
         rpc,
@@ -156,6 +156,7 @@ pub async fn run(cfg: ApiConfig) -> anyhow::Result<()> {
         cosmos,
         cfg.hermes_config_path,
         cfg.ibc_contract_id,
+        cfg.transfer_contract_id,
         cfg.network_passphrase,
     ));
 

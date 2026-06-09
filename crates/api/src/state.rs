@@ -9,6 +9,7 @@ pub struct AppState {
     pub cosmos: Arc<CosmosClient>,
     pub hermes_config_path: Arc<String>,
     pub ibc_contract_id: Arc<String>,
+    pub transfer_contract_id: Arc<String>,
     pub network_passphrase: Arc<String>,
 }
 
@@ -19,6 +20,7 @@ impl AppState {
         cosmos: CosmosClient,
         hermes_config_path: String,
         ibc_contract_id: String,
+        transfer_contract_id: String,
         network_passphrase: String,
     ) -> Self {
         Self {
@@ -27,6 +29,7 @@ impl AppState {
             cosmos: Arc::new(cosmos),
             hermes_config_path: Arc::new(hermes_config_path),
             ibc_contract_id: Arc::new(ibc_contract_id),
+            transfer_contract_id: Arc::new(transfer_contract_id),
             network_passphrase: Arc::new(network_passphrase),
         }
     }
