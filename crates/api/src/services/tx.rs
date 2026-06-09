@@ -43,7 +43,7 @@ pub async fn prepare_tx(
     State(state): State<Arc<AppState>>,
     Json(req): Json<PrepareRequest>,
 ) -> Result<Json<PrepareResponse>, (StatusCode, Json<Value>)> {
-    tracing::info!("POST /tx/prepare");
+    tracing::debug!("POST /tx/prepare");
 
     if state.ibc_contract_id.is_empty() {
         return Err(err(
@@ -84,7 +84,7 @@ pub async fn submit_signed_tx(
     State(state): State<Arc<AppState>>,
     Json(req): Json<SubmitSignedTxRequest>,
 ) -> Result<Json<SubmitSignedTxResponse>, (StatusCode, Json<Value>)> {
-    tracing::info!("POST /tx/submit");
+    tracing::debug!("POST /tx/submit");
 
     let tx_xdr = hex::decode(&req.tx_xdr)
         .map_err(|e| err(StatusCode::BAD_REQUEST, format!("tx_xdr hex: {e}")))?;
@@ -104,7 +104,7 @@ pub async fn submit_signed_tx(
         None => String::new(),
     };
 
-    tracing::info!(hash = %submitted.hash, "tx submitted");
+    tracing::info!(hash = %submitted.hash, "[api] tx submitted to soroban");
 
     Ok(Json(SubmitSignedTxResponse {
         hash: submitted.hash,

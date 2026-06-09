@@ -57,7 +57,7 @@ pub async fn patch_wasm_checksum(
     State(state): State<Arc<AppState>>,
     Json(req): Json<PatchChecksumRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("POST /hermes/wasm-checksum");
+    tracing::debug!("POST /hermes/wasm-checksum");
 
     let checksum = req.checksum.trim().to_ascii_lowercase();
     if checksum.len() != 64 || !checksum.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -104,7 +104,7 @@ pub async fn patch_wasm_checksum(
     let new_text = re.replacen(&text, 1, new_line.as_str()).to_string();
 
     if new_text == text {
-        tracing::info!(%path, %checksum, "hermes wasm_checksum_hex already set, no-op");
+        tracing::debug!(%path, %checksum, "hermes wasm_checksum_hex already set, no-op");
         return Ok(Json(json!({
             "patched": false,
             "path": path,
@@ -122,7 +122,7 @@ pub async fn patch_wasm_checksum(
         )
     })?;
 
-    tracing::info!(%path, %checksum, previous = ?previous, "hermes wasm_checksum_hex patched");
+    tracing::info!(%path, %checksum, "[api] hermes config: wasm_checksum patched");
 
     Ok(Json(json!({
         "patched": true,

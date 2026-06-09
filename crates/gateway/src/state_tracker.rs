@@ -126,10 +126,10 @@ impl StateTracker {
 
         if changes_applied > 0 {
             tracing::info!(
-                sequence = seq,
+                ledger = seq,
                 ibc_writes = changes_applied,
                 root = %hex::encode(self.smt.root()),
-                "ledger applied ibc state changes into smt"
+                "[gateway] SMT updated — committed IBC state change(s)"
             );
         } else {
             tracing::debug!(sequence = seq, "ledger processed into smt (no ibc changes)");

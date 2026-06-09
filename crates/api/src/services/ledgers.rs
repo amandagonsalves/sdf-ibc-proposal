@@ -12,11 +12,11 @@ use crate::state::AppState;
 
 #[tracing::instrument(skip(state))]
 pub async fn get_latest_ledger(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    tracing::info!("GET /ledger/latest");
+    tracing::debug!("GET /ledger/latest");
 
     match state.rpc.get_latest_ledger().await {
         Ok(sequence) => {
-            tracing::info!(sequence, "latest ledger sequence");
+            tracing::debug!(sequence, "latest ledger sequence");
 
             let latest_ledger = get_ledger(State(state), Path(sequence))
                 .await
@@ -40,7 +40,7 @@ pub async fn get_ledger(
     State(state): State<Arc<AppState>>,
     Path(sequence): Path<u32>,
 ) -> impl IntoResponse {
-    tracing::info!(sequence, "GET /ledger/{sequence}");
+    tracing::debug!(sequence, "GET /ledger/{sequence}");
 
     match state.rpc.get_ledger(sequence).await {
         Ok(ledger) => {
@@ -50,7 +50,7 @@ pub async fn get_ledger(
                 "metadata_xdr": ledger.metadata_xdr.as_deref().map(hex::encode),
             });
 
-            tracing::info!(
+            tracing::debug!(
                 sequence = ledger.sequence,
                 header_bytes = ledger.header_xdr.len(),
                 metadata_bytes = ledger.metadata_xdr.as_ref().map(|m| m.len()).unwrap_or(0),

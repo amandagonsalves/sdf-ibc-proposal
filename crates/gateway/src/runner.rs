@@ -10,11 +10,10 @@ use stellar_ibc_core::api_client::ApiClient;
 
 pub async fn run(cfg: GatewayConfig) {
     tracing::info!(
-        host = %cfg.host,
         grpc_port = cfg.grpc_port,
         api_url = %cfg.api_url,
-        ibc_contract_id = %cfg.ibc_contract_id,
-        "starting stellar-gateway"
+        router = %cfg.ibc_contract_id,
+        "[gateway] starting"
     );
 
     let keypair =
@@ -53,7 +52,7 @@ pub async fn run(cfg: GatewayConfig) {
         .build_v1()
         .expect("gRPC reflection service failed to build");
 
-    tracing::info!(%grpc_addr, "gRPC server listening");
+    tracing::info!(%grpc_addr, "[gateway] listening");
 
     tonic::transport::Server::builder()
         .add_service(reflection_service)

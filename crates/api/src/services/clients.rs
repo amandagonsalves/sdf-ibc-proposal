@@ -98,7 +98,7 @@ pub async fn client_state(
     State(state): State<Arc<AppState>>,
     Path(client_id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("GET /stellar/clients/{client_id}/state");
+    tracing::debug!("GET /stellar/clients/{client_id}/state");
 
     if state.ibc_contract_id.is_empty() {
         return Err(err(
@@ -178,7 +178,7 @@ pub async fn consensus_state(
     State(state): State<Arc<AppState>>,
     Path((client_id, height)): Path<(String, u64)>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("GET /stellar/clients/{client_id}/consensus/{height}");
+    tracing::debug!("GET /stellar/clients/{client_id}/consensus/{height}");
 
     if state.ibc_contract_id.is_empty() {
         return Err(err(
@@ -259,7 +259,7 @@ pub async fn list_clients(
     State(state): State<Arc<AppState>>,
     Query(params): Query<ListClientsQuery>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("GET /stellar/clients");
+    tracing::debug!("GET /stellar/clients");
 
     if state.ibc_contract_id.is_empty() {
         return Err(err(

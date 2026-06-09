@@ -54,7 +54,7 @@ fn bad_request<E: std::fmt::Display>(e: E) -> (StatusCode, Json<Value>) {
 pub async fn node_info(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("GET /cosmos/node-info");
+    tracing::debug!("GET /cosmos/node-info");
     match state.cosmos.node_info().await {
         Ok(v) => Ok(Json(v)),
         Err(e) => {
@@ -110,7 +110,7 @@ pub async fn proposals(
         .as_deref()
         .map(proposal_status_str)
         .unwrap_or_else(|| "PROPOSAL_STATUS_VOTING_PERIOD".to_string());
-    tracing::info!(%status, "GET /cosmos/gov/proposals");
+    tracing::debug!(%status, "GET /cosmos/gov/proposals");
     match state.cosmos.proposals_by_status(&status).await {
         Ok(v) => Ok(Json(v)),
         Err(e) => {
@@ -140,7 +140,7 @@ pub async fn proposal_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<u64>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!(proposal_id = id, "GET /cosmos/gov/proposals/{id}");
+    tracing::debug!(proposal_id = id, "GET /cosmos/gov/proposals/{id}");
     match state.cosmos.proposal(id).await {
         Ok(v) => Ok(Json(v)),
         Err(e) => {
@@ -165,7 +165,7 @@ pub async fn proposal_by_id(
 pub async fn gov_deposit_params(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("GET /cosmos/gov/params/deposit");
+    tracing::debug!("GET /cosmos/gov/params/deposit");
     match state.cosmos.gov_deposit_params().await {
         Ok(v) => Ok(Json(v)),
         Err(e) => {
@@ -198,13 +198,13 @@ pub async fn tx_by_hash(
     State(state): State<Arc<AppState>>,
     Path(hash): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!(%hash, "GET /cosmos/tx/{hash}");
+    tracing::debug!(%hash, "GET /cosmos/tx/{hash}");
     match state.cosmos.tx_by_hash(&hash).await {
         Ok(v) => Ok(Json(v)),
         Err(e) => {
             let not_found = e.to_string().contains("not found");
             if not_found {
-                tracing::info!(%hash, "tx not yet found");
+                tracing::debug!(%hash, "tx not yet found");
                 Err(err(StatusCode::NOT_FOUND, e))
             } else {
                 tracing::error!(error = %e, %hash, "tx_by_hash failed");
@@ -229,7 +229,7 @@ pub async fn tx_by_hash(
 pub async fn ibc_wasm_checksums(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("GET /cosmos/ibc-wasm/checksums");
+    tracing::debug!("GET /cosmos/ibc-wasm/checksums");
     match state.cosmos.ibc_wasm_checksums().await {
         Ok(v) => {
             let count = v
@@ -237,7 +237,7 @@ pub async fn ibc_wasm_checksums(
                 .and_then(|c| c.as_array())
                 .map(|a| a.len())
                 .unwrap_or(0);
-            tracing::info!(count, "ibc-wasm checksums");
+            tracing::info!(count, "[cosmos] 08-wasm checksums");
             Ok(Json(v))
         }
         Err(e) => {
@@ -307,7 +307,7 @@ pub async fn submit_store_code(
     State(state): State<Arc<AppState>>,
     Json(req): Json<StoreCodeRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!(
+    tracing::debug!(
         wasm_b64_len = req.wasm_base64.len(),
         "POST /cosmos/ibc-wasm/store-code"
     );
@@ -316,7 +316,7 @@ pub async fn submit_store_code(
         tracing::error!(error = %e, "wasm_base64 decode failed");
         bad_request(format!("wasm_base64 not valid base64: {e}"))
     })?;
-    tracing::info!(wasm_bytes = wasm.len(), "store-code: decoded wasm");
+    tracing::debug!(wasm_bytes = wasm.len(), "store-code: decoded wasm");
 
     let result = state
         .cosmos
@@ -350,7 +350,7 @@ pub async fn submit_store_code(
         ));
     }
 
-    tracing::info!(tx_hash = %result.tx_hash, "store-code broadcast accepted");
+    tracing::info!(tx_hash = %result.tx_hash, "[cosmos] store-code (08-wasm) broadcast accepted");
 
     if !req.wait_for_landing {
         return Ok(Json(json!({
@@ -399,7 +399,7 @@ pub async fn submit_store_code(
     tracing::info!(
         tx_hash = %result.tx_hash,
         proposal_id = ?proposal_id,
-        "store-code landed"
+        "[cosmos] store-code proposal landed"
     );
 
     Ok(Json(json!({
@@ -456,7 +456,7 @@ pub async fn submit_vote(
     State(state): State<Arc<AppState>>,
     Json(req): Json<VoteRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("POST /cosmos/gov/vote");
+    tracing::debug!("POST /cosmos/gov/vote");
 
     let result = state
         .cosmos
@@ -480,7 +480,7 @@ pub async fn submit_vote(
         ));
     }
 
-    tracing::info!(tx_hash = %result.tx_hash, "vote broadcast accepted");
+    tracing::info!(tx_hash = %result.tx_hash, "[cosmos] gov vote broadcast accepted");
 
     Ok(Json(json!({
         "tx_hash": result.tx_hash,
@@ -502,7 +502,7 @@ pub async fn submit_vote(
 #[tracing::instrument(skip(state))]
 pub async fn proposer_info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let address = state.cosmos.proposer_address();
-    tracing::info!(?address, "GET /cosmos/proposer");
+    tracing::debug!(?address, "GET /cosmos/proposer");
     Json(json!({ "address": address }))
 }
 
@@ -519,7 +519,7 @@ pub async fn proposer_info(State(state): State<Arc<AppState>>) -> impl IntoRespo
 #[tracing::instrument(skip(state))]
 pub async fn funder_info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let address = state.cosmos.funder_address();
-    tracing::info!(?address, "GET /cosmos/funder");
+    tracing::debug!(?address, "GET /cosmos/funder");
     Json(json!({ "address": address }))
 }
 
@@ -567,7 +567,7 @@ pub async fn submit_bank_send(
     State(state): State<Arc<AppState>>,
     Json(req): Json<BankSendRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    tracing::info!("POST /cosmos/bank/send");
+    tracing::debug!("POST /cosmos/bank/send");
 
     if req.skip_if_account_exists {
         let exists = state.cosmos.account_exists(&req.to).await.map_err(|e| {
@@ -575,7 +575,7 @@ pub async fn submit_bank_send(
             bad_gateway(e)
         })?;
         if exists {
-            tracing::info!(to = %req.to, "bank-send skipped: account exists");
+            tracing::debug!(to = %req.to, "bank-send skipped: account exists");
             return Ok(Json(json!({
                 "skipped": true,
                 "reason": "account already exists on chain",
@@ -609,7 +609,7 @@ pub async fn submit_bank_send(
         ));
     }
 
-    tracing::info!(tx_hash = %result.tx_hash, to = %req.to, amount = req.amount, "bank-send broadcast accepted");
+    tracing::info!(tx_hash = %result.tx_hash, to = %req.to, amount = req.amount, "[cosmos] bank-send broadcast accepted");
 
     Ok(Json(json!({
         "skipped": false,

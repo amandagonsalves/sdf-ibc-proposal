@@ -69,7 +69,7 @@ impl StellarGatewayQuery for QueryHandler {
         request: Request<QueryClientStateRequest>,
     ) -> Result<Response<QueryClientStateResponse>, Status> {
         let req = request.into_inner();
-        tracing::info!(client_id = %req.client_id, "gRPC QueryClientState");
+        tracing::debug!(client_id = %req.client_id, "gRPC QueryClientState");
 
         let xdr = self
             .api
@@ -95,7 +95,7 @@ impl StellarGatewayQuery for QueryHandler {
         &self,
         _request: Request<QueryClientStatesRequest>,
     ) -> Result<Response<QueryClientStatesResponse>, Status> {
-        tracing::info!("gRPC QueryClientStates");
+        tracing::debug!("gRPC QueryClientStates");
 
         let ids = self
             .api
@@ -137,7 +137,7 @@ impl StellarGatewayQuery for QueryHandler {
         request: Request<QueryConsensusStateRequest>,
     ) -> Result<Response<QueryConsensusStateResponse>, Status> {
         let req = request.into_inner();
-        tracing::info!(
+        tracing::debug!(
             client_id = %req.client_id,
             revision_height = req.revision_height,
             "gRPC QueryConsensusState"
@@ -171,7 +171,7 @@ impl StellarGatewayQuery for QueryHandler {
         request: Request<QueryPacketCommitmentRequest>,
     ) -> Result<Response<QueryPacketCommitmentResponse>, Status> {
         let req = request.into_inner();
-        tracing::info!(
+        tracing::debug!(
             client_id = %req.client_id,
             sequence = req.sequence,
             height = req.height,
@@ -201,12 +201,10 @@ impl StellarGatewayQuery for QueryHandler {
             PathLookup::Absent { proof_bytes } => (Vec::new(), proof_bytes),
         };
         tracing::info!(
-            client_id = %req.client_id,
             sequence = req.sequence,
-            commitment_bytes = commitment.len(),
-            proof_bytes = proof.len(),
             present = !commitment.is_empty(),
-            "served packet commitment proof"
+            proof_bytes = proof.len(),
+            "[gateway] served commitment proof"
         );
 
         Ok(Response::new(QueryPacketCommitmentResponse {
@@ -222,7 +220,7 @@ impl StellarGatewayQuery for QueryHandler {
         request: Request<QueryPacketReceiptRequest>,
     ) -> Result<Response<QueryPacketReceiptResponse>, Status> {
         let req = request.into_inner();
-        tracing::info!(
+        tracing::debug!(
             client_id = %req.client_id,
             sequence = req.sequence,
             height = req.height,
@@ -245,7 +243,12 @@ impl StellarGatewayQuery for QueryHandler {
             PathLookup::Found { proof_bytes, .. } => (true, proof_bytes),
             PathLookup::Absent { proof_bytes } => (false, proof_bytes),
         };
-        tracing::info!(received, proof_bytes = proof.len(), "served packet receipt");
+        tracing::info!(
+            sequence = req.sequence,
+            received,
+            proof_bytes = proof.len(),
+            "[gateway] served receipt proof"
+        );
 
         Ok(Response::new(QueryPacketReceiptResponse {
             received,
@@ -260,7 +263,7 @@ impl StellarGatewayQuery for QueryHandler {
         request: Request<QueryAcknowledgementRequest>,
     ) -> Result<Response<QueryAcknowledgementResponse>, Status> {
         let req = request.into_inner();
-        tracing::info!(
+        tracing::debug!(
             client_id = %req.client_id,
             sequence = req.sequence,
             height = req.height,
@@ -287,9 +290,10 @@ impl StellarGatewayQuery for QueryHandler {
             PathLookup::Absent { proof_bytes } => (Vec::new(), proof_bytes),
         };
         tracing::info!(
+            sequence = req.sequence,
             ack_bytes = acknowledgement.len(),
             proof_bytes = proof.len(),
-            "served acknowledgement"
+            "[gateway] served ack proof"
         );
 
         Ok(Response::new(QueryAcknowledgementResponse {
@@ -440,9 +444,8 @@ impl StellarGatewayQuery for QueryHandler {
         } else {
             tracing::info!(
                 events = page.events.len(),
-                latest_ledger = page.latest_ledger,
-                %contract_id,
-                "events poll: found router event(s)"
+                ledger = page.latest_ledger,
+                "[gateway] observed router event(s)"
             );
         }
 
