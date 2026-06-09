@@ -80,8 +80,29 @@ root is the consensus root counterparty light clients verify against, with proof
 serialized as ICS-23 `MerkleProof`s — a format shared with Cardano so the same
 machinery serves both ecosystems.
 
-For the full trust model, component breakdown, and per-flow sequence diagrams,
-see the architecture document linked below.
+### A transfer in ICS terms
+
+The flows map directly onto the Interchain Standards (no v1 connection/channel
+handshake — IBC v2 keeps only the packet lifecycle):
+
+- **Setup** — `RegisterCounterparty` per side (**ICS-26**), binding each client to
+  its counterparty id and commitment prefix (**ICS-24**).
+- **Stellar → Cosmos** — `ibc-transfer` escrows and builds the
+  `FungibleTokenPacketData` (**ICS-20** `OnSendPacket`); `ibc-router.send_packet`
+  writes the commitment (**ICS-04** / **ICS-24**); the relayer proves it
+  (**ICS-23**) and the Cosmos `08-wasm` Stellar LC verifies the SCP header
+  (**ICS-02** `VerifyClientMessage` → `UpdateState`) and the commitment
+  (**ICS-23** `VerifyMembership`) on-chain, then mints the voucher (**ICS-20**
+  `OnRecvPacket`).
+- **Ack back** — the success ack (`{"result":"AQ=="}`) is proven (**ICS-23**) and
+  relayed to `ibc-router.acknowledge_packet` (**ICS-04**), which verifies it via
+  the `tendermint` LC, clears the commitment, and settles the escrow (**ICS-20**
+  `OnAcknowledgementPacket`). Timeouts refund via an **ICS-23** non-membership
+  proof.
+
+For the full trust model, component breakdown, and per-flow Mermaid sequence
+diagrams (each tagged with its ICS standards), see the architecture document
+linked below.
 
 ## Project structure
 

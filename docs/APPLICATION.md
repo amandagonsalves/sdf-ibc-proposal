@@ -17,13 +17,15 @@
 
 ## Products & Services
 
-**On-chain IBC v2 light-client verification on Soroban.** A full IBC v2 (Eureka) protocol stack as Soroban contracts: an `ibc-router`, light clients (`tendermint`, `attestation`, `mock`), a deterministic fixed-depth-64 Sparse Merkle Tree, and an ICS-23 membership/non-membership proof serializer.
-- *How Stellar is used:* counterparty packet commitments, receipts, and acknowledgements are committed to the SMT and verified **on-chain by Soroban contracts** — no multisig committee, no federated signers; packet security equals the security of the connected chains.
+**On-chain IBC v2 light-client verification on Soroban.** A full IBC v2 (Eureka) protocol stack as Soroban contracts implementing the Interchain Standards: an `ibc-router` (**ICS-26** routing + **ICS-04** packet semantics), light clients (`tendermint`, `attestation`, `mock`) (**ICS-02**), a deterministic fixed-depth-64 Sparse Merkle Tree for the **ICS-24** host paths, and an **ICS-23** membership/non-membership proof serializer.
+- *How Stellar is used:* counterparty packet commitments, receipts, and acknowledgements are committed to the SMT and verified **on-chain by Soroban contracts** (`VerifyClientMessage`/`UpdateState`, `VerifyMembership`/`VerifyNonMembership`) — no multisig committee, no federated signers; packet security equals the security of the connected chains.
 - *Impact:* this is the verification root everything else depends on. It makes Stellar a first-class IBC chain and proves Soroban is production-ready for serious systems work (on-chain SMT + proof verification).
 
 **Trust-minimized cross-chain transfers (ICS-20) with a Hermes relayer.** An `ibc-transfer` Soroban app plus a `StellarChainEndpoint` in the shared Cardano Foundation Hermes fork, fronted by a gRPC `gateway` and an HTTP `api` that build unsigned Soroban transactions the relayer signs and submits (the gateway holds no key).
-- *How Stellar is used:* the transfer app escrows/credits Stellar assets and emits IBC v2 packets; the Stellar light client is compiled to wasm and uploaded to the counterparty via `08-wasm` so it can verify Stellar proofs.
+- *How Stellar is used:* the transfer app runs the **ICS-20** routing callbacks (`OnSendPacket` escrow, `OnRecvPacket` mint/credit, `OnAcknowledgementPacket` settle, `OnTimeoutPacket` refund) over **ICS-04** packets; the Stellar light client is compiled to wasm and uploaded to the counterparty via `08-wasm` so it can verify Stellar proofs.
 - *Impact:* Stellar stablecoins (USDC, EURC) and native assets reach the entire IBC graph, and IBC-native assets reach Stellar's payment and anchor rails — both directions, trust-minimized.
+
+> **A transfer in ICS terms.** Setup is `RegisterCounterparty` per side (**ICS-26**). Stellar→Cosmos: `ibc-transfer` escrows + builds `FungibleTokenPacketData` (**ICS-20** `OnSendPacket`) → `ibc-router.send_packet` writes the commitment (**ICS-04**/**ICS-24**) → relayer proves it (**ICS-23**) → the Cosmos `08-wasm` Stellar LC verifies the SCP header (**ICS-02**) and commitment (**ICS-23**) on-chain → mints the voucher (**ICS-20** `OnRecvPacket`). Ack back: the success ack `{"result":"AQ=="}` is proven (**ICS-23**) and relayed to `acknowledge_packet` (**ICS-04**), which settles the escrow (**ICS-20**); timeouts refund via an **ICS-23** non-membership proof.
 
 **`stellaribc` orchestration CLI + a reusable multi-chain stack.** A single Rust binary that deploys the contracts, uploads the Stellar `08-wasm` light client, creates clients, registers counterparties, and runs the relayer — no shell scripts.
 - *How Stellar is used:* it drives the Soroban CLI, `stellar-api`, and Docker to stand up and operate a complete Stellar IBC deployment reproducibly.
