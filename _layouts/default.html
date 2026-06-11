@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title and page.title != "Home" %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+  <meta name="description" content="{{ page.description | default: site.description | strip_newlines }}">
+  <meta property="og:title" content="{{ page.title | default: site.title }}">
+  <meta property="og:description" content="{{ page.description | default: site.description | strip_newlines }}">
+  <meta property="og:image" content="assets/images/thumbnail.png">
+  <meta name="theme-color" content="#07081a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark"></span>
+      <span class="brand-text"><span class="brand-title">Stellar IBC</span></span>
+    </a>
+    <button class="menu-btn" aria-label="Menu">☰</button>
+  </div>
+
+  <div class="scrim"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">
+        <span class="brand-mark"></span>
+        <span class="brand-text">
+          <span class="brand-title">Stellar IBC</span>
+          <span class="brand-sub">Eureka</span>
+        </span>
+      </a>
+
+      <nav class="nav">
+        <span class="nav-label">Documentation</span>
+        <a class="nav-link {% if page.title == "Home" %}active{% endif %}" href="index.html">Overview</a>
+        <a class="nav-link {% if page.title == "Strategy" %}active{% endif %}" href="strategy.html">Strategy</a>
+        <a class="nav-link {% if page.title == "Architecture" %}active{% endif %}" href="architecture.html">Architecture</a>
+        <a class="nav-link {% if page.title == "Roadmap" %}active{% endif %}" href="roadmap.html">Roadmap</a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <a href="https://ibcprotocol.dev/" target="_blank" rel="noopener">IBC Protocol ↗</a>
+        <a href="https://github.com/cardano-foundation/cardano-ibc-incubator" target="_blank" rel="noopener">Cardano IBC ↗</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <article class="content">
+        {{ content }}
+        <div class="page-foot">
+          Stellar IBC Eureka — public project documentation. Licensed under the Apache License 2.0.
+        </div>
+      </article>
+    </main>
+  </div>
+
+  <script src="assets/js/site.js"></script>
+</body>
+</html>

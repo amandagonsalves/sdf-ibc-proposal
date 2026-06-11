@@ -3,7 +3,8 @@
 Public project documentation for **Stellar IBC Eureka** — trust-minimized IBC v2
 (Eureka) for the Stellar network.
 
-📖 **Read it online:** <https://amandagonsalves.github.io/stellar-ibc-proposal/>
+📖 **Read it online** at this repository's GitHub Pages URL
+(`https://<owner>.github.io/<repo>/`).
 
 > **Source availability.** The implementation is currently in a private
 > repository while it is under active development, and will be **open-sourced**
@@ -12,8 +13,10 @@ Public project documentation for **Stellar IBC Eureka** — trust-minimized IBC 
 
 ## What's here
 
-This repository is a [Jekyll](https://jekyllrb.com/) site built with the
-[Just the Docs](https://just-the-docs.com/) theme and published via GitHub Pages.
+A self-contained [Jekyll](https://jekyllrb.com/) site with a custom dark theme
+(no external theme gem), published via GitHub Pages. All links and assets use
+relative paths, so the site works under any repository name without
+configuration.
 
 | Page | Source |
 |---|---|
@@ -22,21 +25,23 @@ This repository is a [Jekyll](https://jekyllrb.com/) site built with the
 | Architecture — the *how*, with sequence diagrams | [`architecture.md`](architecture.md) |
 | Roadmap — deliverables from devnet to mainnet | [`roadmap.md`](roadmap.md) |
 
+Layout and styling live in [`_layouts/`](_layouts), [`assets/css/style.css`](assets/css/style.css),
+and [`assets/js/site.js`](assets/js/site.js) (mermaid rendering + mobile nav).
+
 ## Running locally
 
 ```sh
 bundle install
 bundle exec jekyll serve
-# open http://localhost:4000/stellar-ibc-proposal/
+# open http://localhost:4000/
 ```
 
 ## Publishing
 
-A push to `main` triggers the [`Deploy Jekyll site to Pages`](.github/workflows/pages.yml)
-workflow, which builds the site and deploys it to GitHub Pages.
-
-**One-time setup:** in the repository settings, under **Settings → Pages →
-Build and deployment**, set the **Source** to **GitHub Actions**.
+This site builds with GitHub's default Pages builder. In the repository settings,
+under **Settings → Pages → Build and deployment**, set the **Source** to
+**Deploy from a branch** (branch `main`, folder `/ (root)`). Every push to `main`
+rebuilds and deploys automatically — no workflow or theme gem required.
 
 ## License
 

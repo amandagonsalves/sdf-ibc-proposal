@@ -1,28 +1,11 @@
 ---
 title: Home
 layout: home
-nav_order: 1
 description: >-
   Trust-minimized IBC v2 (Eureka) for Stellar — on-chain light-client
   verification on Soroban, connecting Stellar to the entire IBC graph.
 permalink: /
 ---
-
-# Stellar IBC Eureka
-{: .fs-9 }
-
-Trust-minimized **IBC v2 (Eureka)** for Stellar — a full Interchain Standards
-stack implemented as Soroban smart contracts, connecting Stellar to every
-IBC-enabled chain without multisig committees or federated signers.
-{: .fs-6 .fw-300 }
-
-[Strategy — the *why*](strategy){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Architecture — the *how*](architecture){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Roadmap](roadmap){: .btn .fs-5 .mb-4 .mb-md-0 }
-
----
-
-![Stellar IBC Bridge](assets/images/thumbnail.png)
 
 {: .note }
 > **Source availability.** The implementation is currently in a private
@@ -133,4 +116,4 @@ handshake — IBC v2 keeps only the packet lifecycle):
   proof.
 
 For the full trust model, component breakdown, and per-flow sequence diagrams
-(each tagged with its ICS standards), see the [Architecture](architecture) page.
+(each tagged with its ICS standards), see the [Architecture](architecture.html) page.
