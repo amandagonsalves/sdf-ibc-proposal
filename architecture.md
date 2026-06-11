@@ -15,6 +15,12 @@ components and their responsibilities, the data flows that move a transfer acros
 chains, and how it all runs. Written for reviewers, integrators, and
 contributors.
 
+{: .note }
+> The implementation is currently in a private repository and will be
+> open-sourced once it stabilizes. The component and type names below
+> (`ibc-router`, `StellarChainEndpoint`, `light-client-wasm`, …) describe that
+> codebase.
+
 ## Contents
 {: .no_toc .text-delta }
 

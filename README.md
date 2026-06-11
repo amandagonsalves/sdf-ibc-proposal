@@ -5,6 +5,11 @@ Public project documentation for **Stellar IBC Eureka** — trust-minimized IBC 
 
 📖 **Read it online:** <https://amandagonsalves.github.io/stellar-ibc-proposal/>
 
+> **Source availability.** The implementation is currently in a private
+> repository while it is under active development, and will be **open-sourced**
+> once it stabilizes. This repository is the public documentation of the
+> project's design, rationale, and roadmap in the meantime.
+
 ## What's here
 
 This repository is a [Jekyll](https://jekyllrb.com/) site built with the

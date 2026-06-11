@@ -24,6 +24,12 @@ IBC-enabled chain without multisig committees or federated signers.
 
 ![Stellar IBC Bridge](assets/images/thumbnail.png)
 
+{: .note }
+> **Source availability.** The implementation is currently in a private
+> repository while it is under active development. It will be **open-sourced**
+> once it stabilizes. This site is the public documentation of the project's
+> design, rationale, and roadmap in the meantime.
+
 ## What it is
 
 A bridge that connects **Stellar** (Soroban smart contracts, SCP consensus) to
