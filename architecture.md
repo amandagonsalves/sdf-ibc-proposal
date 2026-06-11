@@ -112,7 +112,7 @@ against ad-hoc implementation phases.
 | **ICS-24 — Host Requirements** | commitment / receipt / ack paths in the provable SMT store | done |
 | **ICS-02 — Client Semantics** | `07-tendermint` LC on Stellar and the Stellar `08-wasm` LC on Cosmos — create / update / verify | done; `08-wasm` verification proven on-chain |
 | **ICS-23 — Vector Commitments** | ICS-23 membership / non-membership `MerkleProof`s over the SMT | membership verified on-chain (recv); non-membership (timeout) implemented |
-| **ICS-04 — Packet Semantics** | `send` + `recv` verified (Stellar→Cosmos); `acknowledge` wired (pending an end-to-end test run); `timeout` implemented | in progress |
+| **ICS-04 — Packet Semantics** | `send` + `recv` + `acknowledge` verified end-to-end (Stellar→Cosmos round trip closed on-chain); `timeout` implemented | done |
 | **ICS-20 — Fungible Token Transfer** | escrow → relay → mint, `FungibleTokenPacketData` | Stellar→Cosmos proven on-chain; reverse (Cosmos→Stellar) next |
 
 IBC v2 (Eureka) has no connection or channel handshake, so the v1 ICS-03

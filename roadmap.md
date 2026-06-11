@@ -125,8 +125,8 @@ against a real ibc-go v11 + `08-wasm` Cosmos chain:
   direction (Cosmos→Stellar) is next.
 - **IBC v2 relayer on the shared Hermes fork:** `StellarChainEndpoint`,
   `ics10_stellar` types, and a custom v2/Eureka packet-relay worker drive ICS-04
-  packet semantics (`send` + `recv` verified; `acknowledge` wired; `timeout`
-  implemented).
+  packet semantics (`send` + `recv` + `acknowledge` verified end-to-end, closing
+  the Stellar→Cosmos round trip on-chain; `timeout` implemented).
 
 ### Market validation
 

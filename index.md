@@ -83,7 +83,7 @@ Soroban testnet + an ibc-go v11 `simd` with `08-wasm`):
 | **ICS-24 — Host paths** | commitment / receipt / ack paths in the provable SMT store | done |
 | **ICS-02 — Clients** | `07-tendermint` on Stellar, Stellar `08-wasm` on Cosmos — create / update / verify | done; `08-wasm` verified on-chain |
 | **ICS-23 — Commitments** | membership / non-membership `MerkleProof`s over the SMT | membership verified on-chain; non-membership (timeout) implemented |
-| **ICS-04 — Packets** | `send` + `recv` verified (Stellar→Cosmos); `acknowledge` wired; `timeout` implemented | in progress |
+| **ICS-04 — Packets** | `send` + `recv` + `acknowledge` verified end-to-end (Stellar→Cosmos round trip closed on-chain); `timeout` implemented | done |
 | **ICS-20 — Token transfer** | escrow → relay → mint (`FungibleTokenPacketData`) | Stellar→Cosmos proven on-chain; reverse next |
 
 {: .warning }
@@ -91,9 +91,10 @@ Soroban testnet + an ibc-go v11 `simd` with `08-wasm`):
 > production-ready.** A single ICS-20 transfer Stellar→Cosmos has been relayed
 > and **verified on-chain** by the `08-wasm` light client (SCP header +
 > ICS-23/SMT commitment proof), after which Cosmos minted the IBC voucher with a
-> success acknowledgement. The acknowledgement back-leg and the reverse direction
-> (Cosmos→Stellar) are in progress; broader test coverage and a security review
-> are still ahead.
+> success acknowledgement, and the acknowledgement back-leg was relayed to Stellar
+> and verified by the `tendermint` light client — closing the ICS-04 round trip
+> on-chain. The reverse direction (Cosmos→Stellar) is in progress; broader test
+> coverage and a security review are still ahead.
 
 ## A transfer in ICS terms
 
