@@ -1,10 +1,9 @@
-# stellar-ibc-proposal
+# sdf-ibc-proposal
 
 Public project documentation for **Stellar IBC Eureka** — trust-minimized IBC v2
 (Eureka) for the Stellar network.
 
-📖 **Read it online** at this repository's GitHub Pages URL
-(`https://<owner>.github.io/<repo>/`).
+📖 **Read it online:** <https://amandagonsalves.github.io/sdf-ibc-proposal/>
 
 > **Source availability.** The implementation is currently in a private
 > repository while it is under active development, and will be **open-sourced**
