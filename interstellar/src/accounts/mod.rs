@@ -34,7 +34,7 @@ pub fn show(cfg: &Config) {
 fn account_line(label: &str, address: &str) {
     if address.is_empty() {
         logger::warn(&format!(
-            "{label:<18} (not provisioned — run `eurekastellar start`)"
+            "{label:<18} (not provisioned — run `interstellar start`)"
         ));
     } else {
         logger::ok(&format!("{label:<18} {address}"));

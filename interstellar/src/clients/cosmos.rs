@@ -23,7 +23,7 @@ pub async fn run(
     };
 
     let client_id = super::create(cfg, root, http, &spec, force).await?;
-    logger::hint("next: eurekastellar clients stellar");
+    logger::hint("next: interstellar clients stellar");
 
     Ok(client_id)
 }

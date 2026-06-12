@@ -27,7 +27,7 @@ use config::Config;
 
 #[derive(Parser)]
 #[command(
-    name = "eurekastellar",
+    name = "interstellar",
     version,
     about = "Orchestrator for the Stellar<->Cosmos IBC v2 bridge",
     long_about = "A caribic-style orchestrator for the Stellar<->Cosmos bridge, grouped by \
@@ -42,7 +42,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    #[command(about = "Install the eurekastellar binary to the cargo bin dir")]
+    #[command(about = "Install the interstellar binary to the cargo bin dir")]
     Install,
     #[command(about = "Check prerequisites, configuration, and service health")]
     Check,

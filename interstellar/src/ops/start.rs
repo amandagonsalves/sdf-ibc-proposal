@@ -92,7 +92,7 @@ pub async fn run(
     }
 
     logger::ok("start complete");
-    logger::hint("check: eurekastellar status   then: eurekastellar clients cosmos");
+    logger::hint("check: interstellar status   then: interstellar clients cosmos");
 
     Ok(())
 }

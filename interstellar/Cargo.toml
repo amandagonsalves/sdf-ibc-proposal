@@ -8,7 +8,7 @@ rust-version = { workspace = true }
 description = "Caribic-style orchestrator CLI for the Stellar<->Cosmos IBC bridge"
 
 [[bin]]
-name = "eurekastellar"
+name = "interstellar"
 path = "src/main.rs"
 
 [dependencies]

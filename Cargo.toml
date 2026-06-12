@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "eureka",
+    "interstellar",
     "crates/api",
     "crates/core",
     "crates/gateway",

@@ -36,15 +36,15 @@ pub fn stellar_to_cosmos(cfg: &Config, root: &Path, args: &TransferArgs) -> Resu
     };
 
     if transfer_app.is_empty() {
-        bail!("TRANSFER_CONTRACT_ADDRESS is not set — run `eurekastellar start` first");
+        bail!("TRANSFER_CONTRACT_ADDRESS is not set — run `interstellar start` first");
     }
 
     if source_client.is_empty() {
-        bail!("COSMOS_CLIENT_ID is not set — run `eurekastellar clients cosmos` first");
+        bail!("COSMOS_CLIENT_ID is not set — run `interstellar clients cosmos` first");
     }
 
     if sender.is_empty() {
-        bail!("no Stellar sender — run `eurekastellar start` to provision STELLAR_SENDER_ADDRESS (or set DEPLOYER_ADDRESS)");
+        bail!("no Stellar sender — run `interstellar start` to provision STELLAR_SENDER_ADDRESS (or set DEPLOYER_ADDRESS)");
     }
 
     let receiver = if !args.receiver.is_empty() {

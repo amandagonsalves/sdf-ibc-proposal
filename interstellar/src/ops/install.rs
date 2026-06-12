@@ -5,7 +5,7 @@ use anyhow::Result;
 use crate::{logger, run};
 
 pub fn run(root: &Path) -> Result<()> {
-    logger::banner("install — cargo install eurekastellar");
+    logger::banner("install — cargo install interstellar");
 
     let crate_dir = root.join("eureka");
 
@@ -24,12 +24,12 @@ pub fn run(root: &Path) -> Result<()> {
     let bin_dir = cargo_bin_dir();
     logger::ok(&format!(
         "installed: {}",
-        bin_dir.join("eurekastellar").display()
+        bin_dir.join("interstellar").display()
     ));
 
     if on_path(bin_dir.as_path()) {
         logger::ok(&format!(
-            "{} is on PATH — run: eurekastellar status",
+            "{} is on PATH — run: interstellar status",
             bin_dir.display()
         ));
     } else {

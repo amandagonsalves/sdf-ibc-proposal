@@ -20,7 +20,7 @@ fn stellar_side(cfg: &Config, root: &Path, denom: &str) {
     let transfer = cfg.deployment.transfer_app.as_str();
 
     if transfer.is_empty() {
-        logger::warn("TRANSFER_CONTRACT_ADDRESS unset — run `eurekastellar start` first");
+        logger::warn("TRANSFER_CONTRACT_ADDRESS unset — run `interstellar start` first");
 
         return;
     }
@@ -48,7 +48,7 @@ async fn cosmos_side(cfg: &Config, http: &reqwest::Client) {
     let receiver = cfg.accounts.cosmos_receiver_address.as_str();
 
     if receiver.is_empty() {
-        logger::warn("COSMOS_RECEIVER_ADDRESS unset — run `eurekastellar start` first");
+        logger::warn("COSMOS_RECEIVER_ADDRESS unset — run `interstellar start` first");
 
         return;
     }
