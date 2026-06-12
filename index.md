@@ -50,7 +50,9 @@ The pieces:
 
 - **Soroban contracts** — the `ibc-router` (IBC v2 core: client/counterparty
   registration, `send` / `recv` / `ack` / `timeout`, and the provable
-  commitment/receipt/ack store), the `ibc-transfer` ICS-20 application, and the
+  commitment/receipt/ack store), the `ibc-transfer` ICS-20 application — escrow
+  and mint over the **Stellar Asset Contract (SAC)** token interface, so native
+  XLM and issued assets (USDC, EURC) move by their canonical SAC address — and the
   on-chain light clients (`tendermint`, `attestation`, `mock`).
 - **`light-client-wasm`** — the Stellar light client compiled to wasm and
   deployed on the counterparty via `08-wasm`; verifies SCP `EXTERNALIZE`
@@ -62,7 +64,7 @@ The pieces:
 - **Hermes relayer (fork)** — a `StellarChainEndpoint` plus a channel-less v2
   packet-relay worker that observes events, builds the IBC v2 messages, and
   relays them in both directions.
-- **`stellaribc` CLI** — the orchestrator that deploys the contracts, uploads
+- **`interstellar` CLI** — the orchestrator that deploys the contracts, uploads
   the wasm light client, creates clients, registers counterparties, and runs the
   services.
 
@@ -84,7 +86,7 @@ Soroban testnet + an ibc-go v11 `simd` with `08-wasm`):
 | **ICS-02 — Clients** | `07-tendermint` on Stellar, Stellar `08-wasm` on Cosmos — create / update / verify | done; `08-wasm` verified on-chain |
 | **ICS-23 — Commitments** | membership / non-membership `MerkleProof`s over the SMT | membership verified on-chain; non-membership (timeout) implemented |
 | **ICS-04 — Packets** | `send` + `recv` + `acknowledge` verified end-to-end (Stellar→Cosmos round trip closed on-chain); `timeout` implemented | done |
-| **ICS-20 — Token transfer** | escrow → relay → mint (`FungibleTokenPacketData`) | Stellar→Cosmos proven on-chain; reverse next |
+| **ICS-20 — Token transfer** | escrow → relay → mint over the Stellar Asset Contract (SAC) token interface (`FungibleTokenPacketData`) | Stellar→Cosmos proven on-chain; real-asset (SAC) escrow + reverse next |
 
 {: .warning }
 > **Early, under active development — a test implementation, not
@@ -103,8 +105,8 @@ handshake — IBC v2 keeps only the packet lifecycle):
 
 - **Setup** — `RegisterCounterparty` per side (**ICS-26**), binding each client to
   its counterparty id and commitment prefix (**ICS-24**).
-- **Stellar → Cosmos** — `ibc-transfer` escrows and builds the
-  `FungibleTokenPacketData` (**ICS-20** `OnSendPacket`); `ibc-router.send_packet`
+- **Stellar → Cosmos** — `ibc-transfer` escrows the asset via its **SAC** token
+  contract and builds the `FungibleTokenPacketData` (**ICS-20** `OnSendPacket`); `ibc-router.send_packet`
   writes the commitment (**ICS-04** / **ICS-24**); the relayer proves it
   (**ICS-23**) and the Cosmos `08-wasm` Stellar LC verifies the SCP header
   (**ICS-02** `VerifyClientMessage` → `UpdateState`) and the commitment

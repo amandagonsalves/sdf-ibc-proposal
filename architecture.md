@@ -113,7 +113,7 @@ against ad-hoc implementation phases.
 | **ICS-02 — Client Semantics** | `07-tendermint` LC on Stellar and the Stellar `08-wasm` LC on Cosmos — create / update / verify | done; `08-wasm` verification proven on-chain |
 | **ICS-23 — Vector Commitments** | ICS-23 membership / non-membership `MerkleProof`s over the SMT | membership verified on-chain (recv); non-membership (timeout) implemented |
 | **ICS-04 — Packet Semantics** | `send` + `recv` + `acknowledge` verified end-to-end (Stellar→Cosmos round trip closed on-chain); `timeout` implemented | done |
-| **ICS-20 — Fungible Token Transfer** | escrow → relay → mint, `FungibleTokenPacketData` | Stellar→Cosmos proven on-chain; reverse (Cosmos→Stellar) next |
+| **ICS-20 — Fungible Token Transfer** | escrow → relay → mint over the Stellar Asset Contract (SAC) token interface, `FungibleTokenPacketData` | Stellar→Cosmos proven on-chain; real-asset (SAC) escrow + reverse (Cosmos→Stellar) next |
 
 IBC v2 (Eureka) has no connection or channel handshake, so the v1 ICS-03
 (Connection) and the handshake half of ICS-04 (Channel) do not apply — packet
@@ -132,7 +132,7 @@ orchestration.
 | Component | Responsibility |
 |---|---|
 | **`ibc-router`** | The IBC v2 core on Stellar. Registers client types and counterparties, dispatches `send` / `recv` / `ack` / `timeout`, and owns the provable commitment / receipt / ack store (the SMT). |
-| **`ibc-transfer`** | ICS-20 application. Escrows on send, credits/mints on recv, refunds on timeout or failed ack, and settles its state on a successful ack. Encodes and decodes `FungibleTokenPacketData`. |
+| **`ibc-transfer`** | ICS-20 application. Escrows on send, credits/mints on recv, refunds on timeout or failed ack, and settles its state on a successful ack — all over the **Stellar Asset Contract (SAC)** token interface, so native XLM and issued assets (USDC, EURC) move by their canonical SAC address rather than a bespoke token. Encodes and decodes `FungibleTokenPacketData`. |
 | **light clients (`tendermint`, `attestation`, `mock`)** | Verify counterparty headers and membership proofs on Stellar. `tendermint` tracks a Cosmos chain; `mock` is always-accept for development; `attestation` is a roadmap variant. |
 | **`stellar-ibc-core`** | Shared library underneath the contracts and services: the fixed-depth-64 SMT, the ICS-23 proof serializer, the IBC commitment paths, the client/consensus types and reverse codecs, the Soroban RPC client, and the HTTP `ApiClient`. |
 
@@ -156,7 +156,7 @@ orchestration.
 | Component | Responsibility |
 |---|---|
 | **`light-client-wasm`** | The **Stellar** light client, compiled to wasm and deployed on the counterparty via `08-wasm`. Verifies SCP `EXTERNALIZE` envelopes (Ed25519 from a quorum of trusted validators) and ICS-23 proofs against the Stellar SMT root. `08-wasm` lets any ibc-go v10+ chain host it without forking its binary. |
-| **`stellaribc` CLI** | The orchestrator: deploys contracts, uploads the wasm light client, creates clients, registers counterparties, runs the services, and originates transfers. |
+| **`interstellar` CLI** | The orchestrator: deploys contracts, uploads the wasm light client, creates clients, registers counterparties, runs the services, and originates transfers. |
 
 #### Light clients verify in both directions
 
@@ -209,8 +209,9 @@ method-agnostic, so every ICS message — `create_client` (ICS-02),
 ### Flow 3 — Stellar → Cosmos transfer · ICS-20 send + ICS-04 recv
 
 1. **ICS-20 send.** `ibc-transfer.initiate_transfer(...)` runs `OnSendPacket`:
-   escrows the asset and builds the `FungibleTokenPacketData` (`version =
-   "ics20-1"`, `encoding = "application/json"`).
+   escrows the asset via its **Stellar Asset Contract (SAC)** token contract
+   (`transfer` under `require_auth`) and builds the `FungibleTokenPacketData`
+   (`version = "ics20-1"`, `encoding = "application/json"`).
 2. **ICS-04 send.** `ibc-router.send_packet(source_client, timeout, payloads[])`
    assigns the sequence and writes the **Packet Commitment** to the ICS-24
    commitment path in the SMT (`sha256` over the canonical packet fields, with the
@@ -280,16 +281,16 @@ consistent.
 
 ## 4. Deployment and infrastructure
 
-Everything is driven by the `stellaribc` CLI. A full local bring-up:
+Everything is driven by the `interstellar` CLI. A full local bring-up:
 
 ```sh
-stellaribc cosmos start --fresh     # local Cosmos devnet (ibc-go v11 simd + 08-wasm)
-stellaribc start --force-redeploy   # deploy contracts, upload the wasm LC, import relayer keys
-stellaribc clients cosmos           # 07-tendermint client on Stellar
-stellaribc clients stellar          # 08-wasm Stellar client on Cosmos
-stellaribc clients counterparty stellar
-stellaribc clients counterparty cosmos
-stellaribc transfer                 # originate a Stellar → Cosmos ICS-20 transfer
+interstellar cosmos start --fresh     # local Cosmos devnet (ibc-go v11 simd + 08-wasm)
+interstellar start --force-redeploy   # deploy contracts, upload the wasm LC, import relayer keys
+interstellar clients cosmos           # 07-tendermint client on Stellar
+interstellar clients stellar          # 08-wasm Stellar client on Cosmos
+interstellar clients counterparty stellar
+interstellar clients counterparty cosmos
+interstellar transfer                 # originate a Stellar → Cosmos ICS-20 transfer
 ```
 
 The moving parts run as containers — the Cosmos chain, the gateway, the api, and
@@ -350,7 +351,7 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Op as stellaribc CLI
+    actor Op as interstellar CLI
     participant RT as ibc-router (Stellar)
     participant CO as Cosmos (ibc-go)
 

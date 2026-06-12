@@ -48,16 +48,17 @@ key).
 
 - *How Stellar is used:* the transfer app runs the **ICS-20** routing callbacks
   (`OnSendPacket` escrow, `OnRecvPacket` mint/credit, `OnAcknowledgementPacket`
-  settle, `OnTimeoutPacket` refund) over **ICS-04** packets; the Stellar light
-  client is compiled to wasm and uploaded to the counterparty via `08-wasm` so it
-  can verify Stellar proofs.
+  settle, `OnTimeoutPacket` refund) over **ICS-04** packets, moving real Stellar
+  assets (XLM, USDC, EURC) through the **Stellar Asset Contract (SAC)** token
+  interface; the Stellar light client is compiled to wasm and uploaded to the
+  counterparty via `08-wasm` so it can verify Stellar proofs.
 - *Impact:* Stellar stablecoins (USDC, EURC) and native assets reach the entire
   IBC graph, and IBC-native assets reach Stellar's payment and anchor rails —
   both directions, trust-minimized.
 
 {: .note }
 > **A transfer in ICS terms.** Setup is `RegisterCounterparty` per side
-> (**ICS-26**). Stellar→Cosmos: `ibc-transfer` escrows + builds
+> (**ICS-26**). Stellar→Cosmos: `ibc-transfer` escrows the **SAC** asset + builds
 > `FungibleTokenPacketData` (**ICS-20** `OnSendPacket`) →
 > `ibc-router.send_packet` writes the commitment (**ICS-04**/**ICS-24**) → relayer
 > proves it (**ICS-23**) → the Cosmos `08-wasm` Stellar LC verifies the SCP header
@@ -67,7 +68,7 @@ key).
 > settles the escrow (**ICS-20**); timeouts refund via an **ICS-23**
 > non-membership proof.
 
-**`stellaribc` orchestration CLI + a reusable multi-chain stack.** A single Rust
+**`interstellar` orchestration CLI + a reusable multi-chain stack.** A single Rust
 binary that deploys the contracts, uploads the Stellar `08-wasm` light client,
 creates clients, registers counterparties, and runs the relayer — no shell
 scripts.
@@ -119,7 +120,7 @@ against a real ibc-go v11 + `08-wasm` Cosmos chain:
   runs `VerifyMembership` (ICS-23 over the SMT) on-chain for `recv`;
   non-membership (for `timeout`) is implemented.
 - **ICS-20 (Fungible token transfer) — Stellar→Cosmos proven on-chain.**
-  `stellaribc transfer` escrows + emits a `SendPacket`; the relayer fetches the
+  `interstellar transfer` escrows + emits a `SendPacket`; the relayer fetches the
   commitment proof and submits `MsgRecvPacket`; on-chain verification passes and
   Cosmos mints an `ibc/<hash>` voucher with a success acknowledgement. The reverse
   direction (Cosmos→Stellar) is next.
@@ -159,7 +160,7 @@ packet-relay worker for the Stellar endpoint — relay `SendPacket`→`RecvPacke
 `WriteAcknowledgement`→`AckPacket`, and timeout handling — closing the ICS-20
 transfer loop. Deliver `stellar→cosmos` (escrow → received → acknowledged) and the
 reverse `cosmos→stellar` (`MsgTransfer` → credited/minted on Stellar →
-acknowledged), driven by `stellaribc transfer`.
+acknowledged), driven by `interstellar transfer`.
 - *Completion criteria:* A single command runs a full round-trip in each
   direction on the devnet; relayer logs show ack relayed back and the source
   commitment cleared.
@@ -174,6 +175,18 @@ non-membership (for timeout) proofs on-chain on both clients, against the Cosmos
 consensus root and the Stellar SMT root respectively.
 - *Completion criteria:* Test suite demonstrating ICS-02 header updates and
   ICS-23 membership + non-membership proof verification passing on both clients.
+
+**Deliverable 3 — Real-asset escrow via the Stellar Asset Contract (SAC).** Wire
+`ibc-transfer`'s ICS-20 escrow path to the canonical **Stellar Asset Contract
+(SAC)** token interface, so real Stellar assets — native XLM and issued
+stablecoins (USDC, EURC) — move through the transfer app by their SAC token
+address rather than a development token. `OnSendPacket` escrows the SAC asset
+(`transfer` under `require_auth`); `OnRecvPacket` mints/credits the voucher;
+`OnAcknowledgementPacket` settles and `OnTimeoutPacket` releases the escrow back
+to the sender.
+- *Completion criteria:* A transfer of a real SAC asset on the devnet/testnet
+  (e.g. testnet USDC) escrowed on send and released on a successful ack, plus a
+  timeout-refund path; tx hashes + screen recording.
 
 ---
 
@@ -214,7 +227,7 @@ the reusable architecture: a second non-Cosmos pair with no new bridge.
 
 **Deliverable 3 — Integration test suite + community testable build.** End-to-end
 integration tests covering both corridors and edge cases (timeouts, failed acks,
-client refresh); a documented, reproducible `stellaribc` devnet/testnet build
+client refresh); a documented, reproducible `interstellar` devnet/testnet build
 shared with the Stellar Discord for feedback.
 - *Completion criteria:* Passing CI test suite; testable build + instructions
   shared in Discord; collected feedback summary.
@@ -255,7 +268,7 @@ plus a `GET /config` api endpoint so nothing is hardcoded. Includes onboarding
   onboarding flow + FAQ present; works against testnet and (post-mainnet)
   mainnet.
 
-**Deliverable 4 — Operator/integrator UX + documentation.** Polished `stellaribc`
+**Deliverable 4 — Operator/integrator UX + documentation.** Polished `interstellar`
 operator UX, an operator runbook (run your own Stellar IBC relayer), an integrator
 guide (plug an app into the transfer flow), a public monitoring dashboard, and a
 published docs site.
