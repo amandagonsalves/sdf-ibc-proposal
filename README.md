@@ -71,7 +71,7 @@ The pieces:
 - **Hermes relayer (fork)** — a `StellarChainEndpoint` plus a channel-less v2
   packet-relay worker that observes events, builds the IBC v2 messages, and
   relays them in both directions.
-- **`eurekastellar` CLI** — the orchestrator that deploys the contracts, uploads
+- **`interstellar` CLI** — the orchestrator that deploys the contracts, uploads
   the wasm light client, creates clients, registers counterparties, and runs the
   services.
 
@@ -112,7 +112,7 @@ stellar-ibc/
 │   ├── core/        shared library — SMT, ICS-23 proofs, commitment paths, RPC + HTTP clients
 │   ├── gateway/     stellar-hermes-gateway — keyless gRPC service
 │   └── api/         stellar-api — HTTP service that owns the Soroban RPC + signing key
-├── eureka/             eurekastellar — the orchestrator CLI
+├── eureka/             interstellar — the orchestrator CLI
 ├── contracts/
 │   ├── soroban/     ibc-router, ibc-transfer, light-clients/{tendermint,attestation,mock}
 │   └── cosmwasm/    light-client — the Stellar light client built for Cosmos 08-wasm

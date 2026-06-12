@@ -22,7 +22,7 @@ is a **member of the root workspace** at `contracts/cosmwasm/light-client`.
 
 ```sh
 # from the repo root — gov-submits store-code to the Cosmos chain
-eurekastellar contracts upload-wasm
+interstellar contracts upload-wasm
 ```
 
 `08-wasm` store-code is governance-gated, so upload goes through a gov proposal
