@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use std::path::Path;
+use std::time::Duration;
 
 use anyhow::Result;
 
@@ -39,13 +41,64 @@ pub fn run(root: &Path, since: &str) -> Result<()> {
         let start = hero.len().saturating_sub(25);
 
         for line in &hero[start..] {
-            println!("    {line}");
+            logger::plain(line);
         }
     }
 
     logger::hint("look for: 2/3 recv accepted — 08-wasm verified on-chain  →  3/3 ack accepted — round trip closed ✓");
 
     Ok(())
+}
+
+/// Poll the gateway + hermes logs and print each relay hero line as it appears,
+/// returning as soon as the round trip closes (or `timeout_secs` elapses).
+///
+/// Unlike a blind sleep, this keeps the screen moving — the recv → ack →
+/// round-trip lines stream in live, which is the moment a demo recording wants.
+/// Returns `true` if the `round trip` marker was seen.
+pub async fn watch(root: &Path, since: &str, timeout_secs: u64) -> Result<bool> {
+    logger::banner("relay — watching the round trip");
+    logger::detail("tailing gateway + hermes for the recv → ack hero lines");
+
+    const POLL_SECS: u64 = 3;
+    let polls = (timeout_secs / POLL_SECS).max(1);
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut closed = false;
+
+    for _ in 0..polls {
+        for svc in SERVICES {
+            let out = run::capture_all(root, "docker", &["compose", "logs", "--since", since, svc])
+                .unwrap_or_default();
+
+            for line in out.lines().filter(|line| is_hero(line)) {
+                let clean = strip_ansi(line);
+
+                if seen.insert(clean.clone()) {
+                    logger::plain(&clean);
+
+                    if clean.contains("round trip") {
+                        closed = true;
+                    }
+                }
+            }
+        }
+
+        if closed {
+            break;
+        }
+
+        tokio::time::sleep(Duration::from_secs(POLL_SECS)).await;
+    }
+
+    if closed {
+        logger::ok("round trip closed ✓ — recv verified on-chain by the 08-wasm LC, ack relayed back");
+    } else {
+        logger::warn(&format!(
+            "no round-trip marker within {timeout_secs}s — relay may still be in flight (interstellar logs)"
+        ));
+    }
+
+    Ok(closed)
 }
 
 fn is_hero(line: &str) -> bool {

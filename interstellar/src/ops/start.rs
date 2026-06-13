@@ -57,16 +57,20 @@ pub async fn run(
         logger::detail("skip contract deploy");
     } else {
         logger::step("Step 3: deploying Soroban contracts");
-        crate::contracts::deploy_all::run(
+        let deployed = crate::contracts::deploy_all::run(
             &ContractsConfig::from(cfg),
             root,
             force_redeploy,
             false,
         )?;
 
-        logger::step("recreating api + gateway to pick up ROUTER_CONTRACT_ADDRESS");
-        run::compose(root, &["up", "-d", "--force-recreate", "api", "gateway"])?;
-        let _ = probe::wait_http(http, &ops.api_health_url(), WAIT_TIMEOUT_SECS).await;
+        if deployed {
+            logger::step("recreating api + gateway to pick up ROUTER_CONTRACT_ADDRESS");
+            run::compose(root, &["up", "-d", "--force-recreate", "api", "gateway"])?;
+            let _ = probe::wait_http(http, &ops.api_health_url(), WAIT_TIMEOUT_SECS).await;
+        } else {
+            logger::detail("contracts already deployed — skipping api + gateway recreate");
+        }
     }
 
     if skip_wasm {

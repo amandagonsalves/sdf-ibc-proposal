@@ -5,6 +5,7 @@ mod clients;
 mod config;
 mod contracts;
 mod cosmos;
+mod demo;
 mod gateway;
 mod hermes;
 mod logger;
@@ -88,6 +89,10 @@ enum Command {
     },
     #[command(about = "Originate an ICS-20 transfer from the given source chain")]
     Transfer(TransferArgs),
+    #[command(
+        about = "End-to-end demo: start, client bootstrap, balances before, transfer, balances after"
+    )]
+    Demo(DemoArgs),
     #[command(about = "Show the dedicated sender + receiver accounts on each chain")]
     Accounts,
     #[command(about = "Show the Cosmos receiver voucher and the Stellar sender + escrow balances")]
@@ -144,6 +149,43 @@ struct TransferArgs {
         help = "Skip minting the amount to the sender first (devnet mints by default)"
     )]
     no_mint: bool,
+}
+
+#[derive(clap::Args)]
+struct DemoArgs {
+    #[arg(
+        long,
+        help = "Run the ICS-20 transfer round-trip demo (the default and only scenario today)"
+    )]
+    transfer: bool,
+    #[arg(value_enum, default_value = "stellar", help = "Source chain to transfer from")]
+    from: Chain,
+    #[arg(long, default_value = "stake", help = "Token denom to transfer")]
+    denom: String,
+    #[arg(long, default_value_t = 1000, help = "Amount to transfer")]
+    amount: i128,
+    #[arg(
+        long,
+        default_value = "",
+        help = "Receiver address on the destination chain (default: the relayer key on the destination)"
+    )]
+    receiver: String,
+    #[arg(long, default_value = "", help = "Optional transfer memo")]
+    memo: String,
+    #[arg(long, default_value_t = 600, help = "Transfer timeout in seconds from now")]
+    timeout_secs: u64,
+    #[arg(long, help = "Skip minting the amount to the sender first")]
+    no_mint: bool,
+    #[arg(long, help = "Skip the full `start` step (assume the stack is already up)")]
+    skip_start: bool,
+    #[arg(long, help = "Force-redeploy contracts and re-bootstrap clients during start")]
+    force_redeploy: bool,
+    #[arg(
+        long,
+        default_value_t = 120,
+        help = "Max seconds to watch the relay round trip (exits early when it closes) before reading balances-after"
+    )]
+    wait_secs: u64,
 }
 
 #[derive(clap::Args)]
@@ -394,6 +436,7 @@ enum TxQueryCmd {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    logger::init();
     let cli = Cli::parse();
     let root = repo::find_root()?;
     let root = root.as_path();
@@ -487,7 +530,7 @@ async fn main() -> Result<()> {
                 }
                 ContractsCmd::Invoke { id, call } => contracts::invoke::run(&cc, root, &id, &call)?,
                 ContractsCmd::DeployAll { force, attestation } => {
-                    contracts::deploy_all::run(&cc, root, force, attestation)?
+                    contracts::deploy_all::run(&cc, root, force, attestation)?;
                 }
                 ContractsCmd::UploadWasm { testnet, from } => {
                     contracts::wasm::upload(&cc, root, &http, testnet, from.as_deref()).await?
@@ -509,6 +552,34 @@ async fn main() -> Result<()> {
                 Chain::Stellar => transfer::stellar_to_cosmos(&cfg, root, &ta)?,
                 Chain::Cosmos => transfer::cosmos_to_stellar(&cfg, root, &ta)?,
             }
+        }
+
+        Command::Demo(args) => {
+            if !args.transfer {
+                logger::warn("no scenario flag given — running the default --transfer scenario");
+            }
+
+            let ta = transfer::TransferArgs {
+                denom: args.denom,
+                amount: args.amount,
+                receiver: args.receiver,
+                memo: args.memo,
+                timeout_secs: args.timeout_secs,
+                mint: !args.no_mint,
+            };
+
+            demo::run(
+                root,
+                &http,
+                demo::DemoArgs {
+                    from_cosmos: matches!(args.from, Chain::Cosmos),
+                    skip_start: args.skip_start,
+                    force_redeploy: args.force_redeploy,
+                    wait_secs: args.wait_secs,
+                    transfer: ta,
+                },
+            )
+            .await?
         }
 
         Command::Accounts => accounts::show(&cfg),

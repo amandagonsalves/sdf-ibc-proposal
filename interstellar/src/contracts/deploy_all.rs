@@ -6,7 +6,10 @@ use crate::config::ClientTypes;
 use crate::contracts::config::ContractsConfig;
 use crate::{logger, run, shared};
 
-pub fn run(cfg: &ContractsConfig, root: &Path, force: bool, attestation: bool) -> Result<()> {
+/// Returns `true` if contracts were (re)deployed, `false` if the existing
+/// deployment was kept — so callers know whether dependent services need to be
+/// recreated to pick up a new `ROUTER_CONTRACT_ADDRESS`.
+pub fn run(cfg: &ContractsConfig, root: &Path, force: bool, attestation: bool) -> Result<bool> {
     logger::banner("contracts deploy-all (build + deploy + wire router + write .env)");
 
     if cfg.signing_key.is_empty() {
@@ -19,7 +22,7 @@ pub fn run(cfg: &ContractsConfig, root: &Path, force: bool, attestation: bool) -
             cfg.ibc_router
         ));
 
-        return Ok(());
+        return Ok(false);
     }
 
     super::build::run(root)?;
@@ -144,7 +147,7 @@ pub fn run(cfg: &ContractsConfig, root: &Path, force: bool, attestation: bool) -
     logger::ok("deploy-all complete");
     logger::hint("recreate services to pick up ROUTER_CONTRACT_ADDRESS: interstellar api restart --pull && interstellar gateway restart --pull");
 
-    Ok(())
+    Ok(true)
 }
 
 fn deployer_address(cfg: &ContractsConfig, root: &Path) -> Result<String> {

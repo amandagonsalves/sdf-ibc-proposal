@@ -7,16 +7,16 @@ use crate::{logger, run};
 pub fn run(root: &Path) -> Result<()> {
     logger::banner("install — cargo install interstellar");
 
-    let crate_dir = root.join("eureka");
+    let crate_dir = root.join("interstellar");
 
-    logger::step("cargo install --path eureka --force");
+    logger::step("cargo install --path interstellar --force");
     run::command(
         root,
         "cargo",
         &[
             "install",
             "--path",
-            crate_dir.to_str().unwrap_or("eureka"),
+            crate_dir.to_str().unwrap_or("interstellar"),
             "--force",
         ],
     )?;
