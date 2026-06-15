@@ -26,7 +26,7 @@ evaluating the Stellar IBC bridge.
 
 We are building a **trust-minimized bridge between Stellar and Cosmos** using
 **IBC v2 (Eureka)**, the most battle-tested cross-chain protocol in the
-industry. We are doing it **in partnership with the Cardano Foundation**
+industry. We are doing it **with the support of the Cardano Foundation**
 because their existing Cardano↔Cosmos IBC infrastructure (Hermes fork, light
 clients, orchestration tooling) gives Stellar a working bridge in months
 instead of years, and gives Cardano a second non-Cosmos chain validating the
@@ -430,7 +430,7 @@ combination no current bridge serves trust-minimally. IBC v2 is the
 right protocol — battle-tested, standard, light-client-secured, and
 small enough to deploy cost-effectively on Soroban. Cardano's
 production-grade non-Cosmos IBC stack is the right foundation —
-reusing it cuts years off the project, and the partnership compounds
+reusing it cuts years off the project, and the support compounds
 into a multi-chain interop platform that benefits both ecosystems
 permanently. Hermes is the right relayer because it is the reference
 implementation that already supports this pattern. We don't have to
