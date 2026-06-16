@@ -178,7 +178,7 @@ impl Config {
             stellar: StellarConfig::from_env(),
             hermes: HermesConfig::from_env(root),
             api: ImageRef {
-                image: get("API_IMAGE", "amandagonsalvesx/stellar-ibc-api"),
+                image: get("API_IMAGE", "amandagonsalvesx/stellar-eureka-api"),
                 tag: get("API_TAG", "latest"),
                 registry: get("API_REGISTRY", ""),
             },
