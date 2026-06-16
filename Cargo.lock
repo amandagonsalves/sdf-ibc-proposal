@@ -2591,6 +2591,8 @@ dependencies = [
  "anyhow",
  "axum",
  "hex",
+ "ibc",
+ "ibc-proto 0.51.1",
  "serde_json",
  "soroban-client",
  "stellar-hermes-gateway",

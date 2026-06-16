@@ -1,3 +1,4 @@
+use ibc::primitives::proto::{Any, Protobuf};
 use serde_json::json;
 use soroban_client::xdr::{LedgerHeader, Limits, ScVal, WriteXdr};
 use tonic::Code;
@@ -11,8 +12,9 @@ use stellar_ibc_core::commitment::{
     ack_commitment_path, packet_commitment_path, packet_receipt_path,
 };
 use stellar_ibc_core::conversion::{
-    scval_bytes, scval_height, scval_string, scval_struct, scval_symbol, scval_to_xdr,
+    scval_bytes, scval_height, scval_string, scval_struct, scval_symbol, scval_to_xdr, scval_vec,
 };
+use stellar_ibc_core::ibc::client_state::AnyClientState;
 
 use super::mock::{ledger_meta_with_write, GatewayTest};
 
@@ -125,6 +127,92 @@ async fn query_client_state_converts_soroban_to_protobuf() {
 
     assert!(!resp.client_state.is_empty());
     assert_eq!(resp.proof_height, 10);
+
+    let decoded = <AnyClientState as Protobuf<Any>>::decode_vec(&resp.client_state).unwrap();
+    assert_eq!(decoded.chain_id(), "testchain-1");
+    assert_eq!(decoded.latest_height(), 10);
+}
+
+#[tokio::test]
+async fn query_client_state_errors_when_state_missing() {
+    let t = GatewayTest::start(None).await;
+
+    let err = t
+        .query()
+        .query_client_state(QueryClientStateRequest {
+            client_id: "absent".into(),
+            height: 1,
+        })
+        .await
+        .unwrap_err();
+
+    assert_eq!(err.code(), Code::Internal);
+}
+
+#[tokio::test]
+async fn events_decode_packet_attributes() {
+    let t = GatewayTest::start(Some([1u8; 32])).await;
+
+    let payload = scval_struct(vec![
+        ("source_port", scval_string("transfer").unwrap()),
+        ("dest_port", scval_string("transfer").unwrap()),
+    ])
+    .unwrap();
+    let packet = scval_struct(vec![
+        ("sequence", ScVal::U64(7)),
+        ("source_client", scval_string("07-tendermint-0").unwrap()),
+        ("dest_client", scval_string("08-wasm-0").unwrap()),
+        ("payloads", scval_vec(vec![payload]).unwrap()),
+    ])
+    .unwrap();
+    let value = hex::encode(
+        scval_to_xdr(&scval_struct(vec![("packet", packet)]).unwrap()).unwrap(),
+    );
+    let topic = hex::encode(scval_to_xdr(&scval_symbol("send_packet").unwrap()).unwrap());
+
+    t.with_data(|d| {
+        d.latest_ledger = 5;
+        d.events.push(json!({
+            "id": "e1",
+            "ledger": 5,
+            "ledger_closed_at": "2026-01-01T00:00:00Z",
+            "contract_id": "Crouter",
+            "tx_hash": "deadbeef",
+            "topics_xdr": [topic],
+            "value_xdr": value,
+        }));
+    });
+
+    let resp = t
+        .query()
+        .events(EventsRequest {
+            start_ledger: 1,
+            cursor: String::new(),
+            limit: 0,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+
+    let attributes = &resp.events[0].attributes;
+    assert!(attributes.contains("type=send_packet"), "got: {attributes}");
+    assert!(attributes.contains("packet_sequence=7"), "got: {attributes}");
+    assert!(
+        attributes.contains("packet_src_channel=07-tendermint-0"),
+        "got: {attributes}"
+    );
+    assert!(
+        attributes.contains("packet_dst_channel=08-wasm-0"),
+        "got: {attributes}"
+    );
+    assert!(
+        attributes.contains("packet_src_port=transfer"),
+        "got: {attributes}"
+    );
+    assert!(
+        attributes.contains("packet_dst_port=transfer"),
+        "got: {attributes}"
+    );
 }
 
 #[tokio::test]

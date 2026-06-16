@@ -15,6 +15,17 @@ use soroban_client::xdr::{
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
+use ibc::clients::tendermint::client_state::ClientState as TmClientState;
+use ibc::clients::tendermint::consensus_state::ConsensusState as TmConsensusState;
+use ibc::core::commitment_types::specs::ProofSpecs;
+use ibc::primitives::proto::Protobuf;
+use ibc_proto::google::protobuf::{Duration as PbDuration, Timestamp};
+use ibc_proto::ibc::core::client::v1::Height as RawHeight;
+use ibc_proto::ibc::core::commitment::v1::MerkleRoot;
+use ibc_proto::ibc::lightclients::tendermint::v1::{
+    ClientState as RawTmClientState, ConsensusState as RawTmConsensusState, Fraction,
+};
+
 use stellar_hermes_gateway::config::GatewayConfig;
 use stellar_hermes_gateway::proto::stellar_gateway_msg_client::StellarGatewayMsgClient;
 use stellar_hermes_gateway::proto::stellar_gateway_query_client::StellarGatewayQueryClient;
@@ -289,4 +300,59 @@ pub fn ledger_meta_with_write(contract: [u8; 32], key: Vec<u8>, val: Vec<u8>) ->
         scp_info: VecM::default(),
     };
     LedgerCloseMeta::V0(v0).to_xdr(Limits::none()).unwrap()
+}
+
+pub const FIXTURE_CHAIN_ID: &str = "testchain-1";
+pub const FIXTURE_LATEST_HEIGHT: u64 = 10;
+
+#[allow(deprecated)]
+pub fn tm_client_state_protobuf() -> Vec<u8> {
+    let raw = RawTmClientState {
+        chain_id: FIXTURE_CHAIN_ID.to_string(),
+        trust_level: Some(Fraction {
+            numerator: 1,
+            denominator: 3,
+        }),
+        trusting_period: Some(PbDuration {
+            seconds: 1_209_600,
+            nanos: 0,
+        }),
+        unbonding_period: Some(PbDuration {
+            seconds: 1_814_400,
+            nanos: 0,
+        }),
+        max_clock_drift: Some(PbDuration {
+            seconds: 40,
+            nanos: 0,
+        }),
+        frozen_height: Some(RawHeight {
+            revision_number: 0,
+            revision_height: 0,
+        }),
+        latest_height: Some(RawHeight {
+            revision_number: 0,
+            revision_height: FIXTURE_LATEST_HEIGHT,
+        }),
+        proof_specs: ProofSpecs::cosmos().into(),
+        upgrade_path: vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
+        allow_update_after_expiry: false,
+        allow_update_after_misbehaviour: false,
+    };
+    let cs = TmClientState::try_from(raw).unwrap();
+    Protobuf::<RawTmClientState>::encode_vec(cs)
+}
+
+pub fn tm_consensus_state_protobuf() -> Vec<u8> {
+    let raw = RawTmConsensusState {
+        timestamp: Some(Timestamp {
+            seconds: 1_700_000_000,
+            nanos: 0,
+        }),
+        root: Some(MerkleRoot {
+            hash: vec![9u8; 32],
+        }),
+        next_validators_hash: vec![7u8; 32],
+    };
+    let cons = TmConsensusState::try_from(raw).unwrap();
+    Protobuf::<RawTmConsensusState>::encode_vec(cons)
 }
