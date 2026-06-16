@@ -1,12 +1,13 @@
 use std::path::Path;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use base64::Engine;
 use sha2::{Digest, Sha256};
 
 use crate::contracts::config::ContractsConfig;
-use crate::{logger, probe, run};
+use crate::cosmos::tx::CosmosSigner;
+use crate::{logger, run};
 
 const CRATE: &str = "light-client-wasm";
 const DEPOSIT_AMOUNT: u64 = 10_000_000;
@@ -41,66 +42,58 @@ pub async fn upload(
 
     let (bytes, local_sha) = build_wasm(root)?;
 
-    if !probe::http_ok(http, &format!("{}/cosmos/node-info", cfg.api_url)).await {
+    let cosmos = crate::cosmos::config::CosmosConfig::devnet();
+    let signer = CosmosSigner::from_config(&cosmos, http.clone())?;
+
+    if !signer.node_info_ok().await {
         logger::warn(&format!(
-            "api not reachable at {} — start it with: interstellar api start",
-            cfg.api_url
+            "cosmos REST not reachable at {} — start it with: interstellar cosmos start",
+            cosmos.rest_url
         ));
 
         return Ok(());
     }
 
-    let proposer = proposer_address(http, cfg).await?;
+    let proposer = signer.proposer_address()?.to_string();
     logger::step(&format!("funding proposer {proposer}"));
-    post(
-        http,
-        &format!("{}/cosmos/bank/send", cfg.api_url),
-        serde_json::json!({
-            "to": proposer,
-            "amount": FUND_AMOUNT,
-            "gas_limit": FUND_GAS_LIMIT,
-            "fee_amount": FUND_FEE_AMOUNT,
-            "skip_if_account_exists": true,
-        }),
-    )
-    .await?;
+    if signer
+        .fund_account(
+            &proposer,
+            FUND_AMOUNT as u128,
+            FUND_GAS_LIMIT,
+            FUND_FEE_AMOUNT as u128,
+            true,
+        )
+        .await?
+    {
+        logger::ok("proposer funded");
+    } else {
+        logger::detail("proposer already has an account, skipping funding");
+    }
 
     logger::step("submitting store-code proposal");
-    let wasm_b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-    let store = post(
-        http,
-        &format!("{}/cosmos/ibc-wasm/store-code", cfg.api_url),
-        serde_json::json!({
-            "wasm_base64": wasm_b64,
-            "title": format!("upload-light-client-wasm: {CRATE}"),
-            "summary": "Registers light_client_wasm.wasm for the 08-wasm client type",
-            "deposit_amount": DEPOSIT_AMOUNT,
-            "gas_limit": STORE_GAS_LIMIT,
-            "fee_amount": STORE_FEE_AMOUNT,
-            "wait_for_landing": true,
-            "wait_timeout_secs": TX_WAIT_TIMEOUT_SECS,
-        }),
-    )
-    .await?;
-
-    let proposal_id = store
-        .get("proposal_id")
-        .and_then(|v| v.as_u64())
-        .ok_or_else(|| anyhow!("proposal_id not present in api response: {store}"))?;
+    let proposal_id = signer
+        .submit_store_code(
+            bytes,
+            format!("upload-light-client-wasm: {CRATE}"),
+            "Registers light_client_wasm.wasm for the 08-wasm client type".to_string(),
+            DEPOSIT_AMOUNT as u128,
+            STORE_GAS_LIMIT,
+            STORE_FEE_AMOUNT as u128,
+            Duration::from_secs(TX_WAIT_TIMEOUT_SECS),
+        )
+        .await?;
     logger::ok(&format!("proposal id: {proposal_id}"));
 
     logger::step(&format!("voting YES on proposal {proposal_id}"));
-    post(
-        http,
-        &format!("{}/cosmos/gov/vote", cfg.api_url),
-        serde_json::json!({
-            "proposal_id": proposal_id,
-            "option": VOTE_OPTION,
-            "gas_limit": VOTE_GAS_LIMIT,
-            "fee_amount": VOTE_FEE_AMOUNT,
-        }),
-    )
-    .await?;
+    signer
+        .vote(
+            proposal_id,
+            VOTE_OPTION as i32,
+            VOTE_GAS_LIMIT,
+            VOTE_FEE_AMOUNT as u128,
+        )
+        .await?;
 
     logger::detail(&format!(
         "waiting {VOTING_PERIOD_SECS}s for the voting period"
@@ -108,19 +101,17 @@ pub async fn upload(
     tokio::time::sleep(Duration::from_secs(VOTING_PERIOD_SECS)).await;
 
     logger::step("verifying checksum on-chain");
-    if !checksum_registered(http, cfg, local_sha.as_str()).await {
+    if !checksum_registered(&signer, local_sha.as_str()).await {
         bail!("local sha256 {local_sha} did not appear in on-chain checksums (proposal may not have passed)");
     }
     logger::ok(&format!("wasm registered with checksum {local_sha}"));
 
-    logger::step("patching wasm_checksum_hex via api");
-    post(
-        http,
-        &format!("{}/hermes/wasm-checksum", cfg.api_url),
-        serde_json::json!({ "checksum": local_sha }),
-    )
-    .await?;
-    logger::ok("hermes config patched");
+    logger::step("patching wasm_checksum_hex in the hermes config");
+    if crate::hermes::patch_wasm_checksum(Path::new(&cfg.hermes_config), &local_sha)? {
+        logger::ok(&format!("hermes config patched ({})", cfg.hermes_config));
+    } else {
+        logger::detail("hermes config already had this checksum");
+    }
 
     Ok(())
 }
@@ -333,26 +324,10 @@ fn ensure_gaiad_key(root: &Path, name: &str, mnemonic: &str, keyring: &str) -> R
     Ok(())
 }
 
-async fn checksum_registered(
-    http: &reqwest::Client,
-    cfg: &ContractsConfig,
-    local_sha: &str,
-) -> bool {
-    let url = format!("{}/cosmos/ibc-wasm/checksums", cfg.api_url);
-
+async fn checksum_registered(signer: &CosmosSigner, local_sha: &str) -> bool {
     for attempt in 1..=VERIFY_RETRIES {
-        if let Some(value) = probe::get_json(http, &url).await {
-            let present = value
-                .get("checksums")
-                .and_then(|c| c.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str())
-                        .any(|c| c.eq_ignore_ascii_case(local_sha))
-                })
-                .unwrap_or(false);
-
-            if present {
+        if let Ok(checksums) = signer.checksums().await {
+            if checksums.iter().any(|c| c.eq_ignore_ascii_case(local_sha)) {
                 return true;
             }
         }
@@ -364,42 +339,4 @@ async fn checksum_registered(
     }
 
     false
-}
-
-async fn proposer_address(http: &reqwest::Client, cfg: &ContractsConfig) -> Result<String> {
-    let value = probe::get_json(http, &format!("{}/cosmos/proposer", cfg.api_url))
-        .await
-        .ok_or_else(|| {
-            anyhow!("api did not return a proposer (COSMOS_PROPOSER_PRIVATE_KEY missing?)")
-        })?;
-
-    value
-        .get("address")
-        .and_then(|a| a.as_str())
-        .filter(|s| !s.is_empty())
-        .map(str::to_string)
-        .ok_or_else(|| anyhow!("api proposer response missing address"))
-}
-
-async fn post(
-    http: &reqwest::Client,
-    url: &str,
-    body: serde_json::Value,
-) -> Result<serde_json::Value> {
-    let resp = http
-        .post(url)
-        .json(&body)
-        .timeout(Duration::from_secs(TX_WAIT_TIMEOUT_SECS + 30))
-        .send()
-        .await
-        .with_context(|| format!("POST {url}"))?;
-
-    let status = resp.status();
-    let text = resp.text().await.unwrap_or_default();
-
-    if !status.is_success() {
-        bail!("POST {url} -> {status}: {text}");
-    }
-
-    Ok(serde_json::from_str(&text).unwrap_or(serde_json::Value::Null))
 }

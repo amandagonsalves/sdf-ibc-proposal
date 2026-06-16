@@ -11,7 +11,7 @@ pub struct ContractsConfig {
     pub mock_client_type: String,
     pub attestation_client_type: String,
     pub tendermint_client_type: String,
-    pub api_url: String,
+    pub hermes_config: String,
 }
 
 impl From<&Config> for ContractsConfig {
@@ -27,7 +27,7 @@ impl From<&Config> for ContractsConfig {
             mock_client_type: cfg.deployment.mock_client_type.clone(),
             attestation_client_type: cfg.deployment.attestation_client_type.clone(),
             tendermint_client_type: cfg.deployment.tendermint_client_type.clone(),
-            api_url: cfg.stellar.api_url.clone(),
+            hermes_config: cfg.hermes.config.clone(),
         }
     }
 }

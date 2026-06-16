@@ -22,3 +22,6 @@ base64 = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 indicatif = "0.17.8"
+cosmrs = { workspace = true }
+ibc-proto = { workspace = true }
+prost = "0.13"

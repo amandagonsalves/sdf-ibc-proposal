@@ -83,24 +83,13 @@ services:
         required: false
     ports:
       - "${STELLAR_API_PORT}:${STELLAR_API_PORT}"
-    volumes:
-      - ./hermes-config.toml:/etc/hermes/config.toml:rw
     environment:
       STELLAR_API_HOST: "0.0.0.0"
       STELLAR_API_PORT: "${STELLAR_API_PORT}"
       STELLAR_RPC_URL: "${STELLAR_RPC_URL}"
       NETWORK_PASSPHRASE: "${NETWORK_PASSPHRASE}"
-      STELLAR_SIGNING_KEY: "${STELLAR_SIGNING_KEY}"
       ROUTER_CONTRACT_ADDRESS: "${ROUTER_CONTRACT_ADDRESS}"
       TRANSFER_CONTRACT_ADDRESS: "${TRANSFER_CONTRACT_ADDRESS}"
-      COSMOS_CHAIN_ID: "${COSMOS_CHAIN_ID}"
-      COSMOS_REST_URL: "http://cosmos:1317"
-      COSMOS_RPC_URL: "http://cosmos:26657"
-      COSMOS_ACCOUNT_PREFIX: "${COSMOS_ACCOUNT_PREFIX}"
-      COSMOS_GAS_DENOM: "${COSMOS_GAS_DENOM}"
-      COSMOS_PROPOSER_PRIVATE_KEY: "${COSMOS_PROPOSER_PRIVATE_KEY}"
-      COSMOS_FUNDER_PRIVATE_KEY: "${COSMOS_FUNDER_PRIVATE_KEY}"
-      HERMES_CONFIG_PATH: "/etc/hermes/config.toml"
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:${STELLAR_API_PORT}/health"]
       interval: 10s
