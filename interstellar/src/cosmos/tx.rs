@@ -27,8 +27,8 @@ fn load_key(hex_str: &str, prefix: &str, label: &str) -> Result<Option<Account>>
         return Ok(None);
     }
     let bytes = hex::decode(trimmed).with_context(|| format!("{label} is not valid hex"))?;
-    let key =
-        SigningKey::from_slice(&bytes).map_err(|e| anyhow!("invalid {label} secp256k1 key: {e}"))?;
+    let key = SigningKey::from_slice(&bytes)
+        .map_err(|e| anyhow!("invalid {label} secp256k1 key: {e}"))?;
     let address = key
         .public_key()
         .account_id(prefix)
@@ -115,7 +115,14 @@ impl CosmosSigner {
     /// On-chain checksums registered for the 08-wasm client type.
     pub async fn checksums(&self) -> Result<Vec<String>> {
         let url = self.rest("/ibc/lightclients/wasm/v1/checksums");
-        let body: Value = self.http.get(&url).send().await?.error_for_status()?.json().await?;
+        let body: Value = self
+            .http
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         Ok(body
             .get("checksums")
             .and_then(|c| c.as_array())
@@ -139,7 +146,14 @@ impl CosmosSigner {
 
     async fn account_info(&self, address: &str) -> Result<AccountInfo> {
         let url = self.rest(&format!("/cosmos/auth/v1beta1/accounts/{address}"));
-        let body: Value = self.http.get(&url).send().await?.error_for_status()?.json().await?;
+        let body: Value = self
+            .http
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         let account = body
             .get("account")
             .ok_or_else(|| anyhow!("response missing 'account': {body}"))?;
@@ -161,7 +175,14 @@ impl CosmosSigner {
 
     async fn gov_module_address(&self) -> Result<String> {
         let url = self.rest("/cosmos/auth/v1beta1/module_accounts/gov");
-        let body: Value = self.http.get(&url).send().await?.error_for_status()?.json().await?;
+        let body: Value = self
+            .http
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         body.pointer("/account/value/address")
             .or_else(|| body.pointer("/account/base_account/address"))
             .or_else(|| body.pointer("/account/address"))
@@ -253,7 +274,10 @@ impl CosmosSigner {
                 .and_then(|v| v.as_str())
                 .unwrap_or_default()
                 .to_string(),
-            code: tx_response.get("code").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+            code: tx_response
+                .get("code")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as u32,
             raw_log: tx_response
                 .get("raw_log")
                 .and_then(|v| v.as_str())
@@ -293,7 +317,11 @@ impl CosmosSigner {
             .sign_and_broadcast(funder, msg_any, "bank-send", gas_limit, fee_amount)
             .await?;
         if result.code != 0 {
-            bail!("bank send rejected (code {}): {}", result.code, result.raw_log);
+            bail!(
+                "bank send rejected (code {}): {}",
+                result.code,
+                result.raw_log
+            );
         }
         Ok(true)
     }
@@ -366,7 +394,10 @@ impl CosmosSigner {
         }
 
         extract_proposal_id(&landed).ok_or_else(|| {
-            anyhow!("proposal_id not found in landed tx {} events", result.tx_hash)
+            anyhow!(
+                "proposal_id not found in landed tx {} events",
+                result.tx_hash
+            )
         })
     }
 

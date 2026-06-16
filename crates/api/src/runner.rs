@@ -114,8 +114,7 @@ pub async fn run(cfg: ApiConfig) -> anyhow::Result<()> {
 
     let addr = cfg.addr();
 
-    let rpc =
-        RpcClient::new(cfg.rpc_url.as_str()).expect("could not create a new rpc client");
+    let rpc = RpcClient::new(cfg.rpc_url.as_str()).expect("could not create a new rpc client");
 
     let state = Arc::new(AppState::new(
         rpc,
