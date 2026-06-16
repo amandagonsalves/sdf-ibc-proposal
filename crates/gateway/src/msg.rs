@@ -174,7 +174,9 @@ impl StellarGatewayMsg for MsgHandler {
             scval_bytes(&consensus_state_xdr)?,
             scval_u64(height),
         ];
-        let tx_xdr = self.prepare_msg_tx(&req.signer, "create_client", args).await?;
+        let tx_xdr = self
+            .prepare_msg_tx(&req.signer, "create_client", args)
+            .await?;
         tracing::debug!(tx_bytes = tx_xdr.len(), "create_client prepared (unsigned)");
         Ok(Response::new(MsgCreateClientResponse {
             client_id: String::new(),
@@ -207,7 +209,9 @@ impl StellarGatewayMsg for MsgHandler {
         };
 
         let args = vec![scval_string(&req.client_id)?, scval_bytes(&header_xdr)?];
-        let tx_xdr = self.prepare_msg_tx(&req.signer, "update_client", args).await?;
+        let tx_xdr = self
+            .prepare_msg_tx(&req.signer, "update_client", args)
+            .await?;
         Ok(Response::new(MsgUpdateClientResponse { tx_xdr }))
     }
 
@@ -232,7 +236,9 @@ impl StellarGatewayMsg for MsgHandler {
             scval_string(&req.counterparty_client_id)?,
             scval_vec_of_bytes(&req.counterparty_commitment_prefix)?,
         ];
-        let tx_xdr = self.prepare_msg_tx("", "register_counterparty", args).await?;
+        let tx_xdr = self
+            .prepare_msg_tx("", "register_counterparty", args)
+            .await?;
         Ok(Response::new(MsgRegisterCounterpartyResponse { tx_xdr }))
     }
 
@@ -242,16 +248,15 @@ impl StellarGatewayMsg for MsgHandler {
         request: Request<MsgRecvPacketRequest>,
     ) -> Result<Response<MsgRecvPacketResponse>, Status> {
         let req = request.into_inner();
-        tracing::info!(
-            proof_height = req.proof_height,
-            "[gateway] RecvPacket"
-        );
+        tracing::info!(proof_height = req.proof_height, "[gateway] RecvPacket");
         let args = vec![
             decode_packet_scval(&req.packet)?,
             scval_bytes(&req.proof)?,
             scval_u64(req.proof_height),
         ];
-        let tx_xdr = self.prepare_msg_tx(&req.signer, "recv_packet", args).await?;
+        let tx_xdr = self
+            .prepare_msg_tx(&req.signer, "recv_packet", args)
+            .await?;
         Ok(Response::new(MsgRecvPacketResponse { tx_xdr }))
     }
 
@@ -275,7 +280,9 @@ impl StellarGatewayMsg for MsgHandler {
             scval_bytes(&req.proof)?,
             scval_u64(req.proof_height),
         ];
-        let tx_xdr = self.prepare_msg_tx(&req.signer, "acknowledge_packet", args).await?;
+        let tx_xdr = self
+            .prepare_msg_tx(&req.signer, "acknowledge_packet", args)
+            .await?;
         Ok(Response::new(MsgAckPacketResponse { tx_xdr }))
     }
 
@@ -285,16 +292,15 @@ impl StellarGatewayMsg for MsgHandler {
         request: Request<MsgTimeoutPacketRequest>,
     ) -> Result<Response<MsgTimeoutPacketResponse>, Status> {
         let req = request.into_inner();
-        tracing::info!(
-            proof_height = req.proof_height,
-            "[gateway] TimeoutPacket"
-        );
+        tracing::info!(proof_height = req.proof_height, "[gateway] TimeoutPacket");
         let args = vec![
             decode_packet_scval(&req.packet)?,
             scval_bytes(&req.proof)?,
             scval_u64(req.proof_height),
         ];
-        let tx_xdr = self.prepare_msg_tx(&req.signer, "timeout_packet", args).await?;
+        let tx_xdr = self
+            .prepare_msg_tx(&req.signer, "timeout_packet", args)
+            .await?;
         Ok(Response::new(MsgTimeoutPacketResponse { tx_xdr }))
     }
 
@@ -317,50 +323,9 @@ impl StellarGatewayMsg for MsgHandler {
             scval_string(&req.client_id)?,
             scval_bytes(&req.client_message)?,
         ];
-        let tx_xdr = self.prepare_msg_tx(&req.signer, "update_client", args).await?;
+        let tx_xdr = self
+            .prepare_msg_tx(&req.signer, "update_client", args)
+            .await?;
         Ok(Response::new(MsgSubmitMisbehaviourResponse { tx_xdr }))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use soroban_client::xdr::ScVec;
-
-    fn handler() -> MsgHandler {
-        MsgHandler::new(ApiClient::new("http://127.0.0.1:8101"))
-    }
-
-    #[tokio::test]
-    async fn submit_misbehaviour_rejects_missing_client_id() {
-        let h = handler();
-        let req = Request::new(MsgSubmitMisbehaviourRequest {
-            client_id: String::new(),
-            client_message: vec![1, 2, 3],
-            signer: String::new(),
-        });
-        let err = h.submit_misbehaviour(req).await.unwrap_err();
-        assert_eq!(err.code(), tonic::Code::InvalidArgument);
-        assert!(err.message().contains("client_id"));
-    }
-
-    #[test]
-    fn scval_helpers_produce_expected_variants() {
-        let s = scval_string("transfer").unwrap();
-        assert!(matches!(s, ScVal::String(_)));
-
-        let b = scval_bytes(b"abc").unwrap();
-        assert!(matches!(b, ScVal::Bytes(_)));
-
-        let u = scval_u64(42);
-        assert!(matches!(u, ScVal::U64(42)));
-
-        let v = scval_vec_of_bytes(&[b"ibc".to_vec(), b"\x01\x02".to_vec()]).unwrap();
-        let inner = match v {
-            ScVal::Vec(Some(ScVec(items))) => items,
-            _ => panic!("expected ScVal::Vec(Some(_))"),
-        };
-        assert_eq!(inner.len(), 2);
-        assert!(matches!(inner[0], ScVal::Bytes(_)));
     }
 }

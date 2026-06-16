@@ -1,12 +1,6 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-pub mod config;
-pub mod event_decode;
-pub mod msg;
-pub mod proto;
-pub mod query;
-pub mod runner;
-pub mod state_tracker;
+use stellar_hermes_gateway::{config, runner};
 
 #[tokio::main]
 async fn main() {

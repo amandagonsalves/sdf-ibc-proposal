@@ -2,10 +2,8 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::{
-    config::GatewayConfig, msg::MsgHandler, query::QueryHandler, state_tracker::StateTracker,
-};
-use stellar_ibc_core::api_client::ApiClient;
+use crate::{config::GatewayConfig, msg::MsgHandler, query::QueryHandler};
+use stellar_ibc_core::{api_client::ApiClient, state::State};
 
 pub async fn run(cfg: GatewayConfig) {
     tracing::info!(
@@ -18,7 +16,7 @@ pub async fn run(cfg: GatewayConfig) {
     let api = ApiClient::new(&cfg.api_url);
 
     let ibc_contract_id = if cfg.ibc_contract_id.is_empty() {
-        tracing::warn!("ROUTER_CONTRACT_ADDRESS is empty — state tracker will accept any contract");
+        tracing::warn!("ROUTER_CONTRACT_ADDRESS is empty — state state will accept any contract");
         None
     } else {
         match stellar_strkey::Contract::from_string(&cfg.ibc_contract_id) {
@@ -30,7 +28,7 @@ pub async fn run(cfg: GatewayConfig) {
         }
     };
 
-    let tracker = Arc::new(Mutex::new(StateTracker::new(api.clone(), ibc_contract_id)));
+    let state = Arc::new(Mutex::new(State::new(api.clone(), ibc_contract_id)));
 
     let grpc_addr = cfg.grpc_addr();
 
@@ -56,7 +54,7 @@ pub async fn run(cfg: GatewayConfig) {
         .add_service(
             QueryHandler::new(
                 api.clone(),
-                tracker,
+                state,
                 Some(cfg.ibc_contract_id.clone()).filter(|s| !s.is_empty()),
             )
             .into_server(),

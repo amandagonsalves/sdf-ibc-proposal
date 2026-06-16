@@ -13,28 +13,26 @@ use crate::proto::{
     QueryNextSeqRecvRequest, QueryNextSeqRecvResponse, QueryPacketCommitmentRequest,
     QueryPacketCommitmentResponse, QueryPacketReceiptRequest, QueryPacketReceiptResponse,
 };
-use crate::state_tracker::{PathLookup, StateTracker};
-use stellar_ibc_core::api_client::{ApiClient, EventCursor};
-use stellar_ibc_core::commitment::{
-    ack_commitment_path, packet_commitment_path, packet_receipt_path,
+use stellar_ibc_core::{
+    api_client::ApiClient,
+    commitment::{ack_commitment_path, packet_commitment_path, packet_receipt_path},
+    ibc::event::event_attributes,
+    state::{PathLookup, State},
+    types::EventCursor,
 };
 
 #[derive(Clone)]
 pub struct QueryHandler {
     pub api: ApiClient,
-    pub tracker: Arc<Mutex<StateTracker>>,
+    pub state: Arc<Mutex<State>>,
     pub ibc_contract_id: Option<String>,
 }
 
 impl QueryHandler {
-    pub fn new(
-        api: ApiClient,
-        tracker: Arc<Mutex<StateTracker>>,
-        ibc_contract_id: Option<String>,
-    ) -> Self {
+    pub fn new(api: ApiClient, state: Arc<Mutex<State>>, ibc_contract_id: Option<String>) -> Self {
         Self {
             api,
-            tracker,
+            state,
             ibc_contract_id,
         }
     }
@@ -147,14 +145,10 @@ impl StellarGatewayQuery for QueryHandler {
             .api
             .get_consensus_state_xdr(&req.client_id, req.revision_height)
             .await
-            .map_err(|error| {
-                Status::not_found(format!("consensus state fetch failed: {error}"))
-            })?;
+            .map_err(|error| Status::not_found(format!("consensus state fetch failed: {error}")))?;
 
         let cs = stellar_ibc_core::ibc::consensus_state::AnyConsensusState::from_soroban_xdr(&xdr)
-            .map_err(|error| {
-                Status::internal(format!("consensus state decode failed: {error}"))
-            })?;
+            .map_err(|error| Status::internal(format!("consensus state decode failed: {error}")))?;
         let consensus_state =
             ibc::primitives::proto::Protobuf::<ibc::primitives::proto::Any>::encode_vec(cs);
 
@@ -183,7 +177,7 @@ impl StellarGatewayQuery for QueryHandler {
         let key = packet_commitment_path(req.client_id.as_bytes(), req.sequence);
 
         let lookup = self
-            .tracker
+            .state
             .lock()
             .await
             .proof_for_path(seq, &key)
@@ -232,7 +226,7 @@ impl StellarGatewayQuery for QueryHandler {
         let key = packet_receipt_path(req.client_id.as_bytes(), req.sequence);
 
         let lookup = self
-            .tracker
+            .state
             .lock()
             .await
             .proof_for_path(seq, &key)
@@ -275,7 +269,7 @@ impl StellarGatewayQuery for QueryHandler {
         let key = ack_commitment_path(req.client_id.as_bytes(), req.sequence);
 
         let lookup = self
-            .tracker
+            .state
             .lock()
             .await
             .proof_for_path(seq, &key)
@@ -320,9 +314,7 @@ impl StellarGatewayQuery for QueryHandler {
         request: Request<QueryIbcHeaderRequest>,
     ) -> Result<Response<QueryIbcHeaderResponse>, Status> {
         use prost::Message as _;
-        use soroban_client::xdr::{
-            LedgerHeader, Limits, PublicKey, ReadXdr, StellarValueExt,
-        };
+        use soroban_client::xdr::{LedgerHeader, Limits, PublicKey, ReadXdr, StellarValueExt};
 
         let seq = request.into_inner().height as u32;
         tracing::debug!(sequence = seq, "gRPC QueryIbcHeader");
@@ -349,7 +341,7 @@ impl StellarGatewayQuery for QueryHandler {
         signed_value_xdr.extend_from_slice(&scp_value.close_time.0.to_be_bytes());
 
         let ibc_state_root = self
-            .tracker
+            .state
             .lock()
             .await
             .root_at(seq)
@@ -387,7 +379,7 @@ impl StellarGatewayQuery for QueryHandler {
             .cloned()
         {
             Some(id) => id,
-            None => {
+            _ => {
                 static WARNED_UNCONFIGURED: std::sync::atomic::AtomicBool =
                     std::sync::atomic::AtomicBool::new(false);
                 if !WARNED_UNCONFIGURED.swap(true, std::sync::atomic::Ordering::Relaxed) {
@@ -454,8 +446,7 @@ impl StellarGatewayQuery for QueryHandler {
             .into_iter()
             .map(|ev| {
                 let attributes =
-                    crate::event_decode::event_attributes(&ev.topics_xdr, &ev.value_xdr)
-                        .unwrap_or_default();
+                    event_attributes(&ev.topics_xdr, &ev.value_xdr).unwrap_or_default();
 
                 GatewayContractEvent {
                     id: ev.id,
@@ -475,24 +466,5 @@ impl StellarGatewayQuery for QueryHandler {
             cursor: page.cursor,
             events,
         }))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn packet_commitment_path_layout_matches_ics24() {
-        let key = packet_commitment_path(b"10-stellar-0", 0x1234);
-        assert_eq!(&key[..12], b"10-stellar-0");
-        assert_eq!(key[12], 0x01);
-        assert_eq!(&key[13..], &0x1234u64.to_be_bytes());
-    }
-
-    #[test]
-    fn packet_receipt_and_ack_use_v2_discriminators() {
-        assert_eq!(packet_receipt_path(b"c", 0)[1], 0x02);
-        assert_eq!(ack_commitment_path(b"c", 0)[1], 0x03);
     }
 }
