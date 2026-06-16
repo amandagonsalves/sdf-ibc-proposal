@@ -1,18 +1,15 @@
 use std::sync::Arc;
 
+use tokio::net::TcpListener;
 use tokio::sync::Mutex;
+use tokio_stream::wrappers::TcpListenerStream;
+use tonic::transport::server::Router;
+use tonic::transport::Server;
 
 use crate::{config::GatewayConfig, msg::MsgHandler, query::QueryHandler};
 use stellar_ibc_core::{api_client::ApiClient, state::State};
 
-pub async fn run(cfg: GatewayConfig) {
-    tracing::info!(
-        grpc_port = cfg.grpc_port,
-        api_url = %cfg.api_url,
-        router = %cfg.ibc_contract_id,
-        "[gateway] starting"
-    );
-
+async fn build_router(cfg: &GatewayConfig) -> Router {
     let api = ApiClient::new(&cfg.api_url);
 
     let ibc_contract_id = if cfg.ibc_contract_id.is_empty() {
@@ -30,8 +27,6 @@ pub async fn run(cfg: GatewayConfig) {
 
     let state = Arc::new(Mutex::new(State::new(api.clone(), ibc_contract_id)));
 
-    let grpc_addr = cfg.grpc_addr();
-
     let (health_reporter, health_service) = tonic_health::server::health_reporter();
     health_reporter
         .set_service_status("", tonic_health::ServingStatus::Serving)
@@ -46,9 +41,7 @@ pub async fn run(cfg: GatewayConfig) {
         .build_v1()
         .expect("gRPC reflection service failed to build");
 
-    tracing::info!(%grpc_addr, "[gateway] listening");
-
-    tonic::transport::Server::builder()
+    Server::builder()
         .add_service(reflection_service)
         .add_service(health_service)
         .add_service(
@@ -60,6 +53,31 @@ pub async fn run(cfg: GatewayConfig) {
             .into_server(),
         )
         .add_service(MsgHandler::new(api.clone()).into_server())
+}
+
+pub async fn serve_with_listener(
+    cfg: GatewayConfig,
+    listener: TcpListener,
+) -> Result<(), tonic::transport::Error> {
+    build_router(&cfg)
+        .await
+        .serve_with_incoming(TcpListenerStream::new(listener))
+        .await
+}
+
+pub async fn run(cfg: GatewayConfig) {
+    tracing::info!(
+        grpc_port = cfg.grpc_port,
+        api_url = %cfg.api_url,
+        router = %cfg.ibc_contract_id,
+        "[gateway] starting"
+    );
+
+    let grpc_addr = cfg.grpc_addr();
+    tracing::info!(%grpc_addr, "[gateway] listening");
+
+    build_router(&cfg)
+        .await
         .serve(grpc_addr)
         .await
         .expect("gRPC server failed");

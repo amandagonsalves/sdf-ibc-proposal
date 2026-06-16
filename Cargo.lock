@@ -2585,6 +2585,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "integration-tests"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "hex",
+ "serde_json",
+ "soroban-client",
+ "stellar-hermes-gateway",
+ "stellar-ibc-core",
+ "stellar-strkey 0.0.16",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4231,6 +4247,7 @@ dependencies = [
  "stellar-strkey 0.0.16",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-health",
  "tonic-prost",
@@ -4272,6 +4289,8 @@ dependencies = [
  "soroban-client",
  "stellar-xdr",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

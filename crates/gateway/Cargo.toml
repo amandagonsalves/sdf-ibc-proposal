@@ -21,6 +21,7 @@ tonic-reflection = { workspace = true }
 prost = { workspace = true }
 
 tokio = { workspace = true }
+tokio-stream = { version = "0.1", features = ["net"] }
 
 soroban-client = { workspace = true }
 stellar-strkey = { workspace = true }
