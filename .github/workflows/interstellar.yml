@@ -68,7 +68,7 @@ jobs:
           sudo apt-get install -y protobuf-compiler
 
       - name: install stellar cli
-        run: cargo install --locked stellar-cli
+        uses: stellar/stellar-cli@v27.0.0
 
       - name: write .env
         run: |
