@@ -26,16 +26,31 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  setup:
+    name: select ics flows
+    runs-on: ubuntu-latest
+    outputs:
+      ics: ${{ steps.pick.outputs.ics }}
+    steps:
+      - name: pick ics matrix
+        id: pick
+        run: |
+          if [ "${{ inputs.ics }}" = "all" ]; then
+            echo 'ics=["clients","counterparty","transfer","query"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ics=["${{ inputs.ics }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
   ics:
     name: ics ${{ matrix.ics }}
-    if: ${{ inputs.ics == 'all' || inputs.ics == matrix.ics }}
+    needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     strategy:
       fail-fast: false
       matrix:
-        ics: [clients, counterparty, transfer, query]
+        ics: ${{ fromJSON(needs.setup.outputs.ics) }}
 
     steps:
       - name: checkout
