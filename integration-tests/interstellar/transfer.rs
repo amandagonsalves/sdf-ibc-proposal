@@ -2,10 +2,11 @@ use std::path::Path;
 
 use anyhow::{bail, Result};
 
-use crate::clients::config::ClientsConfig;
 use crate::config::Config;
-use crate::transfer::TransferParams;
-use crate::{clients, logger, logs, probe, transfer};
+use crate::tx::clients;
+use crate::tx::clients::config::ClientsConfig;
+use crate::tx::transfer::{self, TransferParams};
+use crate::{logger, logs, probe};
 
 pub async fn run(cfg: &Config, root: &Path, http: &reqwest::Client) -> Result<()> {
     let cc = ClientsConfig::from(cfg);
@@ -25,6 +26,7 @@ pub async fn run(cfg: &Config, root: &Path, http: &reqwest::Client) -> Result<()
         denom: "stake".to_string(),
         amount: 1000,
         receiver: receiver.clone(),
+        sender: String::new(),
         memo: String::new(),
         timeout_secs: 600,
         mint: true,

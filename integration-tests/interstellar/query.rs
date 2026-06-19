@@ -2,8 +2,8 @@ use std::path::Path;
 
 use anyhow::{bail, Result};
 
-use crate::clients::config::ClientsConfig;
 use crate::config::Config;
+use crate::tx::clients::config::ClientsConfig;
 use crate::{logger, probe};
 
 pub async fn run(cfg: &Config, _root: &Path, http: &reqwest::Client) -> Result<()> {
