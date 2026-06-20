@@ -182,12 +182,18 @@ fn build_one(cfg: &Config, root: &Path, service: Service, push: bool) -> Result<
     logger::banner(&format!("services {verb} {}", service.compose()));
     logger::detail(&format!("image: {}", service.image(cfg)));
 
-    match service {
-        Service::Hermes => build_hermes(cfg, root),
-        Service::Api => build_image(cfg, root, service, "crates/api/Dockerfile", push),
-        Service::Gateway => build_image(cfg, root, service, "crates/gateway/Dockerfile", push),
-        Service::Cosmos => Ok(()),
-    }
+    let (dockerfile, context) = match service {
+        Service::Api => ("crates/api/Dockerfile".to_string(), ".".to_string()),
+        Service::Gateway => ("crates/gateway/Dockerfile".to_string(), ".".to_string()),
+        Service::Hermes => {
+            let repo = ensure_hermes_repo(cfg, root)?;
+
+            (format!("{repo}/ci/release/hermes.Dockerfile"), repo)
+        }
+        Service::Cosmos => return Ok(()),
+    };
+
+    build_image(cfg, root, service, &dockerfile, &context, push)
 }
 
 fn build_image(
@@ -195,16 +201,21 @@ fn build_image(
     root: &Path,
     service: Service,
     dockerfile: &str,
+    context: &str,
     push: bool,
 ) -> Result<()> {
     let image = service.image(cfg);
 
     if !push {
-        return tools::docker::command(root, &["build", "-t", &image, "-f", dockerfile, "."]);
+        logger::step("docker build (host arch)");
+
+        return tools::docker::command(root, &["build", "-t", &image, "-f", dockerfile, context]);
     }
 
     docker_login(root)?;
     ensure_builder(root);
+
+    logger::step(&format!("buildx build --push ({PLATFORMS})"));
 
     tools::docker::command(
         root,
@@ -220,36 +231,7 @@ fn build_image(
             "--push",
             "-f",
             dockerfile,
-            ".",
-        ],
-    )
-}
-
-fn build_hermes(cfg: &Config, root: &Path) -> Result<()> {
-    let image = cfg.hermes.image.reference();
-    let repo = ensure_hermes_repo(cfg, root)?;
-    let dockerfile = format!("{repo}/ci/release/hermes.Dockerfile");
-
-    docker_login(root)?;
-    ensure_builder(root);
-
-    logger::step("buildx build --push (multi-arch)");
-
-    tools::docker::command(
-        root,
-        &[
-            "buildx",
-            "build",
-            "--builder",
-            BUILDX_BUILDER,
-            "--platform",
-            PLATFORMS,
-            "-t",
-            &image,
-            "--push",
-            "-f",
-            &dockerfile,
-            &repo,
+            context,
         ],
     )
 }
