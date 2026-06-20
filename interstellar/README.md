@@ -197,20 +197,22 @@ with neither it reads both. `--client-id` restricts to a single client.
 ## `test` — ICS integration flows
 
 ```sh
-interstellar test [--ics clients|counterparty|transfer|query]
+interstellar test [--ics ics02-clients|ics02-counterparty|ics20-transfer|ics02-query]
 ```
 
 Runs the happy-path integration flow for each ICS milestone against a **running
 stack** (bring it up first with `interstellar start`). With no `--ics`, every
 flow runs in dependency order and a summary is printed; the command exits
-non-zero if any flow fails.
+non-zero if any flow fails. Flows are labelled by IBC standard — client
+lifecycle, counterparty registration, and client-state queries are all ICS-02
+under Eureka; token transfer is ICS-20.
 
 | ICS | What it asserts |
 |---|---|
-| `clients` | creates the Cosmos (`07-tendermint`) and Stellar (`08-wasm`) clients and checks the returned ids |
-| `counterparty` | bootstraps clients + counterparties and checks the Stellar router lists the paired clients |
-| `transfer` | originates a Stellar→Cosmos ICS-20 transfer, waits for the relay round trip to close, and checks the Cosmos voucher increased |
-| `query` | checks the api `/health` + `/stellar/clients` reads and the Cosmos `/status` read |
+| `ics02-clients` | creates the Cosmos (`07-tendermint`) and Stellar (`08-wasm`) clients and checks the returned ids |
+| `ics02-counterparty` | bootstraps clients + counterparties and checks the Stellar router lists the paired clients |
+| `ics20-transfer` | originates a Stellar→Cosmos ICS-20 transfer, waits for the relay round trip to close, and checks the Cosmos voucher increased |
+| `ics02-query` | checks the api `/health` + `/stellar/clients` reads and the Cosmos `client_states` read |
 
 The flow bodies live in `integration-tests/interstellar/` (one file per ICS).
 CI runs them per-milestone via the `interstellar.yml` workflow — each ICS is a

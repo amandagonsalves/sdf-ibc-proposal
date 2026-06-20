@@ -11,26 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  clients:
+  ics02-clients:
     uses: ./.github/workflows/interstellar-ics.yml
     secrets: inherit
     with:
-      ics: clients
+      ics: ics02-clients
 
-  counterparty:
+  ics02-counterparty:
     uses: ./.github/workflows/interstellar-ics.yml
     secrets: inherit
     with:
-      ics: counterparty
+      ics: ics02-counterparty
 
-  transfer:
+  ics20-transfer:
     uses: ./.github/workflows/interstellar-ics.yml
     secrets: inherit
     with:
-      ics: transfer
+      ics: ics20-transfer
 
-  query:
+  ics02-query:
     uses: ./.github/workflows/interstellar-ics.yml
     secrets: inherit
     with:
-      ics: query
+      ics: ics02-query
