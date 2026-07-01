@@ -1,7 +1,7 @@
 ---
 title: Roadmap
 layout: default
-nav_order: 4
+nav_order: 5
 description: >-
   What the Stellar IBC Eureka project delivers, what already works, and the
   staged path from devnet to mainnet.

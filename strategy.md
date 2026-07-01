@@ -1,7 +1,7 @@
 ---
 title: Strategy
 layout: default
-nav_order: 2
+nav_order: 3
 description: >-
   Why the Stellar IBC Eureka project exists, what it builds, and the reasoning
   behind each architectural choice.

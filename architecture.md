@@ -1,7 +1,7 @@
 ---
 title: Architecture
 layout: default
-nav_order: 3
+nav_order: 4
 description: >-
   The trust model, components, data flows, and sequence diagrams of the
   Stellar IBC v2 (Eureka) bridge.

@@ -20,6 +20,7 @@ configuration.
 | Page | Source |
 |---|---|
 | Home / overview | [`index.md`](index.md) |
+| Value & Comparison — the *worth*, with metrics and bridge comparison | [`value.md`](value.md) |
 | Strategy — the *why* | [`strategy.md`](strategy.md) |
 | Architecture — the *how*, with sequence diagrams | [`architecture.md`](architecture.md) |
 | Roadmap — deliverables from devnet to mainnet | [`roadmap.md`](roadmap.md) |
