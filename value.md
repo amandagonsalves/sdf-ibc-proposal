@@ -189,11 +189,11 @@ see [Strategy](strategy.html).
 Figures captured **July 2026**. Notes on methodology:
 
 - **Stellar network figures** (RWAs, stablecoin payment volume, accounts) are
-  from the Stellar Development Foundation's Q1 2026 report; treat as
+  from the Stellar Development Foundation's Q1 2026 report; treated as
   company-reported.
 - **IBC 30-day volume** is given as a range: the live Map of Zones API's
   "switched" (net) figure (~$499M) versus its published gross figure (~$2.7B).
-  Cite the conservative end for defensibility.
+  Cited the conservative end for defensibility.
 
 ### Metrics
 
