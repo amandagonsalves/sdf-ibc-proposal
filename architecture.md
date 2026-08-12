@@ -4,13 +4,13 @@ layout: default
 nav_order: 4
 description: >-
   The trust model, components, data flows, and sequence diagrams of the
-  Stellar IBC v2 (Eureka) bridge.
+  Interstellar, the IBC v2 (Eureka) implementation for Stellar.
 ---
 
 # Architecture
 {: .no_toc }
 
-How the Stellar IBC v2 (Eureka) bridge is put together: the trust model, the
+How Interstellar is put together: the trust model, the
 components and their responsibilities, the data flows that move a transfer across
 chains, and how it all runs. Written for reviewers, integrators, and
 contributors.
@@ -57,8 +57,8 @@ security of the two underlying chains — nothing weaker.
 | Role | Holds funds? | Holds keys? | Trusted for correctness? |
 |---|---|---|---|
 | `ibc-router` + light clients (on-chain) | escrow only | — | **yes** — this is the verification root |
-| `stellar-api` | no | yes (relayer signing key) | no — only signs what the relayer asks |
-| `stellar-hermes-gateway` | no | no | no — pure transport/encoding |
+| `interstellar-api` | no | yes (relayer signing key) | no — only signs what the relayer asks |
+| `interstellar-gateway` | no | no | no — pure transport/encoding |
 | Hermes relayer | no | yes (its own fee key) | no — a wrong/missing relay cannot forge a packet, only delay it |
 
 A malicious relayer can censor or stall, but cannot mint, steal, or forge — the
@@ -140,10 +140,15 @@ orchestration.
 
 | Component | Responsibility |
 |---|---|
-| **`stellar-hermes-gateway`** | The gRPC service the relayer talks to (`StellarGatewayQuery` + `StellarGatewayMsg`). Holds **no** Soroban connection and **no** key — every call is fulfilled through `ApiClient` against `stellar-api`. Tracks the SMT root, produces ICS-23 proofs, and decodes Soroban router events into IBC-shaped attributes. |
-| **`stellar-api`** | The standalone HTTP service that owns the Soroban RPC connection and the signing key. Builds unsigned transactions, submits signed transactions, and exposes ledger / account / event reads plus Cosmos-side governance and bank helpers. Splitting it from the gateway means the key lives in exactly one place and the gateway stays a stateless protocol adapter. |
+| **`interstellar-gateway`** | The gRPC service the relayer talks to (`StellarGatewayQuery` + `StellarGatewayMsg`). Holds **no** Soroban connection and **no** key — every call is fulfilled through `ApiClient` against `interstellar-api`. Tracks the SMT root, produces ICS-23 proofs, and decodes Soroban router events into IBC-shaped attributes. |
+| **`interstellar-api`** | The standalone HTTP service that owns the Soroban RPC connection and the signing key. Builds unsigned transactions, submits signed transactions, and exposes ledger / account / event reads plus Cosmos-side governance and bank helpers. Splitting it from the gateway means the key lives in exactly one place and the gateway stays a stateless protocol adapter. |
 
-### c. Relayer (Hermes fork)
+### c. Relayer — Hermes today, the Cosmos IBC v2 relayer next
+
+The link runs end to end today on a fork of **Hermes** carrying Stellar support:
+token transfers work in both directions, with commitments, receipts,
+acknowledgements and timeouts exercised against a live Stellar testnet and a
+Cosmos devnet.
 
 | Component | Responsibility |
 |---|---|
@@ -151,11 +156,37 @@ orchestration.
 | **`ics10-stellar` client types** | Stellar client / consensus state types and the v2 message encodings; unwraps the `08-wasm` envelope so the relayer can track the Stellar client on the counterparty like a native one. |
 | **`stellar-packet` worker** | The custom v2 relay worker. IBC v2 has no channels, so it is **client-paired** rather than channel-paired; it drives recv, the ack-back leg, and timeout, carrying a proof source, client updater, and submitter for **each** direction. |
 
+#### Migrating to the Cosmos IBC v2 relayer
+
+That relayer is being migrated to the **Cosmos IBC v2 relayer**, for one
+architectural reason above all: **it does not embed chain-specific proof logic.**
+It obtains proofs from a separate **proof API** over gRPC, and is request-driven,
+Postgres-backed, batches recv / ack / timeout independently, retries failed
+submissions, tracks transaction costs, and supports remote signing.
+
+The fit is good because the proof service already exists: `interstellar-gateway`
+already implements that proof API alongside its own services, on the same gRPC
+port, so **the proof half of the integration is already done and needs no fork**.
+The relayer is wired up alongside Postgres with both chains configured and
+routing authored, and the Cosmos side is operational.
+
+What the migration adds is a Stellar chain type: transaction construction and
+submission as Soroban `InvokeHostFunction` calls, signing (either via the
+relayer's remote-signer interface backed by `interstellar-api`, or a local key),
+and a finality rule — a ledger is final once SCP externalizes its value, with no
+additional confirmations. One standing constraint: Soroban allows one
+`InvokeHostFunction` per transaction and `ibc-router.recv_packet` takes a single
+packet, so every Stellar-bound batch stays at one packet until the router grows a
+batch entrypoint. Batching applies normally in the Cosmos direction.
+
+Completing this retires the Hermes fork and the work of tracking it against
+upstream.
+
 ### d. Counterparty light client & orchestration
 
 | Component | Responsibility |
 |---|---|
-| **`light-client-wasm`** | The **Stellar** light client, compiled to wasm and deployed on the counterparty via `08-wasm`. Verifies SCP `EXTERNALIZE` envelopes (Ed25519 from a quorum of trusted validators) and ICS-23 proofs against the Stellar SMT root. `08-wasm` lets any ibc-go v10+ chain host it without forking its binary. |
+| **`light-client-wasm`** | The **Stellar** light client, compiled to wasm and deployed on the counterparty via `08-wasm`. Verifies signed SCP `EXTERNALIZE` statements, evaluates the quorum, binds the agreed value to a Stellar ledger, and checks ICS-23 proofs against the Stellar state root. `08-wasm` lets any ibc-go v10+ chain host it without forking its binary. |
 | **`interstellar` CLI** | The orchestrator: deploys contracts, uploads the wasm light client, creates clients, registers counterparties, runs the services, and originates transfers. |
 
 #### Light clients verify in both directions
@@ -165,12 +196,15 @@ A bridge needs each chain to verify the other, so there are two light clients:
 - **Cosmos → Stellar** — the `tendermint` LC on Soroban (`07-tendermint`) accepts
   the Cosmos client/consensus state, verifies header updates, and checks ICS-23
   membership proofs against the stored consensus root.
-- **Stellar → Cosmos** — `light-client-wasm` via `08-wasm`. Its SCP model is
-  deliberately **not** Tendermint-style — there is no ledger-hash continuity
-  chain; SCP authenticity is the validator quorum, so it checks the
-  `LedgerCloseValueSignature` (Ed25519 over the raw preimage
-  `networkID ‖ ENVELOPE_TYPE_SCPVALUE ‖ txSetHash ‖ closeTime`) against the
-  validator set seeded at client creation.
+- **Stellar → Cosmos** — `light-client-wasm` via `08-wasm`. Its model is
+  deliberately **not** Tendermint-style. Stellar does not use a single globally
+  configured validator set or stake-weighted voting, so there is no ">2/3 of the
+  validators" to count. The client verifies signed SCP `EXTERNALIZE` statements
+  for the slot — Ed25519 over
+  `networkID ‖ xdr(ENVELOPE_TYPE_SCP) ‖ xdr(SCPStatement)` — and then evaluates
+  whether the signers form a **quorum** under the quorum configuration it trusts
+  for that ledger, using Stellar's own recursive rule rather than a threshold
+  count. Section 4 walks through the full chain.
 
 ---
 
@@ -197,7 +231,7 @@ negotiation, no port binding, no handshake.
 ### Flow 2 — Transaction model (prepare → sign → submit)
 
 The transport mechanism beneath every ICS-26 message dispatch on the Stellar
-side. Transactions are built where the chain connection lives (`stellar-api`) and
+side. Transactions are built where the chain connection lives (`interstellar-api`) and
 signed where the key lives (the relayer), but **driven** by the relayer, so the
 gateway never holds a key. The relayer sends an IBC message to the gateway; the
 gateway asks the api to prepare an unsigned `tx_xdr`; the relayer signs it and
@@ -224,7 +258,8 @@ method-agnostic, so every ICS message — `create_client` (ICS-02),
    client to the proof height, then `MsgRecvPacket` (`ibc.core.channel.v2`), and
    submits `[update, recv]` together to Cosmos.
 5. **On-chain verification.** ibc-go runs the `08-wasm` Stellar LC:
-   `VerifyClientMessage` (SCP `EXTERNALIZE` quorum signature) → `UpdateState`,
+   `VerifyClientMessage` (SCP `EXTERNALIZE` statements → quorum → ledger) →
+   `UpdateState`,
    then `VerifyMembership` (ICS-23 commitment proof vs `ConsensusState.root`). On
    success, ICS-04 writes the **receipt** + **acknowledgement commitment**, and
    the ICS-26 router invokes ICS-20 `OnRecvPacket`, which **mints the voucher** to
@@ -279,7 +314,105 @@ consistent.
 
 ---
 
-## 4. Deployment and infrastructure
+## 4. How Stellar consensus is verified
+
+This is the part with no established reference implementation to follow, so it is
+worth setting out in full.
+
+### Why Stellar is the harder direction
+
+Tendermint has one globally agreed validator set with voting power attached, so
+*"validators holding more than two-thirds of the power signed this block"* is a
+well-defined statement, and the Soroban client checks exactly that.
+
+Stellar has no equivalent. It uses **Federated Byzantine Agreement**: there is no
+single configured validator set and no stake weighting. Each node chooses which
+sets of peers it will listen to, and agreement is defined relative to those
+choices. Four terms carry most of the weight:
+
+| Term | Meaning |
+|---|---|
+| **slot** | one consensus instance — on Stellar, the slot number is the ledger sequence number |
+| **quorum slice** | a set of nodes that is enough to convince *one particular node* of something |
+| **quorum** | a set of nodes containing a slice for **every one of its own members** |
+| **externalize** | the moment a node commits to a value for a slot, irreversibly — the event a light client must prove happened |
+
+Two consequences shape the design. First, **there is no threshold to count to**:
+the client has to evaluate whether a specific set of signers forms a quorum,
+using the recursive structure Stellar validators publish. Observed on mainnet in
+August 2026, that structure was *5 of 7 organizations, each 2 of 3 validators* —
+21 signatures for a single ledger. Second, **the configuration is not carried in
+the protocol**: a Tendermint client learns the next validator set from the chain
+itself, and SCP offers nothing equivalent. The trusted configuration therefore
+comes from outside, is governed deliberately, and — because it changes over
+time — is stored with the range of ledgers each version applies to.
+
+### Two claims, kept apart
+
+```
+SCP safety      → a quorum externalized value x for slot N   (what the protocol guarantees)
+Ledger binding  → x is exactly the ledger header's own value (how stellar-core builds a ledger)
+State binding   → that ledger commits to the IBC state root  (this project's construction)
+```
+
+Only the first is a property of SCP. A Cosmos chain gets the second and third
+almost free, because its verified header carries the state root directly. On
+Stellar they have to be built — and a quorum of valid signatures says nothing on
+its own about which ledger or which state root travelled alongside it. Conflating
+the two is the easiest way to end up with a client that performs real
+cryptography and still proves nothing about the ledger.
+
+### The checks, in order
+
+| # | Check | In plain terms |
+|---|---|---|
+| L0 | Configuration applies | pick the trusted quorum configuration that governs this ledger; refuse if none does |
+| L1 | Signatures | every message really was signed by the validator it names |
+| L2 | Right kind of message | each is an `EXTERNALIZE` statement, for the slot being claimed |
+| L3 | Quorum sets are genuine | each signer's published configuration matches the hash it committed to |
+| L4 | The signers form a quorum | evaluated with Stellar's own recursive rule, not a count |
+| L5 | They agree | all signers externalized the same value |
+| L6 | The value is this ledger | the agreed value is byte-identical to the header's own field, so the header — and its hash — is authenticated |
+| L7 | The ledger commits to the root | follow the header's commitment to transaction results down to the contract return value carrying the state root |
+
+L0–L5 establish *that consensus happened*. L6–L7 establish *which ledger, and
+which root*. Both are needed; neither implies the other.
+
+### What this was checked against
+
+The rules come from the SCP whitepaper (Mazières, *The Stellar Consensus
+Protocol*, 2016). Wire-level details — the exact signing preimage, enum values,
+structure layouts, and how a ledger header is built from an externalized value —
+come from the `stellar-core` source and `stellar-xdr`, pinned to versions; those
+are implementation facts, not protocol facts.
+
+Neither was taken on trust. A reference checker fetches the archived SCP
+messages, quorum sets and ledger header for a given ledger from Stellar's public
+history archives and runs every check the contract must run:
+
+- **L1–L6** were confirmed on live data from both networks — 21 signers under the
+  nested mainnet configuration, 3 under a flat testnet one.
+- **L7** was checked in two halves: the transaction-result hash matched the
+  ledger header for **64 of 64** mainnet ledgers in a checkpoint, and the
+  contract-return commitment matched the recorded hash for **40 of 40** Soroban
+  invocations across eight consecutive testnet ledgers.
+
+### What safety rests on
+
+One assumption cannot be discharged on-chain: that the configured quorum
+configuration is sufficiently related to the real Stellar network **for the
+ledger in question**. That is checked off-chain with SDF's quorum-analysis
+tooling before a client is created and at every configuration change, then
+monitored for drift afterwards. Everything else — signatures, quorum evaluation,
+parsing, and the two bindings — is implementation correctness, addressed by the
+checks above and by testing against real ledgers.
+
+A note on finality: a Stellar ledger is final once SCP externalizes the
+corresponding value. The bridge requires no additional confirmations.
+
+---
+
+## 5. Deployment and infrastructure
 
 Everything is driven by the `interstellar` CLI. A full local bring-up:
 
@@ -309,7 +442,7 @@ native one.
 
 ---
 
-## 5. Architecture diagrams
+## 6. Architecture diagrams
 
 ### Component topology
 
@@ -322,8 +455,8 @@ flowchart TB
     end
 
     subgraph StellarSvc["Stellar off-chain services"]
-        GW["stellar-hermes-gateway (gRPC, no key) — StateTracker: SMT root + ICS-23 proofs"]
-        API["stellar-api (owns Soroban RPC + signing key) — tx prepare / submit / clients / events"]
+        GW["interstellar-gateway (gRPC, no key) — StateTracker: SMT root + ICS-23 proofs"]
+        API["interstellar-api (owns Soroban RPC + signing key) — tx prepare / submit / clients / events"]
     end
 
     subgraph StellarChain["Stellar / Soroban"]
@@ -369,8 +502,8 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant R as Relayer
-    participant GW as stellar-hermes-gateway
-    participant API as stellar-api
+    participant GW as interstellar-gateway
+    participant API as interstellar-api
     participant SOR as Soroban
 
     R->>GW: IBC message
@@ -404,7 +537,7 @@ sequenceDiagram
     GW-->>WK: proof + proof height
     WK->>CO: ICS-02 MsgUpdateClient(dest 08-wasm → proof height)
     WK->>CO: ICS-04 MsgRecvPacket (ibc.core.channel.v2)
-    CO->>WASM: ICS-02 VerifyClientMessage (SCP quorum) → UpdateState
+    CO->>WASM: ICS-02 VerifyClientMessage (SCP quorum → ledger) → UpdateState
     CO->>WASM: ICS-23 VerifyMembership (commitment vs ConsensusState.root)
     WASM-->>CO: valid
     CO->>CO: write receipt + ack commitment

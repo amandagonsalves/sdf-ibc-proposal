@@ -3,7 +3,7 @@ title: Strategy
 layout: default
 nav_order: 3
 description: >-
-  Why the Stellar IBC Eureka project exists, what it builds, and the reasoning
+  Why the Interstellar project exists, what it builds, and the reasoning
   behind each architectural choice.
 ---
 
@@ -12,7 +12,7 @@ description: >-
 
 Why this project exists, what we're building, and the reasoning behind each
 architectural choice. Written for stakeholders, contributors, and anyone
-evaluating the Stellar IBC bridge.
+evaluating Interstellar.
 
 ## Contents
 {: .no_toc .text-delta }
@@ -47,7 +47,7 @@ shared. That compounding — bridges that scale O(*n*) instead of O(*n²*)
 
 ---
 
-## 1. Why connect Stellar to Cosmos
+## 1. Why connect Stellar to the IBC network
 
 Stellar and Cosmos solve **different problems** and combine into something
 more valuable than either alone.
@@ -228,7 +228,7 @@ strongest single argument we have to make.
 
 ---
 
-## 3. Why work with Cardano
+## 3. Why build on proven IBC infrastructure
 
 The Cardano Foundation has been building **the only production
 non-Cosmos IBC integration in the industry** since 2023. They've shipped:
@@ -272,7 +272,18 @@ when our bridge holds bridged assets at scale.
 
 ---
 
-## 4. Why Hermes relayer
+## 4. The relayer: Hermes today, the Cosmos IBC v2 relayer next
+
+The link runs end to end today on a fork of **Hermes**. It is being migrated to
+the **Cosmos IBC v2 relayer**, for one architectural reason above all: that
+relayer does not embed chain-specific proof logic — it obtains proofs from a
+separate proof API over gRPC, which the project's gateway already implements.
+The proof half of the integration is therefore already done, with no fork
+required. What the migration adds is a Stellar chain type: transaction
+construction and submission, signing, and a finality rule.
+
+The reasoning that led to Hermes in the first place still explains the shape of
+the current implementation.
 
 Hermes is the **reference Rust IBC relayer** maintained by Informal
 Systems (the team behind Tendermint Core). We chose it over the
@@ -357,7 +368,7 @@ to get wrong, less for adversaries to probe.
 
 ---
 
-## 6. Why this is beneficial for Stellar and Cardano
+## 6. Why this is beneficial
 
 ### For Stellar
 
@@ -395,7 +406,7 @@ accounts and ICS-31 cross-chain queries (both v2-compatible) let a
 contract on Osmosis trigger Soroban execution. Stellar becomes a
 *destination for cross-chain logic*, not just an end-point.
 
-### For Cardano
+### For the partner ecosystem
 
 **Cross-chain stack validation.** Cardano Foundation's `hermes-relayer`
 fork, light-client patterns, and `caribic` tooling now support **two**

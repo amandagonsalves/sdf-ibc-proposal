@@ -44,28 +44,28 @@
       '  startOnLoad: false,' +
       '  theme: "base",' +
       '  themeVariables: {' +
-      '    background: "#0c0e22",' +
-      '    primaryColor: "#181c3a",' +
-      '    primaryBorderColor: "#8b6dff",' +
-      '    primaryTextColor: "#e8eaf6",' +
-      '    secondaryColor: "#12152e",' +
-      '    tertiaryColor: "#12152e",' +
-      '    lineColor: "#8b6dff",' +
-      '    textColor: "#cdd1ef",' +
+      '    background: "#070b1a",' +
+      '    primaryColor: "#131c3d",' +
+      '    primaryBorderColor: "#4da3f0",' +
+      '    primaryTextColor: "#dfe6f2",' +
+      '    secondaryColor: "#0c1330",' +
+      '    tertiaryColor: "#0c1330",' +
+      '    lineColor: "#a97ce0",' +
+      '    textColor: "#dfe6f2",' +
       '    fontFamily: "Inter, sans-serif",' +
-      '    actorBorder: "#8b6dff",' +
-      '    actorBkg: "#181c3a",' +
-      '    actorTextColor: "#e8eaf6",' +
-      '    signalColor: "#9aa0c6",' +
-      '    signalTextColor: "#cdd1ef",' +
-      '    labelBoxBkgColor: "#181c3a",' +
-      '    labelBoxBorderColor: "#ff4d97",' +
-      '    labelTextColor: "#e8eaf6",' +
-      '    noteBkgColor: "#1c2247",' +
-      '    noteBorderColor: "#38d6e6",' +
-      '    noteTextColor: "#e8eaf6",' +
-      '    clusterBkg: "#0e1228",' +
-      '    clusterBorder: "#2a2f55"' +
+      '    actorBorder: "#4da3f0",' +
+      '    actorBkg: "#131c3d",' +
+      '    actorTextColor: "#dfe6f2",' +
+      '    signalColor: "#93a1bd",' +
+      '    signalTextColor: "#dfe6f2",' +
+      '    labelBoxBkgColor: "#131c3d",' +
+      '    labelBoxBorderColor: "#a97ce0",' +
+      '    labelTextColor: "#dfe6f2",' +
+      '    noteBkgColor: "#1b2547",' +
+      '    noteBorderColor: "#a97ce0",' +
+      '    noteTextColor: "#dfe6f2",' +
+      '    clusterBkg: "#0b1330",' +
+      '    clusterBorder: "#24325c"' +
       '  }' +
       '});' +
       'mermaid.run({ querySelector: ".mermaid" });';

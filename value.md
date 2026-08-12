@@ -122,7 +122,7 @@ trusted intermediary; they relocate it. IBC does.
 
 | Protocol | Who verifies a transfer | Trust assumption |
 |---|---|---|
-| **IBC** | The destination chain's on-chain **light client** of the source chain | Honest majority of the **two chains' own** validator sets — nothing else |
+| **IBC** | The destination chain's on-chain **light client** of the source chain | The **two chains' own** consensus assumptions — a Tendermint majority on one side, Stellar's quorum configuration on the other. Nothing else |
 | **Axelar** | Axelar's **proof-of-stake validator set** observes and signs | Honest majority of **Axelar's** validators (a third chain in the middle) |
 | **LayerZero** | A configurable **DVN** quorum (defaults: Google Cloud + LayerZero Labs 2-of-3 multisig) | Honest majority of the configured **third-party verifiers** |
 | **Chainlink CCIP** | An honest majority of **1 of 3 oracle networks** + Risk Management Network | Honest majority of **Chainlink's** oracle/DON layer |

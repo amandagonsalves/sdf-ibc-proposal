@@ -8,9 +8,10 @@
     <meta name="description" content="{{ page.description | default: site.description | strip_newlines }}">
     <meta property="og:title" content="{{ page.title | default: site.title }}">
     <meta property="og:description" content="{{ page.description | default: site.description | strip_newlines }}">
-    <meta property="og:image" content="assets/images/thumbnail.png">
-    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
-    <meta name="theme-color" content="#07081a">
+    <meta property="og:image" content="assets/images/interstellar.jpeg">
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    <link rel="apple-touch-icon" href="assets/images/favicon.png">
+    <meta name="theme-color" content="#070b1a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -23,7 +24,7 @@
     <div class="topbar">
       <a class="brand" href="index.html">
         <span class="brand-mark"></span>
-        <span class="brand-text"><span class="brand-title">Stellar IBC</span></span>
+        <span class="brand-text"><span class="brand-title">Interstellar</span></span>
       </a>
       <button class="menu-btn" aria-label="Menu">☰</button>
     </div>
@@ -33,8 +34,8 @@
         <a class="brand" href="index.html">
           <span class="brand-mark"></span>
           <span class="brand-text">
-            <span class="brand-title">Stellar IBC</span>
-            <span class="brand-sub">Eureka</span>
+            <span class="brand-title">Interstellar</span>
+            <span class="brand-sub">IBC v2 for Stellar</span>
           </span>
         </a>
         <nav class="nav">
@@ -49,15 +50,15 @@
         </nav>
         <div class="sidebar-foot">
           <a href="https://ibcprotocol.dev/" target="_blank" rel="noopener">IBC Protocol ↗</a>
-          <a href="https://github.com/cardano-foundation/cardano-ibc-incubator" target="_blank" rel="noopener">Cardano
-            IBC ↗</a>
+          <a href="https://stellar.org/papers/stellar-consensus-protocol" target="_blank"
+            rel="noopener">SCP whitepaper ↗</a>
           <a href="https://hermes.informal.systems/" target="_blank" rel="noopener">Hermes ↗</a>
         </div>
       </aside>
       <main class="main">
         <article class="content">
           {{ content }}
-          <div class="page-foot"> Stellar IBC Eureka — public project documentation. Licensed under the Apache License
+          <div class="page-foot"> Interstellar — public project documentation. Licensed under the Apache License
             2.0. </div>
         </article>
       </main>

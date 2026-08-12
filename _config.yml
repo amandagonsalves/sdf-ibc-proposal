@@ -1,7 +1,7 @@
-title: Stellar IBC Eureka
+title: Interstellar
 description: >-
-  Trust-minimized IBC v2 (Eureka) for Stellar — on-chain light-client
-  verification on Soroban, connecting Stellar to the entire IBC graph.
+  IBC v2 (Eureka) for Stellar — on-chain light-client verification of consensus,
+  with no bridge operator, custodian or attestation service in the trust path.
 
 markdown: kramdown
 highlighter: rouge

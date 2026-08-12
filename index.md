@@ -2,8 +2,8 @@
 title: Home
 layout: home
 description: >-
-  Trust-minimized IBC v2 (Eureka) for Stellar — on-chain light-client
-  verification on Soroban, connecting Stellar to the entire IBC graph.
+  IBC v2 (Eureka) for Stellar — on-chain light-client verification of consensus,
+  with no bridge operator, custodian or attestation service in the trust path.
 permalink: /
 ---
 
@@ -15,9 +15,19 @@ permalink: /
 
 ## What it is
 
-A bridge that connects **Stellar** (Soroban smart contracts, SCP consensus) to
-the IBC network using **IBC v2 (Eureka)** — the streamlined protocol that drops
-the v1 connection and channel handshakes, keeping only the packet lifecycle. The
+**Stellar, connected to the IBC network — with verification, not trust.**
+
+Moving value between chains normally means trusting somebody: a bridge operator,
+a multisig, an attestation service. Whoever that is becomes the weakest point.
+IBC removes them. Each chain runs a **light client** of the other — on-chain code
+that checks the other chain's consensus signatures itself — and every packet is
+accompanied by a Merkle proof verified against a header that client has already
+verified. The relayer carries bytes and holds no authority: if it lies, proofs
+fail; if it disappears, packets time out and funds are refunded.
+
+This project implements that for **Stellar** (Soroban smart contracts, SCP
+consensus) using **IBC v2 (Eureka)** — the streamlined protocol that drops the
+v1 connection and channel handshakes, keeping only the packet lifecycle. The
 first counterparty is a Cosmos chain (ibc-go v10+ with the `08-wasm`
 light-client module); the same machinery extends to Cardano and beyond.
 
@@ -55,15 +65,19 @@ The pieces:
   XLM and issued assets (USDC, EURC) move by their canonical SAC address — and the
   on-chain light clients (`tendermint`, `attestation`, `mock`).
 - **`light-client-wasm`** — the Stellar light client compiled to wasm and
-  deployed on the counterparty via `08-wasm`; verifies SCP `EXTERNALIZE`
-  envelopes and ICS-23 proofs against the Stellar state root.
-- **`stellar-hermes-gateway`** — the keyless gRPC service the relayer talks to;
-  tracks the state root and produces proofs.
-- **`stellar-api`** — the HTTP service that owns the Soroban RPC connection and
-  the signing key, building and submitting transactions on the gateway's behalf.
-- **Hermes relayer (fork)** — a `StellarChainEndpoint` plus a channel-less v2
-  packet-relay worker that observes events, builds the IBC v2 messages, and
-  relays them in both directions.
+  deployed on the counterparty via `08-wasm`; verifies signed SCP `EXTERNALIZE`
+  statements, evaluates the quorum, binds the agreed value to a Stellar ledger,
+  and checks ICS-23 proofs against the Stellar state root.
+- **`interstellar-gateway`** — the keyless gRPC service the relayer talks to;
+  tracks the state root and produces proofs. It also serves the proof API the
+  Cosmos IBC v2 relayer expects.
+- **`interstellar-api`** — the HTTP service that owns the Soroban RPC connection
+  and the signing key, building and submitting transactions on the gateway's
+  behalf.
+- **Relayer** — the link runs today on a fork of **Hermes** carrying a
+  `StellarChainEndpoint` and a channel-less v2 packet worker. It is being
+  migrated to the **Cosmos IBC v2 relayer**, which takes proofs from a separate
+  proof API rather than embedding chain-specific proof logic.
 - **`interstellar` CLI** — the orchestrator that deploys the contracts, uploads
   the wasm light client, creates clients, registers counterparties, and runs the
   services.
@@ -72,6 +86,35 @@ Provable state is a deterministic fixed-depth-64 **Sparse Merkle Tree** whose
 root is the consensus root counterparty light clients verify against, with proofs
 serialized as ICS-23 `MerkleProof`s — a format shared with Cardano so the same
 machinery serves both ecosystems.
+
+## The security model
+
+Everything rests on one question, asked in **each** direction: *did the other
+chain's validators really agree on this?* Two light clients answer it, and they
+are genuinely different problems.
+
+**Cosmos → Stellar** is well-trodden. Tendermint has one globally agreed
+validator set with voting power attached, so "validators holding more than
+two-thirds of the power signed this block" is a well-defined statement, and the
+Soroban client checks exactly that.
+
+**Stellar → Cosmos** has no equivalent. Stellar uses *Federated Byzantine
+Agreement*: there is no single configured validator set and no stake weighting.
+Each node chooses which sets of peers it will listen to, and agreement is
+defined relative to those choices — so there is **no threshold to count to**. The
+client instead evaluates whether a specific set of signers forms a **quorum**
+under the configuration it trusts for that ledger, using Stellar's own recursive
+rule. It then has to do something a Cosmos client gets almost for free: tie what
+was agreed to an actual ledger, and that ledger to the state root the proofs are
+checked against.
+
+Those are two separate claims, and both are proved explicitly. A quorum of valid
+signatures establishes that consensus happened; on its own it says nothing about
+which ledger or which state root travelled alongside it.
+
+The full chain — eight checks, what each one establishes, what it was verified
+against, and the one assumption that cannot be discharged on-chain — is set out
+in [Architecture § 4](architecture.html).
 
 ## Status by Interchain Standard
 

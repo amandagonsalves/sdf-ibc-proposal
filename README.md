@@ -1,6 +1,6 @@
 # sdf-ibc-proposal
 
-Public project documentation for **Stellar IBC Eureka** — trust-minimized IBC v2
+Public project documentation for **Interstellar** — trust-minimized IBC v2
 (Eureka) for the Stellar network.
 
 📖 **Read it online:** <https://amandagonsalves.github.io/sdf-ibc-proposal/>

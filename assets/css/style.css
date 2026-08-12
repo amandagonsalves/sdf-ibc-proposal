@@ -1,25 +1,27 @@
-/* Stellar IBC Eureka — custom dark theme */
+/* Interstellar — dark theme, palette taken from the project mark */
 
 :root {
-  --bg: #07081a;
-  --bg-1: #0c0e22;
-  --bg-2: #12152e;
-  --bg-3: #181c3a;
-  --text: #e8eaf6;
-  --muted: #9aa0c6;
-  --faint: #6c719a;
+  --bg: #070b1a;
+  --bg-1: #0c1330;
+  --bg-2: #131c3d;
+  --bg-3: #1b2547;
+  --text: #dfe6f2;
+  --muted: #93a1bd;
+  --faint: #6b7899;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
 
-  --purple: #8b6dff;
-  --magenta: #ff4d97;
-  --cyan: #38d6e6;
-  --blue: #5b8cff;
+  /* the mark's two accents: a cyan-blue and a violet */
+  --purple: #a97ce0;
+  --magenta: #a97ce0;
+  --cyan: #4da3f0;
+  --blue: #4da3f0;
+  --violet: #a97ce0;
 
-  --link: #b79bff;
-  --link-hover: #d8c7ff;
+  --link: #7fbcf5;
+  --link-hover: #b9d8fa;
 
-  --grad: linear-gradient(120deg, #7c5cff 0%, #ff4d97 55%, #38d6e6 100%);
+  --grad: linear-gradient(90deg, #4da3f0 0%, #a97ce0 100%);
 
   --sidebar-w: 280px;
   --content-max: 840px;
@@ -43,9 +45,9 @@ body {
   color: var(--text);
   background-color: var(--bg);
   background-image:
-    radial-gradient(900px 600px at 8% -8%, rgba(124, 92, 255, 0.16), transparent 60%),
-    radial-gradient(900px 700px at 100% 0%, rgba(255, 77, 151, 0.10), transparent 55%),
-    radial-gradient(1000px 800px at 60% 120%, rgba(56, 214, 230, 0.08), transparent 55%);
+    radial-gradient(900px 600px at 8% -8%, rgba(77, 163, 240, 0.14), transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, rgba(169, 124, 224, 0.12), transparent 55%),
+    radial-gradient(1000px 800px at 60% 120%, rgba(77, 163, 240, 0.07), transparent 55%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -79,8 +81,8 @@ a:hover { color: var(--link-hover); text-decoration: underline; text-underline-o
 .brand:hover { text-decoration: none; }
 .brand-mark {
   width: 34px; height: 34px; border-radius: 9px; flex: 0 0 34px;
-  background: var(--grad);
-  box-shadow: 0 6px 20px rgba(124, 92, 255, 0.35);
+  background: #070b1a url("../images/favicon.png") center / cover no-repeat;
+  box-shadow: 0 6px 20px rgba(77, 163, 240, 0.28);
 }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
 .brand-title { font-weight: 700; font-size: 15px; color: var(--text); letter-spacing: -0.01em; }

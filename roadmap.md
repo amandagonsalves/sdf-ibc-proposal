@@ -3,7 +3,7 @@ title: Roadmap
 layout: default
 nav_order: 5
 description: >-
-  What the Stellar IBC Eureka project delivers, what already works, and the
+  What the Interstellar project delivers, what already works, and the
   staged path from devnet to mainnet.
 ---
 
@@ -73,8 +73,8 @@ binary that deploys the contracts, uploads the Stellar `08-wasm` light client,
 creates clients, registers counterparties, and runs the relayer — no shell
 scripts.
 
-- *How Stellar is used:* it drives the Soroban CLI, `stellar-api`, and Docker to
-  stand up and operate a complete Stellar IBC deployment reproducibly.
+- *How Stellar is used:* it drives the Soroban CLI, `interstellar-api`, and Docker to
+  stand up and operate a complete Interstellar deployment reproducibly.
 - *Impact:* the same protocol layer, relayer, and tooling that connect Stellar to
   Cosmos extend to Cardano and any future IBC chain — the marginal cost of the
   next chain is one light client + one endpoint, so the bridge scales O(n), not
@@ -88,7 +88,7 @@ stepper, plus an operator runbook, integrator guide, and monitoring dashboard.
   invocation with Freighter and tracks the resulting voucher; nothing is
   custodial and no key leaves the user.
 - *Impact:* lowers adoption cost — any Stellar app can plug into the transfer
-  flow, and any operator can run a Stellar IBC relayer.
+  flow, and any operator can run an Interstellar relayer.
 
 ---
 
@@ -100,7 +100,7 @@ validation**, not live user metrics yet.
 ### Technical traction
 
 Already built and demonstrably working, tracked against the Interchain Standards
-the stack implements. The Stellar IBC v2 stack runs end-to-end on a local devnet
+the stack implements. Interstellar runs end-to-end on a local devnet
 against a real ibc-go v11 + `08-wasm` Cosmos chain:
 
 - **ICS-26 (Routing) — done.** The `ibc-router` Soroban contract dispatches
@@ -269,7 +269,7 @@ plus a `GET /config` api endpoint so nothing is hardcoded. Includes onboarding
   mainnet.
 
 **Deliverable 4 — Operator/integrator UX + documentation.** Polished `interstellar`
-operator UX, an operator runbook (run your own Stellar IBC relayer), an integrator
+operator UX, an operator runbook (run your own Interstellar relayer), an integrator
 guide (plug an app into the transfer flow), a public monitoring dashboard, and a
 published docs site.
 - *Completion criteria:* Docs site live at a public URL; operator + integrator
