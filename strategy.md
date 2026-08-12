@@ -250,7 +250,7 @@ non-Cosmos IBC integration in the industry** since 2023. They've shipped:
   finality, snapshot verification, SCP-style consensus modeling) maps
   cleanly to Stellar's SCP.
 
-**This collaboration is uniquely valuable** for three reasons:
+**This support is uniquely valuable** for three reasons:
 
 1. **Time to market.** Building the relayer fork, light-client crate,
    and orchestration tooling from scratch would take 18–24 months.
@@ -266,9 +266,9 @@ non-Cosmos IBC integration in the industry** since 2023. They've shipped:
    confirmation that its IBC stack generalizes; Stellar gets a
    maintained relayer without the burden of independent forks.
 
-The Cardano Foundation also brings institutional credibility, security
-audits, and a track record of shipping interoperability work — material
-when our bridge holds bridged assets at scale.
+That support also brings institutional credibility, security audits, and a
+track record of shipping interoperability work — material when the bridge
+holds assets at scale.
 
 ---
 
@@ -406,7 +406,7 @@ accounts and ICS-31 cross-chain queries (both v2-compatible) let a
 contract on Osmosis trigger Soroban execution. Stellar becomes a
 *destination for cross-chain logic*, not just an end-point.
 
-### For the partner ecosystem
+### For the wider IBC ecosystem
 
 **Cross-chain stack validation.** Cardano Foundation's `hermes-relayer`
 fork, light-client patterns, and `caribic` tooling now support **two**

@@ -222,8 +222,8 @@ the reusable architecture: a second non-Cosmos pair with no new bridge.
 - *Dependency (third party):* (a) **Cardano IBC operational on its public
   testnet** — driven by the Cardano Foundation; and (b) the **Stellar light client
   approved and stored on a public IBC-v2 + `08-wasm` chain via that chain's
-  governance**. Both are coordinated ahead of time (we are building in
-  collaboration with the Cardano Foundation).
+  governance**. Both are coordinated ahead of time (we are building with the
+  support of the Cardano Foundation).
 
 **Deliverable 3 — Integration test suite + community testable build.** End-to-end
 integration tests covering both corridors and edge cases (timeouts, failed acks,
