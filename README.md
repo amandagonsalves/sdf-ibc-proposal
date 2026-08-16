@@ -21,8 +21,10 @@ configuration.
 |---|---|
 | Home / overview | [`index.md`](index.md) |
 | Value & Comparison, the *worth*, with metrics and bridge comparison | [`value.md`](value.md) |
+| Questions & Objections, the fair criticisms answered directly | [`questions.md`](questions.md) |
 | Strategy, the *why* | [`strategy.md`](strategy.md) |
 | Architecture, the *how*, with sequence diagrams | [`architecture.md`](architecture.md) |
+| Implementation & Evidence, what is built and what it was verified against | [`implementation.md`](implementation.md) |
 | Roadmap, deliverables from devnet to mainnet | [`roadmap.md`](roadmap.md) |
 
 Layout and styling live in [`_layouts/`](_layouts), [`assets/css/style.css`](assets/css/style.css),

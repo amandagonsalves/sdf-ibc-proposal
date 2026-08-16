@@ -1,7 +1,7 @@
 ---
 title: Strategy
 layout: default
-nav_order: 3
+nav_order: 4
 description: >-
   Why the Interstellar project exists, what it builds, and the reasoning
   behind each architectural choice.
@@ -33,6 +33,11 @@ The result is that **Stellar gains first-class connectivity to every IBC-enabled
 chain**, a network of **115+ chains** today, without relying on multisig
 committees or federated validators. The marginal cost of the next counterparty is
 a configuration entry, not an integration project.
+
+The hard part (verifying Stellar's consensus from outside) is solved,
+implemented on-chain, and validated against live mainnet data. The measured
+results are on [Implementation & Evidence](implementation.html); the objections
+we consider fair are answered on [Questions & Objections](questions.html).
 
 IBC is increasingly **not a single-ecosystem protocol**. It is becoming the
 generic interop substrate that lets independent chain families talk to *each
@@ -265,7 +270,19 @@ not embed chain-specific proof logic, it obtains proofs from a separate proof AP
 over gRPC, which the project's gateway already implements. The proof half of the
 integration is therefore already done, with no fork required. What the migration
 adds is a Stellar chain type: transaction construction and submission, signing,
-and a finality rule.
+and a finality rule (for Stellar, simply that a ledger is final once SCP
+externalizes its value).
+
+The new relayer is already running under its own compose profile with both chains
+configured and the routing authored. Its chain-type abstraction covers Cosmos,
+EVM and SVM today, and an entry of any other type is skipped when the bridge
+clients are built, so **the Stellar routing is correct but inert** until the
+chain type lands. Until then the Hermes fork carries the live link.
+
+The cost of the current arrangement is worth naming: everything Stellar-specific
+living inside a fork means every upstream Hermes release has to be merged, and
+the surface to keep compatible is the whole chain-endpoint interface rather than
+a narrow contract. Retiring that is the point of the migration.
 
 The general principle: **chain-specific logic belongs behind an interface, not
 inside a relayer fork.** That is what makes the relayer layer genuinely shared

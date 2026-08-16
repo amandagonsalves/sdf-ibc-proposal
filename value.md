@@ -104,6 +104,53 @@ carries assets Stellar users cannot easily obtain today. IBC lets both sides
 issue and trade natively, making Stellar a *supplier* of unique assets to the
 network, not just another consumer of USDC.
 
+### The flagship use case, stated concretely
+
+IBC is a capability rather than a use case, so here is one use case with a
+specific mechanism rather than a list of possibilities.
+
+Stellar is **the only chain carrying tokenized non-USD currency at any meaningful
+scale**: naira, reais, pesos and shillings, issued by regional anchors and used
+for payments. The rest of the IBC graph is almost entirely dollar-denominated and
+holds very little of this.
+
+The significance is a question of **market structure**. A stablecoin that cannot
+be traded has limited utility. For a market to function, a participant has to
+hold inventory and quote prices, and holding a regional currency means carrying
+the risk that it moves against them. Without somewhere to offset that risk,
+market makers either quote poor prices or decline to participate, the market
+stays thin, issuance stays small, and the anchor cannot grow.
+
+The IBC graph provides exactly what is missing: **deep spot liquidity and
+derivatives venues where that risk can be hedged**. Stellar provides the assets.
+Neither side can develop the market independently, and no alternative pairing
+substitutes, because no other chain issues these currencies.
+
+The counter-argument (that this exports trading activity off Stellar) is answered
+directly, including where it holds, on
+[Questions & Objections](questions.html#does-this-move-liquidity-off-stellar).
+
+### Beyond token transfer
+
+Token transfer is the first application on the packet layer, not the ceiling, and
+IBC v2 makes that unusually cheap to exploit. Under v1 an application was bound
+to a channel at handshake time, so every new use case meant new plumbing. V2
+carries the source and destination ports **inside the packet payload**, so a
+single client pairing already carries packets for any number of applications,
+including ones not yet written. Nothing about the trust model changes when a
+second application appears; it rides the verification already built.
+
+| Direction | What it enables |
+|---|---|
+| **ICS-27** interchain accounts | A contract or account on another chain controls an account on Stellar, so a strategy running elsewhere can hold and move Stellar-native assets **without a custodian in between** |
+| **ICS-31** cross-chain queries | A Soroban contract reads *verified* state from another chain, which is what lets it price or settle against facts it did not observe locally |
+| **Symmetric packet layer** | An application on another chain can trigger Soroban execution and receive the acknowledgement, so Stellar becomes a **callable destination**, not only a source of assets |
+
+The practical consequence for planning is that **the expensive part is paid
+once**. The light client, the relayer, the proof plumbing and the operational
+work are shared by every application that follows, so the second and third
+product on this rail cost a fraction of the first.
+
 ---
 
 ## 3. Why IBC, when Stellar already has bridges
@@ -173,8 +220,14 @@ And because IBC is shared infrastructure rather than a point bridge, the
 investment compounds: connect Stellar once, and it reaches the entire graph, the
 next chain that joins IBC becomes reachable from Stellar at near-zero marginal
 cost. For the full architecture of *how* this works, see
-[Architecture](architecture.html); for the reasoning behind each design choice,
-see [Strategy](strategy.html).
+[Architecture](architecture.html); for the evidence that the hard part already
+works, see [Implementation & Evidence](implementation.html); for the reasoning
+behind each design choice, see [Strategy](strategy.html).
+
+The fair objections to all of this (the use case, the liquidity question, whether
+IBC fits Stellar at all, what would have to fail for funds to be lost, and the
+delivery risk of a small team) are answered on
+[Questions & Objections](questions.html).
 
 ---
 
