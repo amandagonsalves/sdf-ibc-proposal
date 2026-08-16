@@ -24,65 +24,58 @@ evaluating Interstellar.
 
 ## TL;DR
 
-We are building a **trust-minimized bridge between Stellar and Cosmos** using
-**IBC v2 (Eureka)**, the most battle-tested cross-chain protocol in the
-industry. We are doing it **with the support of the Cardano Foundation**
-because their existing Cardano↔Cosmos IBC infrastructure (Hermes fork, light
-clients, orchestration tooling) gives Stellar a working bridge in months
-instead of years, and gives Cardano a second non-Cosmos chain validating the
-same trust-minimized interop stack.
+We are implementing **IBC v2 (Eureka)** for Stellar: not a bridge to a particular
+chain, but a native implementation of the Interchain Standards on Soroban, plus
+the Stellar light client that other chains load in order to verify Stellar for
+themselves.
 
-The result is that **Stellar gains first-class connectivity to every
-IBC-enabled chain** — Osmosis, Noble, Neutron, Injective, Cosmos Hub, dYdX,
-Celestia, and the rest of the IBC graph — without relying on multisig
-committees or federated validators.
+The result is that **Stellar gains first-class connectivity to every IBC-enabled
+chain**, a network of **115+ chains** today, without relying on multisig
+committees or federated validators. The marginal cost of the next counterparty is
+a configuration entry, not an integration project.
 
-Looking further out: IBC is increasingly **not only a Cosmos protocol**.
-It is becoming the generic interop substrate that lets non-Cosmos chains
-talk to *each other* through shared, reusable parts. The same investment
-that ships a Stellar↔Cosmos bridge ships the Stellar half of every
-future Stellar↔non-Cosmos pair, for free, because the protocol layer is
-shared. That compounding — bridges that scale O(*n*) instead of O(*n²*)
-— is what makes this work fundable as infrastructure, not as a one-off.
+IBC is increasingly **not a single-ecosystem protocol**. It is becoming the
+generic interop substrate that lets independent chain families talk to *each
+other* through shared, reusable parts. The same investment that connects Stellar
+to its first counterparty ships the Stellar half of every future pairing, for
+free, because the protocol layer is shared. That compounding (bridges that scale
+O(*n*) instead of O(*n²*)) is what makes this work fundable as infrastructure,
+not as a one-off.
 
 ---
 
 ## 1. Why connect Stellar to the IBC network
 
-Stellar and Cosmos solve **different problems** and combine into something
-more valuable than either alone.
+Stellar is exceptional at the **on-ramp / off-ramp / payment** layer:
 
-**Stellar's strengths:**
 - Sub-5-second settlement, sub-cent fees.
 - A 10-year-old payments network with a global stablecoin and anchor
   ecosystem (USDC, EURC, MoneyGram, Circle, regional fiat anchors).
 - The Stellar Development Foundation, AID-tech rails, and an embedded
   user base focused on remittances, FX, and tokenized real-world assets.
-- Soroban smart contracts (Rust/WASM) — the platform now supports the
+- Soroban smart contracts (Rust/WASM), the platform now supports the
   general-purpose programmability needed for IBC.
 
-**Cosmos's strengths:**
-- The largest collection of **app-specific sovereign chains** in crypto:
-  Osmosis (DEX), Injective (derivatives), dYdX (perps), Noble (USDC issuance),
-  Celestia (data availability), Neutron (smart contracts), Cosmos Hub
-  (ICS-secured services).
-- A single shared interop protocol (IBC) connecting all of them.
-- Mature on-chain governance, staking, and DeFi primitives.
+What it lacks is a way to move that value off-network without handing custody to
+an intermediary. Every route out of Stellar today runs through a bridge operator,
+a multisig, or an attestation service, and whoever that is becomes the weakest
+point in the system.
 
-**What the bridge unlocks for users:**
-- **Stellar-native assets reach Cosmos DEXs** — USDC, EURC, XLM, and
-  anchored RWAs become tradeable on Osmosis and Injective.
-- **Cosmos-native assets reach Stellar payment rails** — ATOM, OSMO, INJ,
-  and Noble-issued stablecoins become spendable through Stellar's anchor
-  network, MoneyGram cash-out points, and global remittance corridors.
-- **Cross-chain settlement** — a remittance app can quote rates on Osmosis,
+**What IBC connectivity unlocks:**
+
+- **Stellar-native assets reach the whole graph**, trust-minimized. USDC, EURC,
+  XLM, and anchored RWAs become tradeable, lendable, and usable as collateral on
+  115+ chains without wrapping through multiple bridges first.
+- **Graph-native assets reach Stellar's payment rails**, spendable through the
+  anchor network, cash-out points, and global remittance corridors.
+- **Cross-chain settlement**, a remittance app can quote a rate on one chain,
   settle on Stellar, and pay out at a physical cash agent.
-- **Soroban contracts callable from Cosmos** — DeFi composability across
-  consensus layers.
+- **Soroban contracts callable from other chains**, composability across
+  consensus layers rather than only asset movement.
 
-Stellar is exceptional at the **on-ramp / off-ramp / payment** layer.
-Cosmos is exceptional at the **DeFi / app-chain** layer. Connecting them
-turns each ecosystem into a distribution channel for the other.
+The reach is not the whole argument, though. The argument is that this reach
+arrives **without a new trusted party**, which is the thing no bridge Stellar can
+use today offers.
 
 ---
 
@@ -96,7 +89,7 @@ Axelar, Hyperlane, Chainlink CCIP, deBridge, Synapse, Connext, …). We chose
 light client** of the source chain running inside the destination chain.
 There is no validator committee, no signing federation, no off-chain
 multisig. The security of an IBC packet equals the security of the underlying
-chains — nothing weaker.
+chains, nothing weaker.
 
 Most "bridges" today rely on a permissioned set of signers who attest to
 events. When that committee is compromised, funds are lost. The five largest
@@ -104,14 +97,14 @@ bridge hacks in crypto history (Ronin, Poly, Wormhole, Nomad, Harmony) all
 share this pattern. IBC's light-client model makes that class of failure
 impossible.
 
-**Battle-tested.** IBC has moved hundreds of billions of dollars cumulative
-volume across the Cosmos ecosystem since 2021 with no consensus-level
-exploit. It is the most-used cross-chain protocol by transaction count.
+**Battle-tested.** IBC has moved hundreds of billions of dollars in cumulative
+volume since 2021 with no consensus-level exploit, across 115+ connected chains.
+It is the most-used cross-chain protocol by transaction count.
 
 **Standard.** IBC is a public, open spec (the
 [ibc-protocol.org](https://ibc-protocol.org/) standards). Implementations
 exist in Go, Rust, Solidity, and Move. Adopting IBC means Stellar can talk
-to *any* IBC-enabled chain — present or future — without bespoke per-pair
+to *any* IBC-enabled chain (present or future) without bespoke per-pair
 integration work. Network effect compounds.
 
 **Aligned with Stellar's values.** Stellar was founded on a "trust anchor"
@@ -123,8 +116,8 @@ opaque intermediaries.
 **Composable upgrade path.** Through **ICS-20** (transfer) we get fungible
 token transfers; through **ICS-27** (interchain accounts) we get
 cross-chain smart-contract calls; through **08-wasm** we get pluggable
-light clients without forking the counterparty chain. The same primitive
-extends from "move USDC" to "trigger a Soroban contract from Osmosis."
+light clients without forking the host chain. The same primitive
+extends from "move USDC" to "trigger a Soroban contract from another chain."
 
 ---
 
@@ -133,37 +126,34 @@ extends from "move USDC" to "trigger a Soroban contract from Osmosis."
 A broader framing worth making explicit, because it changes what kind
 of investment this work represents.
 
-IBC is — at its core — a **blockchain-interop state machine**. The
+IBC is, at its core, a **blockchain-interop state machine**. The
 specification dictates what state must be provable (commitments,
 receipts, ack commitments), what must be verifiable (header /
 membership / non-membership proofs), and what the packet lifecycle
 looks like. It deliberately says nothing about *how* those state
 transitions are computed underneath. **IBC can be implemented under
 any virtual machine, any consensus algorithm, any programming
-language** — wherever you can hash, sign, and verify a Merkle proof.
+language**, wherever you can hash, sign, and verify a Merkle proof.
 
-The Cosmos SDK has the most mature implementation today, but that is
-an accident of timing, not a property of the protocol. Increasingly,
-IBC is being adopted as the **default interoperability substrate** by
-chain families that have nothing to do with Cosmos — and the more
-non-Cosmos chains speak it, the more value it provides as a shared
-language between them.
+The most mature implementation today grew up in one ecosystem, but that is an
+accident of timing, not a property of the protocol. Increasingly, IBC is being
+adopted as the **default interoperability substrate** by chain families with
+entirely different consensus and execution models, Polkadot/Substrate
+implementations in production, Ethereum rollups onboarding through Eureka, and
+active integration work for Solana and Near among others. The more independent
+chain families speak it, the more value it provides as a shared language between
+them.
 
-| Chain family | IBC status |
-|---|---|
-| Cosmos SDK (Tendermint) | Native `ibc-go` since 2021 |
-| Cardano (Ouroboros / eUTXO) | Production integration shipping (Cardano Foundation) |
-| Stellar (SCP / Soroban) | **This project** |
-| Polkadot / Substrate | Composable / Picasso IBC implementation in production |
-| Ethereum L2s (rollups) | Polymer Labs / IBC Eureka onboarding rollups |
-| Solana | Picasso / Eclipse IBC research and integration |
-| Near | Pagoda / Picasso IBC integration work in progress |
+That is precisely why this project is possible. Stellar's consensus looks nothing
+like the chains IBC grew up on, and Soroban's execution model looks nothing like
+theirs either. Neither matters to the protocol. What matters is that Stellar can
+commit to the three provable paths, and that another chain can verify Stellar's
+consensus. Both are engineering problems with answers.
 
-Once two non-Cosmos chains both speak IBC, they can talk **directly to
-each other** through the same packet protocol — no Cosmos chain has to
-sit in the middle, no new bridge has to be built. The day a Stellar
-client exists for a chain that already has a Cosmos counterparty
-client, that pair is bridged. **Marginal cost of the next chain pair
+Once two chains both speak IBC, they talk **directly to each other** through the
+same packet protocol. No third chain has to sit in the middle, no new bridge has
+to be built. The day a Stellar light client exists on a chain that already has a
+counterparty client, that pair is bridged. **Marginal cost of the next chain pair
 approaches zero.**
 
 ### Bespoke bridges scale O(n²); IBC scales O(n)
@@ -183,44 +173,56 @@ bridges:
 Each one needs its own security model, audited codebase, operator set,
 relay incentive design, and ongoing maintenance. Industry-rough
 numbers put the build-and-audit cost in the hundreds of thousands to
-low millions per bridge, with significant ongoing operating cost — and
+low millions per bridge, with significant ongoing operating cost, and
 custom bridges remain the single most-exploited category of crypto
 infrastructure by total value lost.
 
 IBC inverts the topology. With *n* chains all speaking IBC, you need:
 - *n* light clients (one per chain, packaged as `08-wasm` blobs and
-  embedded wherever they need to be verified — write once, run
+  embedded wherever they need to be verified, write once, run
   anywhere).
 - **1** shared protocol specification.
-- **1** generalized relayer stack (Hermes, with an abstract
-  `ChainEndpoint` trait that every chain implements).
+- **1** generalized relayer stack, with an abstract chain-endpoint
+  interface that every chain implements.
 
 The marginal cost of the (*n*+1)-th chain is **one light client + one
 chain endpoint**. Not *n* new bridges. The investment in the shared
-core, the Hermes Stellar endpoint, and `light-client-wasm` is reused by
+core, the Stellar relayer endpoint, and `light-client-wasm` is reused by
 every future chain pair this stack serves.
+
+### The client is a portable artifact
+
+The detail that makes those economics real rather than rhetorical: the Stellar
+light client is a **wasm blob, not a deployment**.
+
+Through the `08-wasm` client module, a host chain loads a light client as data.
+No fork of the host binary, no coordinated upgrade of its codebase. The same
+artifact that lets one chain verify Stellar lets **every other `08-wasm`-capable
+chain** verify Stellar, with no additional Stellar-side work.
+
+So "one light client per chain" is not one light client per *pair*. It is one per
+chain, written once, hosted anywhere. That is the mechanism by which the marginal
+cost of the next counterparty approaches configuration rather than engineering.
 
 ### Why this matters for funding
 
-This framing changes the pitch substantially. A grant for
-"another Stellar↔Cosmos bridge" reads as a **point investment** with
-a single use case. A grant for **"the Stellar
-implementation of a generic, reusable, multi-chain interop state
-machine — already supporting Cardano, designed to support every
-future non-Cosmos chain that joins"** reads as **infrastructure
-investment** with compounding returns.
+This framing changes the pitch substantially. A grant for "another Stellar
+bridge" reads as a **point investment** with a single use case. A grant for
+**"the Stellar implementation of a generic, reusable, multi-chain interop state
+machine, designed to support every chain family that joins"** reads as
+**infrastructure investment** with compounding returns.
 
 The same dollar funds:
 
-- A working Stellar↔Cosmos bridge (the immediate, demonstrable
+- A working trust-minimized IBC link for Stellar (the immediate, demonstrable
   deliverable).
-- The Stellar side of any Stellar↔non-Cosmos pair that emerges in the
-  next several years, for free, because the protocol layer is shared.
-- A maintained `StellarChainEndpoint` in the upstream Hermes fork —
-  permanent infrastructure for every IBC operator running Stellar.
-- Validation that the abstract `ChainEndpoint` pattern generalizes
-  across consensus families, which strengthens the case for further
-  non-Cosmos IBC integrations and lowers the bar for any of them.
+- The Stellar side of every future pairing that emerges in the next several
+  years, for free, because the protocol layer is shared.
+- A maintained Stellar chain endpoint in the shared relayer, permanent
+  infrastructure for every IBC operator running Stellar.
+- Validation that the chain-endpoint pattern generalizes across consensus
+  families, which strengthens the case for further integrations and lowers the
+  bar for any of them.
 
 Bespoke bridge funding terminates at the boundary of its chain pair.
 IBC funding **compounds across the interop graph**. That is the
@@ -230,90 +232,72 @@ strongest single argument we have to make.
 
 ## 3. Why build on proven IBC infrastructure
 
-The Cardano Foundation has been building **the only production
-non-Cosmos IBC integration in the industry** since 2023. They've shipped:
+Extending IBC to a chain family it did not grow up in is not speculative work.
+The pattern (an abstract relayer chain endpoint, plus a wasm light client for a
+consensus family outside the one IBC was designed around, plus devnet
+orchestration tooling) has been built and shipped before, and this project builds
+on those foundations directly rather than reinventing them.
 
-- A **`hermes-relayer` fork** with an abstract `ChainEndpoint` trait
-  capable of relaying to non-Tendermint chains. This is the single
-  hardest piece of work in any IBC extension project; we get to reuse
-  the architectural pattern wholesale.
-- A **`cardano-entrypoint`** Cosmos chain (ibc-go v10 + 08-wasm
-  enabled) that serves as a reference Cosmos counterparty — we test
-  against the same chain Cardano uses, which means our 08-wasm uploads,
-  light-client lifecycle, and packet flows are validated against
-  known-good Cosmos infrastructure.
-- A **`caribic` CLI** orchestrating Docker-based devnets, contract
-  deploys, and bridge bootstrap flows. Our own `interstellar` CLI is a
-  direct descendant of patterns proven there.
-- An **08-cardano-probabilistic light client** — a wasm light client for
-  a non-Tendermint chain. The architectural template (probabilistic
-  finality, snapshot verification, SCP-style consensus modeling) maps
-  cleanly to Stellar's SCP.
+That prior art matters for three concrete reasons:
 
-**This support is uniquely valuable** for three reasons:
+1. **Time to market.** Building the relayer abstraction, light-client packaging,
+   and orchestration tooling from scratch would take 18–24 months. Reusing proven
+   foundations compresses it to months.
+2. **Evidence the architecture generalizes.** A second independent consensus
+   model implemented against the same interfaces is the strongest available
+   signal that the abstraction is real, not incidental to one chain. Patterns
+   that work for one consensus family inform the next.
+3. **Shared maintenance.** Improvements to the shared relayer infrastructure
+   benefit every chain using it, and the cost of tracking upstream is amortized
+   across more than one team.
 
-1. **Time to market.** Building the relayer fork, light-client crate,
-   and orchestration tooling from scratch would take 18–24 months.
-   Building on Cardano's foundations compresses it to months.
-2. **Cross-pollination of architecture.** Both Cardano and Stellar are
-   non-Tendermint chains with their own consensus families (Ouroboros
-   PoS / SCP). Patterns that work for one inform the other. Cardano's
-   probabilistic light client teaches us how to handle "soft finality"
-   for cross-chain proofs; Stellar's faster (5s) finality validates
-   simpler client designs.
-3. **Compounding investment.** Every improvement to the shared
-   `hermes-relayer` fork benefits both ecosystems. Cardano gets
-   confirmation that its IBC stack generalizes; Stellar gets a
-   maintained relayer without the burden of independent forks.
-
-That support also brings institutional credibility, security audits, and a
-track record of shipping interoperability work — material when the bridge
-holds assets at scale.
+The commitment-tree shape is shared for the same reason: a fixed-depth-64 Sparse
+Merkle Tree with common leaf, inner, and index rules means proofs interoperate
+without a bespoke verifier per pair.
 
 ---
 
-## 4. The relayer: Hermes today, the Cosmos IBC v2 relayer next
+## 4. The relayer: Hermes today, the IBC v2 relayer next
 
 The link runs end to end today on a fork of **Hermes**. It is being migrated to
-the **Cosmos IBC v2 relayer**, for one architectural reason above all: that
-relayer does not embed chain-specific proof logic — it obtains proofs from a
-separate proof API over gRPC, which the project's gateway already implements.
-The proof half of the integration is therefore already done, with no fork
-required. What the migration adds is a Stellar chain type: transaction
-construction and submission, signing, and a finality rule.
+the **IBC v2 relayer**, for one architectural reason above all: that relayer does
+not embed chain-specific proof logic, it obtains proofs from a separate proof API
+over gRPC, which the project's gateway already implements. The proof half of the
+integration is therefore already done, with no fork required. What the migration
+adds is a Stellar chain type: transaction construction and submission, signing,
+and a finality rule.
+
+The general principle: **chain-specific logic belongs behind an interface, not
+inside a relayer fork.** That is what makes the relayer layer genuinely shared
+infrastructure rather than *n* forks in a trenchcoat.
 
 The reasoning that led to Hermes in the first place still explains the shape of
-the current implementation.
+the current implementation. Hermes is the **reference Rust IBC relayer**
+maintained by Informal Systems. We chose it over the alternatives (the Go relayer
+`rly`, ts-relayer, custom code) because:
 
-Hermes is the **reference Rust IBC relayer** maintained by Informal
-Systems (the team behind Tendermint Core). We chose it over the
-alternatives — Go relayer (`rly`), Confio's ts-relayer, custom code —
-because:
-
-**Maturity.** Hermes has been the workhorse of Cosmos IBC since 2021. It
+**Maturity.** Hermes has been the workhorse of IBC relaying since 2021. It
 runs in production relaying significant TVL daily. Bug surface is well
 understood; failure modes are documented.
 
 **Rust-native.** The rest of our stack is Rust (Soroban contracts,
 shared core, gateway, api, light-client-wasm). Hermes lets us
 contribute upstream and debug across the entire stack in a single
-language and toolchain. No FFI, no Go↔Rust impedance mismatch.
+language and toolchain. No FFI, no cross-language impedance mismatch.
 
 **Forkable, extensible architecture.** Hermes splits chain logic behind
-a `ChainEndpoint` trait. Cardano's fork added `CardanoChainEndpoint`;
-we add `StellarChainEndpoint` the same way. The fork pattern is proven
-and the codebase invites it. Rolling our own relayer would mean
-re-implementing event subscription, transaction queuing, light-client
-update logic, packet timeouts, fee estimation, key management, and
-configuration — all of which Hermes solves.
+a `ChainEndpoint` trait, so a new chain family is added by implementing that
+trait rather than by rewriting the relayer. The pattern is proven and the
+codebase invites it. Rolling our own relayer would mean re-implementing event
+subscription, transaction queuing, light-client update logic, packet timeouts,
+fee estimation, key management, and configuration, all of which Hermes solves.
 
 **IBC v2 support.** Recent Hermes versions support the v2 packet
 lifecycle natively. Less code to write, less risk of spec deviation.
 
-**Operator ecosystem.** Cosmos relayer operators already know how to
-run Hermes. When the bridge goes live, the operator-facing surface
-(`hermes start`, `~/.hermes/config.toml`, `keys add`, `query packet
-…`) is familiar.
+**Operator ecosystem.** IBC relayer operators already know how to run Hermes.
+When the link goes live, the operator-facing surface (`hermes start`,
+`~/.hermes/config.toml`, `keys add`, `query packet …`) is familiar.
 
 ---
 
@@ -323,7 +307,7 @@ IBC v2 (Eureka) ships a dramatically simpler protocol than v1, and we
 benefit on every axis.
 
 **No handshakes.** V1 requires a multi-step `Connection*` + `Channel*`
-handshake to establish a route between two chains — four messages per
+handshake to establish a route between two chains, four messages per
 side, with both sides needing to be live during the ceremony. V2
 collapses this to **one call**: `registerCounterparty(clientId,
 merklePrefix)`. Bringing a new chain pair online goes from a
@@ -342,29 +326,31 @@ Acknowledgement Commit = {destClientId}   || 0x03 || be64(seq)
 
 For Stellar this is decisive: Soroban storage is **expensive** (state
 rent based on byte-count). Fewer paths means dramatically lower
-cost-per-packet for application chains. It also simplifies the light
-client: 3 path patterns to verify instead of 8.
+cost-per-packet. It also keeps the light client small enough to run inside
+another chain's gas budget: 3 path patterns to verify instead of 8, and a
+fixed-shape commitment tree that would not have been viable under v1.
 
 **Per-packet app routing.** V1 binds an application (port) to a channel
 at handshake time. V2 puts `sourcePort` / `destPort` into the packet
-payload itself. A single client connection can carry packets for any
+payload itself. A single client pairing can carry packets for any
 number of applications, including future apps we haven't deployed yet.
+Token transfer is the first application, not the shape of the integration.
 
 **Cheaper, faster, simpler client lifecycle.** No `ChannelOpenInit/Try/
 Ack/Confirm`, no version negotiation, no port binding. The gateway's
 query service doesn't even implement `QueryClientState`,
-`QueryConsensusState`, or `QueryNextSeqRecv` — all three are
+`QueryConsensusState`, or `QueryNextSeqRecv`, all three are
 non-provable in v2.
 
 **Greenfield advantage.** V2 is the right call for a chain with no v1
 legacy. We pay no migration tax, no backward-compatibility cost. The
-ecosystem direction is clearly v2: Eureka chains (dYdX v4, Noble,
-Skip's chain abstraction stack) are v2-first. Cosmos Hub is migrating.
-Adopting v2 means Stellar plugs into the *current generation* of the
-IBC graph, not the legacy one.
+ecosystem direction is clearly v2, so adopting it means Stellar plugs into the
+*current generation* of the IBC graph, not the legacy one.
 
 **Smaller attack surface.** Less protocol surface = less to audit, less
-to get wrong, less for adversaries to probe.
+to get wrong, less for adversaries to probe. For a system whose security claim
+rests on implementation correctness, that is a security argument, not just an
+engineering convenience.
 
 ---
 
@@ -372,17 +358,19 @@ to get wrong, less for adversaries to probe.
 
 ### For Stellar
 
-**Immediate liquidity reach.** The day the bridge goes live, every
-IBC-enabled chain becomes a destination for Stellar's stablecoins
-(USDC, EURC) and native assets (XLM). The reverse is also true:
-ATOM, OSMO, INJ, dYdX, TIA, NOBLE, and every IBC-graph asset can flow
-into Stellar's payment network.
+**Immediate liquidity reach.** The day the link goes live, 115+ IBC-enabled
+chains become destinations for Stellar's stablecoins (USDC, EURC) and native
+assets (XLM), and every asset on the graph can flow into Stellar's payment
+network. Each chain that joins IBC later is reachable at near-zero marginal cost.
+
+**A security claim that can be defended technically.** "No committee holds your
+funds" is a statement that survives scrutiny, and it differentiates Stellar
+against every committee-based bridge in the space.
 
 **Validation of Soroban as a serious smart-contract platform.**
-Implementing a non-trivial cross-chain protocol on Soroban —
-deterministic SMT, ICS-23 proof verification, light-client contracts
-— demonstrates that Soroban is production-ready for systems work, not
-just simple token logic.
+Implementing a non-trivial cross-chain protocol on Soroban (deterministic SMT,
+ICS-23 proof verification, light-client contracts) demonstrates that Soroban is
+production-ready for systems work, not just simple token logic.
 
 **Differentiator vs other L1 payment networks.** Most payment-focused
 chains (Ripple, Algorand, Hedera) have either bespoke bridges or rely
@@ -390,61 +378,51 @@ on federated message buses. Stellar with IBC becomes the *only*
 trust-minimized payment chain plugged into the largest interop graph
 in crypto.
 
-**Real-world asset (RWA) corridor.** Stellar anchors tokenize fiat,
-gold, real estate. IBC lets those tokenized RWAs reach Cosmos DeFi —
-margining, lending, derivatives — without leaving a trust-minimized
-custody path.
+**Real-world asset (RWA) corridor.** Stellar anchors tokenize fiat, gold, and
+real estate. IBC lets those tokenized RWAs reach DeFi venues (margining,
+lending, derivatives) without leaving a trust-minimized custody path.
 
-**No moat erosion.** Stellar's existing strengths (fast/cheap
-settlement, anchor network, regulated stablecoins) are amplified by
-IBC, not replaced. Cosmos chains gain access to Stellar's payment
-rails; Stellar gains access to Cosmos liquidity. Each chain stays
-focused on what it does best.
+**No moat erosion.** Stellar's existing strengths (fast/cheap settlement, anchor
+network, regulated stablecoins) are amplified by IBC, not replaced. Each chain
+stays focused on what it does best and becomes a distribution channel for the
+others.
 
-**Soroban contract callable from another chain.** ICS-27 interchain
+**Soroban contracts callable from another chain.** ICS-27 interchain
 accounts and ICS-31 cross-chain queries (both v2-compatible) let a
-contract on Osmosis trigger Soroban execution. Stellar becomes a
+contract elsewhere trigger Soroban execution. Stellar becomes a
 *destination for cross-chain logic*, not just an end-point.
 
 ### For the wider IBC ecosystem
 
-**Cross-chain stack validation.** Cardano Foundation's `hermes-relayer`
-fork, light-client patterns, and `caribic` tooling now support **two**
-non-Tendermint chain families. Pattern reuse is the strongest evidence
-that an architecture generalizes. Future non-Cosmos integrations
-(Polkadot, Bitcoin via the same probabilistic LC pattern, etc.) become
-easier to argue for and execute.
+**Cross-chain stack validation.** Every consensus family added to the shared
+relayer and light-client patterns is evidence that the architecture generalizes.
+Pattern reuse across independent chain families is the strongest signal that an
+abstraction is real, and it lowers the bar for every subsequent integration.
 
-**Shared maintenance burden.** Two teams working on the same Hermes
-fork yields more fixes, more features, better test coverage, faster
-upstream merges. Cardano's investment compounds.
+**Shared maintenance burden.** More teams working on the same relayer
+infrastructure yields more fixes, more features, better test coverage, and faster
+upstream merges. Every participant's investment compounds.
 
-**Strategic position as the trust-minimized-interop reference
-implementer.** The Cardano Foundation has been first-to-ship in
-non-Cosmos IBC. Adding Stellar establishes a multi-chain footprint
-that meaningfully differentiates Cardano from L1s with only federated
-bridges. "If you want a non-Cosmos chain integrated into IBC, the
-Cardano Foundation has done it twice."
-
-**Cross-pollination of Cardano and Stellar.** Cardano's Plutus
-contracts and Stellar's Soroban contracts can now exchange value
-through the Cosmos IBC graph — a Cardano-Stellar path through Osmosis,
-for example. Indirect connectivity becomes direct in protocol, even
-where no direct bilateral bridge exists.
+**A payments-native member of the graph.** IBC gains direct access to regulated
+stablecoins, tokenized RWAs, non-USD fiat tokens, and a cash-out network, asset
+classes and rails the graph is comparatively thin on, supplied natively rather
+than wrapped.
 
 ---
 
 ## In one paragraph
 
-Stellar's payment rails plus Cosmos's app-chain ecosystem is a
-combination no current bridge serves trust-minimally. IBC v2 is the
-right protocol — battle-tested, standard, light-client-secured, and
-small enough to deploy cost-effectively on Soroban. Cardano's
-production-grade non-Cosmos IBC stack is the right foundation —
-reusing it cuts years off the project, and the support compounds
-into a multi-chain interop platform that benefits both ecosystems
-permanently. Hermes is the right relayer because it is the reference
-implementation that already supports this pattern. We don't have to
-invent the protocol, the relayer, or the orchestration. We have to
-implement the Stellar-shaped piece, and that is exactly what this
-project does.
+Cross-chain infrastructure today mostly asks users to trust an operator, and that
+is where the industry's losses have come from. IBC removes the operator by having
+each chain verify the other's consensus in on-chain code, and it is a general
+interop state machine rather than a single-ecosystem transport, implementable
+under any VM and any consensus algorithm. Implementing it for Stellar means
+Stellar joins a protocol rather than gaining a bridge: one light client, written
+once and loadable by any host chain, makes 115+ current chains and every future
+one reachable with no new trusted party per pair. The hard part is verifying
+Stellar's consensus from the outside, because Stellar has no global validator set
+to count and no header field binding an agreed value to application state. That
+problem is solved, implemented on-chain, and validated against live mainnet data.
+We did not have to invent the protocol, the relayer, or the orchestration. We had
+to implement the Stellar-shaped piece, and that is exactly what this project
+does.

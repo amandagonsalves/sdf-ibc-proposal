@@ -26,68 +26,66 @@ Interchain Standards the stack implements.
 
 **On-chain IBC v2 light-client verification on Soroban.** A full IBC v2 (Eureka)
 protocol stack as Soroban contracts implementing the Interchain Standards: an
-`ibc-router` (**ICS-26** routing + **ICS-04** packet semantics), light clients
-(`tendermint`, `attestation`, `mock`) (**ICS-02**), a deterministic
-fixed-depth-64 Sparse Merkle Tree for the **ICS-24** host paths, and an
-**ICS-23** membership/non-membership proof serializer.
+`ibc-router` (**ICS-26** routing + **ICS-04** packet semantics), an inbound light
+client (**ICS-02**), a deterministic fixed-depth-64 Sparse Merkle Tree for the
+**ICS-24** host paths whose root is maintained on-chain, and an **ICS-23**
+membership/non-membership proof serializer.
 
 - *How Stellar is used:* counterparty packet commitments, receipts, and
   acknowledgements are committed to the SMT and verified **on-chain by Soroban
   contracts** (`VerifyClientMessage`/`UpdateState`,
-  `VerifyMembership`/`VerifyNonMembership`) — no multisig committee, no federated
+  `VerifyMembership`/`VerifyNonMembership`), no multisig committee, no federated
   signers; packet security equals the security of the connected chains.
 - *Impact:* this is the verification root everything else depends on. It makes
   Stellar a first-class IBC chain and proves Soroban is production-ready for
   serious systems work (on-chain SMT + proof verification).
 
-**Trust-minimized cross-chain transfers (ICS-20) with a Hermes relayer.** An
-`ibc-transfer` Soroban app plus a `StellarChainEndpoint` in the shared Cardano
-Foundation Hermes fork, fronted by a gRPC `gateway` and an HTTP `api` that build
-unsigned Soroban transactions the relayer signs and submits (the gateway holds no
-key).
+**The Stellar light client, loadable by any IBC host chain.** `light-client-wasm`
+compiled to wasm and deployed through the **08-wasm** module, verifying SCP
+`EXTERNALIZE` statements, evaluating the quorum, and binding the agreed value to
+a ledger and that ledger to the IBC state root.
+
+- *How Stellar is used:* it is the artifact that lets **any** of the 115+ IBC
+  chains verify Stellar for itself, with no fork of the host chain and no
+  Stellar-side work per counterparty.
+- *Impact:* this is what converts the project from a bridge into protocol
+  membership. Write the client once, and every current and future IBC host can
+  run it.
+
+**Trust-minimized cross-chain transfers (ICS-20) with a relayer.** An
+`ibc-transfer` Soroban app plus a Stellar chain endpoint in the shared relayer,
+fronted by a gRPC `gateway` and an HTTP `api` that build unsigned Soroban
+transactions the relayer signs and submits. Neither service holds a signing
+key.
 
 - *How Stellar is used:* the transfer app runs the **ICS-20** routing callbacks
   (`OnSendPacket` escrow, `OnRecvPacket` mint/credit, `OnAcknowledgementPacket`
   settle, `OnTimeoutPacket` refund) over **ICS-04** packets, moving real Stellar
   assets (XLM, USDC, EURC) through the **Stellar Asset Contract (SAC)** token
-  interface; the Stellar light client is compiled to wasm and uploaded to the
-  counterparty via `08-wasm` so it can verify Stellar proofs.
-- *Impact:* Stellar stablecoins (USDC, EURC) and native assets reach the entire
-  IBC graph, and IBC-native assets reach Stellar's payment and anchor rails —
-  both directions, trust-minimized.
-
-{: .note }
-> **A transfer in ICS terms.** Setup is `RegisterCounterparty` per side
-> (**ICS-26**). Stellar→Cosmos: `ibc-transfer` escrows the **SAC** asset + builds
-> `FungibleTokenPacketData` (**ICS-20** `OnSendPacket`) →
-> `ibc-router.send_packet` writes the commitment (**ICS-04**/**ICS-24**) → relayer
-> proves it (**ICS-23**) → the Cosmos `08-wasm` Stellar LC verifies the SCP header
-> (**ICS-02**) and commitment (**ICS-23**) on-chain → mints the voucher
-> (**ICS-20** `OnRecvPacket`). Ack back: the success ack `{"result":"AQ=="}` is
-> proven (**ICS-23**) and relayed to `acknowledge_packet` (**ICS-04**), which
-> settles the escrow (**ICS-20**); timeouts refund via an **ICS-23**
-> non-membership proof.
+  interface.
+- *Impact:* Stellar stablecoins and native assets reach the entire IBC graph, and
+  IBC-native assets reach Stellar's payment and anchor rails, both directions,
+  trust-minimized.
 
 **`interstellar` orchestration CLI + a reusable multi-chain stack.** A single Rust
 binary that deploys the contracts, uploads the Stellar `08-wasm` light client,
-creates clients, registers counterparties, and runs the relayer — no shell
-scripts.
+creates clients, registers counterparties, runs the relayer, and verifies Stellar
+consensus against live archive data, no shell scripts.
 
-- *How Stellar is used:* it drives the Soroban CLI, `interstellar-api`, and Docker to
-  stand up and operate a complete Interstellar deployment reproducibly.
-- *Impact:* the same protocol layer, relayer, and tooling that connect Stellar to
-  Cosmos extend to Cardano and any future IBC chain — the marginal cost of the
-  next chain is one light client + one endpoint, so the bridge scales O(n), not
-  O(n²).
+- *How Stellar is used:* it drives the Soroban CLI, `interstellar-api`, and Docker
+  to stand up and operate a complete Interstellar deployment reproducibly.
+- *Impact:* the same protocol layer, relayer, and tooling extend to any future
+  IBC counterparty, the marginal cost of the next chain is one light client + one
+  endpoint, so the link scales O(n), not O(n²).
 
-**End-user transfer dApp + operator/integrator tooling.** A web app (Freighter +
-Keplr) that turns the transfer flow into a one-click product with a live status
-stepper, plus an operator runbook, integrator guide, and monitoring dashboard.
+**End-user transfer dApp + operator/integrator tooling.** A web app that turns the
+transfer flow into a one-click product with a live status stepper, plus an
+operator runbook, integrator guide, and monitoring dashboard.
 
 - *How Stellar is used:* the dApp signs the `initiate_transfer` Soroban
-  invocation with Freighter and tracks the resulting voucher; nothing is
+  invocation with a browser wallet and tracks the resulting voucher; nothing is
   custodial and no key leaves the user.
-- *Impact:* lowers adoption cost — any Stellar app can plug into the transfer
+- *Impact:* lowers adoption cost, any Stellar app can plug into the transfer
   flow, and any operator can run an Interstellar relayer.
 
 ---
@@ -100,175 +98,179 @@ validation**, not live user metrics yet.
 ### Technical traction
 
 Already built and demonstrably working, tracked against the Interchain Standards
-the stack implements. Interstellar runs end-to-end on a local devnet
-against a real ibc-go v11 + `08-wasm` Cosmos chain:
+the stack implements. Interstellar runs on a local devnet against a real IBC v2 +
+`08-wasm` host chain:
 
-- **ICS-26 (Routing) — done.** The `ibc-router` Soroban contract dispatches
+- **ICS-26 (Routing), done.** The `ibc-router` Soroban contract dispatches
   `send` / `recv` / `ack` / `timeout`, and IBC v2 counterparty registration
-  (`registerCounterparty`) is complete on both sides — no v1 connection or channel
+  (`registerCounterparty`) is complete on both sides, no v1 connection or channel
   handshake.
-- **ICS-24 (Host requirements) — done.** Packet commitment, receipt, and
-  acknowledgement paths live in a deterministic fixed-depth-64,
-  Cardano-compatible Sparse Merkle Tree whose root is the consensus root
-  counterparty clients verify against.
-- **ICS-02 (Client semantics) — done, verification proven on-chain.** A
-  `07-tendermint` client on the Stellar router, and a Stellar `08-wasm` client on
-  Cosmos (the Stellar LC compiled to wasm and gov-uploaded via `MsgStoreCode`);
-  the `08-wasm` client runs `VerifyClientMessage` (SCP quorum) → `UpdateState`
-  on-chain.
-- **ICS-23 (Vector commitments) — membership proven on-chain.** The `08-wasm` LC
-  runs `VerifyMembership` (ICS-23 over the SMT) on-chain for `recv`;
-  non-membership (for `timeout`) is implemented.
-- **ICS-20 (Fungible token transfer) — Stellar→Cosmos proven on-chain.**
-  `interstellar transfer` escrows + emits a `SendPacket`; the relayer fetches the
-  commitment proof and submits `MsgRecvPacket`; on-chain verification passes and
-  Cosmos mints an `ibc/<hash>` voucher with a success acknowledgement. The reverse
-  direction (Cosmos→Stellar) is next.
-- **IBC v2 relayer on the shared Hermes fork:** `StellarChainEndpoint`,
-  `ics10_stellar` types, and a custom v2/Eureka packet-relay worker drive ICS-04
-  packet semantics (`send` + `recv` + `acknowledge` verified end-to-end, closing
-  the Stellar→Cosmos round trip on-chain; `timeout` implemented).
+- **ICS-24 (Host requirements), done.** Packet commitment, receipt, and
+  acknowledgement paths live in a deterministic fixed-depth-64 Sparse Merkle
+  Tree, byte-exact against the reference implementation, whose root is recomputed
+  and published **on-chain** on every provable write.
+- **ICS-02 (Client semantics), both clients implemented on-chain.** An inbound
+  light client on the Stellar router, and the Stellar light client compiled to
+  wasm and uploaded to the host chain via `MsgStoreCode`, implementing the full
+  consensus chain of custody.
+- **ICS-23 (Vector commitments), done.** Membership (for `recv`/`ack`) and
+  non-membership (for `timeout`) proof verification over the SMT.
+- **ICS-04 + ICS-20, packet flows demonstrated end to end.** `interstellar
+  transfer` escrows and emits a `SendPacket`; the relayer fetches the commitment
+  proof and submits the receive; on-chain verification passes and the host chain
+  credits the receiver with a success acknowledgement, which is relayed back and
+  verified on Stellar, closing the round trip.
+- **Stellar consensus verification, validated against live mainnet data.** The
+  full chain (signatures, quorum evaluation, agreement, ledger binding, and the
+  binding from ledger to IBC state root) is implemented on-chain and confirmed
+  link by link against real archived ledgers, with a negative suite showing each
+  check fails closed. The off-chain services assemble that evidence for the live
+  relay path, and the relayer pins its trust root against a shipped constant
+  rather than accepting quorum sets over the wire.
+- **IBC v2 relayer:** a Stellar chain endpoint, Stellar client types, and a custom
+  v2/Eureka packet-relay worker drive ICS-04 packet semantics, with migration to
+  the proof-API-based IBC v2 relayer underway.
 
 ### Market validation
 
 - **The interop market is enormous and the trust-minimized slice is unserved on
-  Stellar.** IBC has moved hundreds of billions in cumulative volume with no
-  consensus-level exploit; the Cosmos DeFi venues it connects (Osmosis, Injective,
-  dYdX, Noble) hold billions in liquidity. No trust-minimized,
-  light-client-secured Stellar↔interchain path exists today — existing Stellar
-  bridges are federated/multisig.
+  Stellar.** IBC connects **115+ chains**, has moved hundreds of billions in
+  cumulative volume, and has had **zero** protocol-level exploits since 2021. No
+  trust-minimized, light-client-secured path in or out of Stellar exists today,
+  existing Stellar bridges are federated/multisig.
 - **The problem is expensive and proven.** The five largest bridge hacks (Ronin,
   Poly, Wormhole, Nomad, Harmony) all stem from the trusted-signer model IBC
-  eliminates.
-- **Stellar's distinctive value on the other side:** Stellar is the only
-  trust-minimized payments chain that would be plugged into the largest interop
-  graph — its anchors, regulated stablecoins (USDC, EURC), and cash-out network
-  (MoneyGram) become reachable from Cosmos DeFi, and vice versa.
+  eliminates, and bridges remain the most-exploited category in crypto.
+- **Stellar's distinctive value on the other side:** Stellar would be the only
+  trust-minimized payments chain plugged into the largest interop graph, its
+  anchors, regulated stablecoins, non-USD tokenized fiat, and cash-out network
+  become reachable from 115+ chains, and vice versa.
 
 ---
 
-## Stage 1 — MVP (devnet)
+## Stage 1: MVP (devnet)
 
-**Goal:** Close the Stellar↔Cosmos ICS-20 loop in both directions, with on-chain
-proof verification on both sides, on the devnet where the forward leg is already
+**Goal:** Close the ICS-20 loop in both directions with the full consensus chain
+of custody verified on-chain, on the devnet where the packet flows are already
 proven.
 
-**Deliverable 1 — Full ICS-04 + ICS-20 round-trip, both directions
-(Stellar↔Cosmos).** Complete ICS-04 packet semantics
-(`send` / `recv` / `acknowledge` / `timeout`) end-to-end via the Hermes v2
-packet-relay worker for the Stellar endpoint — relay `SendPacket`→`RecvPacket`,
-`WriteAcknowledgement`→`AckPacket`, and timeout handling — closing the ICS-20
-transfer loop. Deliver `stellar→cosmos` (escrow → received → acknowledged) and the
-reverse `cosmos→stellar` (`MsgTransfer` → credited/minted on Stellar →
-acknowledged), driven by `interstellar transfer`.
+**Deliverable 1. Consensus verification proven in the live packet flow.** The
+off-chain services already assemble the evidence bundle the on-chain Stellar
+light client expects (SCP `EXTERNALIZE` envelopes, quorum sets, the next slot's
+transaction set, and the state-root proof), and the relayer pins its trust root
+against a shipped constant. This deliverable proves it end to end in the relay
+path and closes the operational gaps around it: a caller for the root-refresh
+entrypoint so an idle link can still bind a recent root, and removal of the
+development-only light clients from the default deployment.
+- *Completion criteria:* a devnet transfer whose client update carries a real
+  consensus bundle and is accepted on-chain; a mutated bundle is rejected; a
+  transfer succeeding after an idle period; no always-accept client registered
+  after a default deploy; end-to-end run reproducible from a single command.
+
+**Deliverable 2. Full ICS-04 + ICS-20 round-trip, both directions.** Complete
+ICS-04 packet semantics (`send` / `recv` / `acknowledge` / `timeout`) end-to-end
+via the v2 packet-relay worker in both directions, closing the ICS-20 transfer
+loop: outbound (escrow → received → acknowledged) and inbound (transfer →
+credited on Stellar → acknowledged).
 - *Completion criteria:* A single command runs a full round-trip in each
-  direction on the devnet; relayer logs show ack relayed back and the source
-  commitment cleared.
+  direction on the devnet; relayer logs show the ack relayed back and the source
+  commitment cleared; the acknowledgement check fails the run when no ack
+  arrives.
 
-**Deliverable 2 — ICS-02 + ICS-23 conformance on both light clients.** Bring both
-light clients to full ICS-02 (client semantics) and ICS-23 (vector commitments)
-conformance, in both directions. **ICS-02:** validate the `07-tendermint` LC on
-Stellar against real Cosmos headers (`update_client`) and the Stellar `08-wasm`
-LC against SCP `EXTERNALIZE` proofs (`VerifyClientMessage` → `UpdateState`).
-**ICS-23:** verify membership (`verify_membership`, for recv/ack) and
-non-membership (for timeout) proofs on-chain on both clients, against the Cosmos
-consensus root and the Stellar SMT root respectively.
-- *Completion criteria:* Test suite demonstrating ICS-02 header updates and
-  ICS-23 membership + non-membership proof verification passing on both clients.
-
-**Deliverable 3 — Real-asset escrow via the Stellar Asset Contract (SAC).** Wire
-`ibc-transfer`'s ICS-20 escrow path to the canonical **Stellar Asset Contract
-(SAC)** token interface, so real Stellar assets — native XLM and issued
-stablecoins (USDC, EURC) — move through the transfer app by their SAC token
-address rather than a development token. `OnSendPacket` escrows the SAC asset
-(`transfer` under `require_auth`); `OnRecvPacket` mints/credits the voucher;
-`OnAcknowledgementPacket` settles and `OnTimeoutPacket` releases the escrow back
-to the sender.
-- *Completion criteria:* A transfer of a real SAC asset on the devnet/testnet
-  (e.g. testnet USDC) escrowed on send and released on a successful ack, plus a
-  timeout-refund path; tx hashes + screen recording.
+**Deliverable 3. Real-asset transfers and the verification cost budget.**
+ICS-20 escrow already runs over the canonical **Stellar Asset Contract (SAC)**
+token interface, so this deliverable exercises it with real assets end to end,
+native XLM and an issued stablecoin, and establishes the cost budget the design
+depends on: measure the on-chain cost of verifying the consensus bundle and the
+state-root proof on the host chain, and apply the batching mitigations if it
+exceeds the budget (bind once per client update rather than per packet, and
+chain headers backwards so one expensive step covers a range).
+- *Completion criteria:* A transfer of a real SAC asset escrowed on send and
+  released on a successful ack, plus a timeout-refund path, with tx hashes; a
+  published per-update cost measurement against a host chain's limits, and a
+  documented batching strategy if the measurement requires one.
 
 ---
 
-## Stage 2 — Testnet
+## Stage 2: Testnet
 
 **Goal:** Run continuously on public testnets, prove the architecture generalizes
-by adding a second non-Cosmos chain (direct Cardano), and open it to community
-testing.
+by adding a second host chain, and open it to community testing.
 
-**Deliverable 1 — Public testnet deployment + continuous relayer ops
-(Stellar↔Cosmos).** Deploy contracts to Stellar testnet, connect to a public
-Cosmos testnet counterparty, run the relayer continuously with
-monitoring/alerting, and publish operator documentation. Transfers observable on
-public explorers.
+**Deliverable 1. Public testnet deployment + continuous relayer ops.** Deploy
+contracts to Stellar testnet, connect to a public IBC v2 testnet counterparty,
+run the relayer continuously with monitoring/alerting, and publish operator
+documentation. Transfers observable on public explorers.
 - *Completion criteria:* Public contract addresses; a live relayer running ≥7
-  days; ≥1 transfer per direction visible on stellar.expert + a Cosmos explorer;
-  operator runbook published.
-- *Dependency (third party):* requires a public ibc-go v10+ chain with the
-  `08-wasm` module to **approve and store the Stellar light client via on-chain
-  governance** — a `store-code` proposal voted in by that chain's validators, with
+  days; ≥1 transfer per direction visible on stellar.expert + the counterparty's
+  explorer; operator runbook published.
+- *Dependency (third party):* requires a public IBC v2 chain with the `08-wasm`
+  module to **approve and store the Stellar light client via on-chain
+  governance**, a `store-code` proposal voted in by that chain's validators, with
   the checksum allow-listed in the `08-wasm` module. We de-risk by targeting
   operators amenable to new `08-wasm` clients and coordinating the proposal ahead
   of time (or using a permissioned testnet where we can drive the governance
   directly).
 
-**Deliverable 2 — Direct Stellar↔Cardano IBC (no chain in the middle).** Stand up
-a Cardano light client on the Stellar router and the Stellar `08-wasm` client on
-the Cardano side, register counterparties, and deliver direct `stellar→cardano`
-and `cardano→stellar` ICS-20 transfers over the shared Hermes fork — the payoff of
-the reusable architecture: a second non-Cosmos pair with no new bridge.
-- *Completion criteria:* Both clients created and counterparties registered; ≥1
-  transfer per direction completed on testnet with on-chain proof verification.
-- *Dependency (third party):* (a) **Cardano IBC operational on its public
-  testnet** — driven by the Cardano Foundation; and (b) the **Stellar light client
-  approved and stored on a public IBC-v2 + `08-wasm` chain via that chain's
-  governance**. Both are coordinated ahead of time (we are building with the
-  support of the Cardano Foundation).
+**Deliverable 2. A second counterparty, proving the artifact is portable.**
+Deploy the *same* Stellar light-client wasm to a second, independent host chain
+and complete ICS-20 transfers over it, with no changes to the Stellar-side
+contracts and no new bridge code, the payoff of the reusable architecture.
+- *Completion criteria:* the same client checksum stored on a second chain; both
+  counterparties registered; ≥1 transfer per direction completed on testnet with
+  on-chain proof verification; a written account of exactly what had to change
+  (target: configuration only).
+- *Dependency (third party):* the Stellar light client approved and stored on
+  that chain via its governance process, coordinated ahead of time.
 
-**Deliverable 3 — Integration test suite + community testable build.** End-to-end
+**Deliverable 3. Integration test suite + community testable build.** End-to-end
 integration tests covering both corridors and edge cases (timeouts, failed acks,
-client refresh); a documented, reproducible `interstellar` devnet/testnet build
-shared with the Stellar Discord for feedback.
+client refresh, quorum-configuration rotation); a documented, reproducible
+`interstellar` devnet/testnet build shared with the Stellar Discord for feedback.
 - *Completion criteria:* Passing CI test suite; testable build + instructions
   shared in Discord; collected feedback summary.
 
 ---
 
-## Stage 3 — Mainnet
+## Stage 3: Mainnet
 
 **Goal:** Ship to mainnet with production relayer operations, and meet the UX
 readiness bar with both an end-user dApp and operator/integrator UX.
 
-**Deliverable 1 — Security review + hardening.** Internal security review of the
-Soroban contracts, the wasm LC, and the relayer integration; fuzzing of the
-SMT/proof paths; key-management/operational-security review; remediation of
-findings from a third-party audit.
+**Deliverable 1. Security review + hardening.** Internal security review of the
+Soroban contracts, the wasm light client, and the relayer integration; fuzzing of
+the SMT/proof paths; light-client lifecycle hardening; key-management and
+operational-security review; remediation of findings from a third-party audit.
+Includes standing up the quorum-configuration governance the trust model
+requires: a named owner, validation with SDF's quorum-analysis tooling at client
+creation and at every change, and drift monitoring.
 - *Completion criteria:* Published internal review summary + fuzzing report;
-  audit findings triaged and remediated; no open critical/high issues.
+  audit findings triaged and remediated; no open critical/high issues; the
+  configuration process documented with an accountable owner.
 
-**Deliverable 2 — Mainnet launch + production relayer operations.** Deploy
-contracts and light clients to Stellar mainnet; register mainnet counterparties
-for the Cosmos (and, if the Cardano leg landed, Cardano) routes; run a production
-relayer with monitoring/alerting and rate limits.
+**Deliverable 2. Mainnet launch + production relayer operations.** Deploy
+contracts and light clients to Stellar mainnet; register mainnet counterparties;
+run a production relayer with monitoring/alerting and rate limits.
 - *Completion criteria:* Mainnet contract addresses; ≥1 live mainnet transfer per
   direction; relayer running stably ≥7 consecutive days with a monitoring
   dashboard.
 - *Dependency (third party):* the **Stellar light client must be approved and
-  stored on the target Cosmos mainnet** (and on Cardano mainnet, if that leg
-  landed) via each chain's **on-chain governance**. Mainnet is additionally gated
-  on the security review + external audit (Deliverable 1) completing with no open
-  critical/high findings before any value moves.
+  stored on the target mainnet** via that chain's **on-chain governance**.
+  Mainnet is additionally gated on the security review + external audit
+  (Deliverable 1) completing with no open critical/high findings before any value
+  moves.
 
-**Deliverable 3 — End-user transfer dApp (UX readiness).** Connect Freighter
-(Stellar) + Keplr (Cosmos), enter amount + receiver, sign `initiate_transfer`, and
-watch a status stepper (`escrowed → relaying → received`) as the voucher appears —
-plus a `GET /config` api endpoint so nothing is hardcoded. Includes onboarding
-(wallet setup guidance, test-token button), error handling, and an FAQ.
+**Deliverable 3. End-user transfer dApp (UX readiness).** Connect a Stellar
+wallet and a counterparty wallet, enter amount + receiver, sign
+`initiate_transfer`, and watch a status stepper (`escrowed → relaying →
+received`) as the voucher appears, plus a `GET /config` api endpoint so nothing
+is hardcoded. Includes onboarding (wallet setup guidance, test-token button),
+error handling, and an FAQ.
 - *Completion criteria:* Live demo URL; screen recording of a full transfer;
   onboarding flow + FAQ present; works against testnet and (post-mainnet)
   mainnet.
 
-**Deliverable 4 — Operator/integrator UX + documentation.** Polished `interstellar`
+**Deliverable 4. Operator/integrator UX + documentation.** Polished `interstellar`
 operator UX, an operator runbook (run your own Interstellar relayer), an integrator
 guide (plug an app into the transfer flow), a public monitoring dashboard, and a
 published docs site.

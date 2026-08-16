@@ -1,6 +1,6 @@
 # sdf-ibc-proposal
 
-Public project documentation for **Interstellar** — trust-minimized IBC v2
+Public project documentation for **Interstellar**, trust-minimized IBC v2
 (Eureka) for the Stellar network.
 
 📖 **Read it online:** <https://amandagonsalves.github.io/sdf-ibc-proposal/>
@@ -20,10 +20,10 @@ configuration.
 | Page | Source |
 |---|---|
 | Home / overview | [`index.md`](index.md) |
-| Value & Comparison — the *worth*, with metrics and bridge comparison | [`value.md`](value.md) |
-| Strategy — the *why* | [`strategy.md`](strategy.md) |
-| Architecture — the *how*, with sequence diagrams | [`architecture.md`](architecture.md) |
-| Roadmap — deliverables from devnet to mainnet | [`roadmap.md`](roadmap.md) |
+| Value & Comparison, the *worth*, with metrics and bridge comparison | [`value.md`](value.md) |
+| Strategy, the *why* | [`strategy.md`](strategy.md) |
+| Architecture, the *how*, with sequence diagrams | [`architecture.md`](architecture.md) |
+| Roadmap, deliverables from devnet to mainnet | [`roadmap.md`](roadmap.md) |
 
 Layout and styling live in [`_layouts/`](_layouts), [`assets/css/style.css`](assets/css/style.css),
 and [`assets/js/site.js`](assets/js/site.js) (mermaid rendering + mobile nav).
@@ -41,7 +41,7 @@ bundle exec jekyll serve
 This site builds with GitHub's default Pages builder. In the repository settings,
 under **Settings → Pages → Build and deployment**, set the **Source** to
 **Deploy from a branch** (branch `main`, folder `/ (root)`). Every push to `main`
-rebuilds and deploys automatically — no workflow or theme gem required.
+rebuilds and deploys automatically, no workflow or theme gem required.
 
 ## License
 
